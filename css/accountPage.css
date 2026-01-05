@@ -1,0 +1,63 @@
+.account-page-container{
+       background-size: cover;
+  background-repeat: no-repeat;
+  overflow: hidden;
+  background-position: center;
+  padding-right: 40px;
+  color: white;
+  padding-left: 40px;
+  background-image: url("../assets/bg-img.png");
+  height: 100vh;
+  animation: fadeInOut 1s ease-in-out;
+}
+
+.account-header-logo{
+  object-fit: contain;
+  width: 276px;
+  height: 140px;
+}
+
+.account-page-content{
+    width: 100%;
+    display: flex;
+    zoom: 1.1;
+    flex-direction: column;
+}
+
+.account-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+  padding: 6px;
+  border-radius: 8px;
+}
+
+.account-item p{
+    font-size: 24px;
+}
+
+.account-status{
+  padding-left: 10px;
+  padding-right: 10px;
+  padding-top: 5px;
+  padding-bottom: 5px;
+  background-color: green;
+  color: white !important;
+  border-radius: 8px;
+}
+
+.account-item p:first-child {
+  font-weight: 500;
+  color: var(--gold)
+
+}
+
+.account-item p:last-child {
+  /* color: var(--gold) */
+}
+
+
+#accountBackBtn{
+  color: white !important;
+}

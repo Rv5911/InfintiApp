@@ -1,0 +1,78 @@
+.sorting-overlay-dialog {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  background-color: rgba(0, 0, 0, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  z-index: 9999;
+}
+
+.sorting-overlay-dialog-hidden {
+  display: none;
+}
+
+.sorting-dialog-content {
+  border: 2px solid var(--gold);
+  padding: 20px;
+  background: black;
+  zoom: 1.7;
+  border-radius: 8px;
+  min-width: 400px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.sorting-title {
+  color: white;
+  font-size: 20px;
+  font-weight: 600;
+  text-align: center;
+  margin-bottom: 10px;
+}
+.sorting-options {
+  display: flex;
+  zoom: 1.2;
+  flex-direction: column;
+}
+
+.sorting-option {
+  color: white;
+  font-size: 16px;
+  margin-bottom: 10px;
+}
+
+.sorting-option input[type="radio"] {
+  accent-color: var(--gold);
+}
+
+.sorting-option input:focus {
+  outline: 2px solid var(--gold);
+}
+
+.sorting-actions {
+  display: flex;
+  justify-content: space-between;
+}
+
+.sorting-btn {
+  padding: 8px 16px;
+  border: 1px solid var(--gold);
+  background: transparent;
+  color: var(--gold);
+  cursor: pointer;
+  border-radius: 6px;
+  transition: 0.2s;
+}
+
+.sorting-btn:focus,
+.sorting-btn:hover {
+  background: var(--gold);
+  color: black;
+}
+

@@ -1,0 +1,152 @@
+.parental-control-container {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  justify-content: center;
+  padding-left: 40px;
+  padding-right: 40px;
+  height: 100%;
+  zoom: 1.3;
+  color: #fff;
+}
+
+.parental-input-group {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 25px;
+  width: 100%;
+}
+
+.parental-field {
+  display: flex;
+  margin-bottom: 40px;
+  align-items: center;
+  border: 2px solid #ffffff;
+  padding-top: 18px;
+  padding-bottom: 18px;
+  padding-left: 30px;
+  padding-right: 30px;
+  background: #00000099;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.parental-field:hover {
+  background: rgba(255, 255, 255, 0.12);
+  transform: translateY(-2px);
+}
+
+.parental-input-container {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  width: 100%;
+  gap: 15px;
+}
+
+.parental-input-label {
+  font-size: 24px;
+  font-weight: 500;
+  color: #e6e6e6;
+  margin-bottom: 10px;
+}
+
+.parental-input {
+  background: transparent;
+  border: none;
+  color: white;
+  font-size: 30px;
+  outline: none;
+  width: 100%;
+}
+
+.parental-input::placeholder {
+  color: #999;
+}
+
+.parental-field.parental-focused {
+  border-color: var(--gold);
+  scale: 1.1;
+}
+
+.parental-input:focus {
+  outline: none;
+}
+
+#parentalSaveBtn {
+  padding-left: 45px;
+  padding-right: 45px;
+  padding-top: 14px;
+  padding-bottom: 14px;
+  color: white;
+  border: 2px solid #ffffff;
+  border-radius: 50px;
+  background-color: var(--gold);
+  font-size: 22px;
+  text-align: center;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 15px rgba(11, 118, 247, 0.3);
+}
+
+#parentalSaveBtn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(11, 118, 247, 0.4);
+}
+
+#parentalSaveBtn:focus {
+  outline: 2px solid #fff;
+  outline-offset: 2px;
+}
+
+#parentalSaveBtn:active {
+  transform: translateY(0);
+}
+
+.parental-save-btn-focused {
+  border: 2px solid var(--gold) !important;
+  outline: none;
+  transform: translateY(-2px);
+  scale: 1.1;
+  box-shadow: 0 6px 20px rgba(11, 118, 247, 0.4);
+}
+
+.parental-saveBtn-div {
+  display: flex;
+  justify-content: center;
+  gap: 20px;
+}
+
+#parentalClearBtn {
+  padding-left: 45px;
+  padding-right: 45px;
+  padding-top: 14px;
+  margin-left: 20px;
+  padding-bottom: 14px;
+  color: white;
+  border: 2px solid #ffffff;
+  border-radius: 50px;
+  background-color: var(--gold);
+  font-size: 22px;
+  text-align: center;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 15px rgba(11, 118, 247, 0.3);
+}
+
+#parentalClearBtn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(11, 118, 247, 0.4);
+}
+
+#parentalClearBtn:focus {
+  outline: 2px solid #fff;
+  outline-offset: 2px;
+}
+
+#parentalClearBtn:active {
+  transform: translateY(0);
+}

@@ -1,0 +1,324 @@
+.gs-main-container{
+    background-size: cover;
+    background-repeat: no-repeat;
+    overflow: hidden;
+    background-position: center;
+    padding-right: 40px;
+    color: white;
+    padding-left: 40px;
+    background-image: url("../assets/bg-gradient.png");
+    height: 100vh;
+    animation: gs-fadeIn 1s ease-in-out;
+}
+
+@keyframes gs-fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.gs-header{
+    position: relative;
+    z-index: 2;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 28px 48px;
+}
+
+.gs-login-header{
+    display: flex;
+    gap: 14px;
+    align-items: center;
+}
+
+.gs-header-logo{
+    height: 46px;
+}
+
+.gs-content-wrap{
+    zoom: 1.2;
+    height: 60vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 2;
+    position: relative;
+    padding: 20px;
+}
+
+.gs-panel {
+    width: 65%;
+    border-radius: 10px;
+    padding: 48px 56px 40px;
+    border: 1px solid rgba(255, 255, 255, 0.02);
+    position: relative;
+    background-color: #071212;
+}
+
+.gs-panel::after{
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: 10px;
+    pointer-events: none;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.02);
+}
+
+.gs-title {
+    text-align: center;
+    margin: 0 0 30px 0;
+    font-weight: 500;
+    font-size: 40px;
+    letter-spacing: 0.4px;
+}
+
+.gs-options-list{
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+    margin-bottom: 28px;
+}
+
+.gs-option {
+    display: flex;
+    margin-bottom: 18px;
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    align-items: center;
+    padding: 18px 22px;
+    background-color: black;
+    border-radius: 10px;
+    position: relative;
+    transition: all 0.2s ease;
+}
+
+.gs-option:hover{
+    border: 1px solid #d18d15;
+    transform: translateY(-1px);
+}
+
+.gs-option .gs-checkbox{
+    margin-right: 18px;
+}
+
+.limit-option {
+    justify-content: space-between;
+    cursor: pointer;
+}
+
+.gs-limit-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+}
+
+.gs-limit-label {
+    font-size: 24px;
+    font-weight: 600;
+}
+
+.gs-limit-selector {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.gs-limit-display {
+    font-size: 20px;
+    color: var(--gold);
+}
+
+.gs-limit-arrow {
+    font-size: 14px;
+    color: var(--gold);
+    transition: transform 0.2s ease;
+}
+
+.gs-dropdown {
+    display: none;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background-color: #071212;
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    border-top: none;
+    border-radius: 0 0 10px 10px;
+    z-index: 10;
+    overflow: hidden;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+}
+
+.gs-dropdown-option {
+    padding: 15px 22px;
+    font-size: 20px;
+    cursor: pointer;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    transition: background-color 0.2s ease;
+}
+
+.gs-dropdown-option:last-child {
+    border-bottom: none;
+}
+
+.gs-dropdown-option:hover {
+    background-color: rgba(209, 141, 21, 0.1);
+}
+
+.gs-checkbox {
+   width: 46px;
+    height: 46px;
+    min-width: 46px;
+    border-radius: 8px;
+    display: flex;
+    cursor: pointer;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid white;
+    position: relative;
+}
+
+.gs-checkbox input{
+    appearance:none;
+    -webkit-appearance:none;
+    width:100%;
+    height:100%;
+    margin:0;
+    cursor:pointer;
+    background:transparent;
+    display: none;
+}
+
+.gs-checkbox::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 6px;
+  height: 12px;
+  border: solid white;
+  border-width: 0 2px 2px 0;
+  transform: translate(-50%, -50%) rotate(45deg);
+  opacity: 0;
+  transition: opacity 0.2s ease-in-out;
+}
+
+.gs-checkbox.gs-checked::after {
+    opacity: 1;
+}
+
+.gs-option-label {
+    font-size: 24px;
+    font-weight: 600;
+    user-select: none;
+}
+
+.gs-actions{
+    display: flex;
+    justify-content: center;
+    margin-top: 12px;
+}
+
+.gs-btn{
+    border:none;
+    padding:16px 36px;
+    font-weight:700;
+    font-size:18px;
+    border-radius:40px;
+    cursor:pointer;
+    min-width:160px;
+    box-shadow: 0 8px 20px rgba(0,0,0,0.45);
+}
+
+.gs-back-btn{
+    background: #ffffff;
+    color: #0b0b0b;
+}
+
+.gs-btn:hover{
+    background-color: #d18d15;
+    color: white;
+    transform: translateY(-2px);
+}
+
+/* Focus states */
+.gs-focused {
+    border: 3px solid var(--gold) !important;
+    outline: none;
+}
+
+.gs-btn-focused {
+    background: var(--gold) !important;
+    color: black !important;
+    outline: none;
+}
+
+.gs-dropdown-option.gs-focused {
+    background-color: rgba(209, 141, 21, 0.2);
+    border-left: 3px solid var(--gold);
+}
+
+@media (max-width: 720px){
+    .gs-panel{ 
+        padding: 28px 20px; 
+        width: 92% 
+    }
+    .gs-checkbox{ 
+        width: 40px; 
+        height: 40px; 
+        min-width: 40px 
+    }
+    .gs-option-label{ 
+        font-size: 18px 
+    }
+    .gs-btn{ 
+        padding: 12px 22px; 
+        font-size: 16px; 
+        min-width: 140px 
+    }
+    .gs-title{ 
+        font-size: 32px 
+    }
+    .gs-header{ 
+        padding: 18px 
+    }
+    .gs-limit-label { 
+        font-size: 18px; 
+    }
+    .gs-limit-display { 
+        font-size: 16px; 
+    }
+    .gs-dropdown-option {
+        font-size: 16px;
+        padding: 12px 18px;
+    }
+}
+
+@media (max-width: 420px){
+    .gs-actions{ 
+        flex-direction: column; 
+        gap: 12px; 
+        align-items: center 
+    }
+    .gs-option {
+        padding: 12px 16px;
+    }
+}
+
+#gs-save-btn{
+    margin-right: 28px;
+}
+
+/* Additional CSS for selected dropdown option */
+.gs-option-selected {
+    background-color: rgba(209, 141, 21, 0.2) !important;
+    border-left: 3px solid var(--gold) !important;
+    color: var(--gold) !important;
+}
+
+.gs-dropdown-option.gs-option-selected::before {
+    content: "✓";
+    margin-right: 10px;
+    font-weight: bold;
+    color: var(--gold);
+}

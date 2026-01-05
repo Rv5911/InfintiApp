@@ -1,0 +1,1496 @@
+.livetvpage-main-container {
+    background-size: cover;
+    background-repeat: no-repeat;
+    overflow: hidden;
+    background-position: center;
+    padding-right: 40px;
+    color: white;
+    padding-left: 40px;
+    animation: fadeInOut 1s ease-in-out;
+    background-image: url("../assets/bg-img.png");
+    height: 100vh;
+    animation: fadeInOut 1s ease-in-out;
+}
+
+
+#live-header-search {
+    padding-left: 18px !important;
+    padding-top: 18px !important;
+    padding-bottom: 18px !important;
+    border-radius: 294px !important;
+}
+
+/* Header */
+.livetv-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    color: white;
+    padding-top: 30px;
+    width: 100%;
+}
+
+.livetv-series-header {
+    width: 35%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.second-livetv-header .datetime {
+    padding-top: 20px;
+    text-wrap: nowrap;
+    font-size: 32px;
+}
+
+.second-livetv-header {
+    width: 75%;
+    padding-left: 15%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.livetv-header-title {
+    font-size: 50px;
+    padding-top: 20px;
+    font-weight: 500;
+}
+
+.second-live-header-div {
+    display: flex;
+    align-items: center;
+}
+
+/* Search */
+#livetv-header-search {
+    width: 400px;
+    padding-top: 6px;
+    padding-bottom: 6px;
+    padding-left: 25px;
+    padding-right: 20%;
+    color: white;
+    border: 2px solid var(--gold);
+    background-color: rgba(18, 18, 18, 0.4);
+    border-radius: 10px;
+    font-size: 28px;
+}
+
+.livetv-header-search {
+    position: relative;
+}
+
+.livetv-header-search-icon {
+    position: absolute;
+    top: 50%;
+    right: 30px;
+    transform: translateY(-50%);
+    height: 30px;
+    width: 30px;
+}
+
+.livetv-header-menu {
+    margin-left: 60px;
+    position: relative;
+    border: 2px solid transparent;
+}
+
+.livetv-content-container {
+    padding-top: 2%;
+    padding-bottom: 30px;
+    display: flex;
+    width: 100%;
+}
+
+.livetv-channels-list {
+    width: 25%;
+    background-color: rgba(0, 0, 0, 0.4);
+    border-radius: 10px;
+    height: 81vh;
+    overflow-y: scroll;
+    padding: 10px 15px;
+}
+
+.livetv-channel-category {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 18px;
+    color: #e3e2ff;
+    cursor: pointer;
+    border-radius: 31px;
+    position: relative;
+}
+
+.livetv-channel-category:hover {
+    background-color: var(--gold);
+    color: white;
+}
+
+.livetv-channel-category-focused {
+    background-color: var(--gold) !important;
+    color: white !important;
+}
+
+.livetv-channel-category-active {
+    color: var(--gold);
+}
+
+.livetv-channel-category-name {
+    flex: 1;
+    text-align: left;
+    font-size: 28px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.livetv-channel-category-count {
+    font-size: 24px;
+    text-align: right;
+    margin-left: 10px;
+}
+
+/* Right: Channels grid */
+.livetv-channels-list-container {
+    width: 30%;
+    max-height: 81vh;
+    overflow-y: auto;
+    padding-top: 20px;
+    padding-left: 20px;
+    padding-bottom: 20px;
+    padding-right: 30px;
+    margin-left: 20px;
+    border-radius: 10px;
+    background-color: rgba(0, 0, 0, 0.4);
+}
+
+.channel-card {
+    padding-top: 18px;
+    padding-bottom: 18px;
+    display: flex;
+    align-items: center;
+    margin-bottom: 10px;
+    padding-left: 24px;
+    background-color: black;
+    padding-right: 24px;
+    border: 2px solid rgba(255, 255, 255, 0.25);
+}
+
+.channel-card-logo {
+    width: 50px;
+    height: 50px;
+    object-fit: contain;
+}
+
+.channel-card .channel-card-name {
+    padding-left: 14px;
+    font-size: 22px;
+}
+
+/* Scrollbars off */
+.livetv-channels-list::-webkit-scrollbar,
+.livetv-channels-list-container::-webkit-scrollbar {
+    display: none;
+}
+
+.livetv-channels-list,
+.livetv-channels-list-container {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
+
+/* Focus helpers */
+.livetv-header-search-input-focused {
+    border: 4px solid var(--gold) !important;
+    outline: none;
+}
+
+.livetv-header-search-focused {
+    border: 4px solid var(--gold) !important;
+    border-radius: 8px;
+    padding: 4px;
+}
+
+.livetv-header-menu-focused {
+    border: 2px solid var(--gold) !important;
+    border-radius: 8px;
+    padding: 4px;
+}
+
+.livetv-no-data {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 50vh;
+    width: 100%;
+    font-size: 40px;
+    color: var(--gold);
+}
+
+.channel-card-focused {
+    border: 2px solid var(--gold) !important;
+}
+
+/* Selected channel (currently playing) */
+.channel-card-selected {
+    border: 2px solid var(--gold);
+    background: rgba(245, 197, 24, 0.1);
+}
+
+.livetv-video-wrapper2 {
+    margin-left: 20px;
+    width: 45%;
+    border-top-left-radius: 10px;
+    border-top-right-radius: 10px;
+
+    height: 81vh;
+    display: grid;
+    border-radius: 10px;
+    position: relative;
+}
+
+.livetv-video-wrapper {
+    display: flex;
+    overflow-y: hidden;
+    flex-direction: column;
+    justify-content: flex-start;
+    gap: 17px;
+    position: relative;
+    /* Add this */
+}
+
+.live-video-player-div {
+    width: 100%;
+    height: 50%;
+    z-index: 2;
+    /* Add this */
+}
+
+.livetv-player-epg {
+    width: 100%;
+    border-bottom-left-radius: 10px;
+    border-bottom-right-radius: 10px;
+    background: rgba(0, 0, 0, 0.4);
+    height: 96%;
+    margin-top: 20px;
+    /* Change from 20px to 0 */
+    padding: 20px 22px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    z-index: 1;
+    /* Add this */
+}
+
+.livetv-player-epg::-webkit-scrollbar {
+    display: none;
+}
+
+.livetv-player-epg-item {
+    margin-bottom: 25px;
+}
+
+.livetv-player-epg-item .livetv-player-epg-title:first-child {
+    font-size: 26px;
+    color: var(--gold);
+}
+
+.livetv-player-epg-description {
+    font-size: 26px;
+    width: 100%;
+    color: rgba(188, 188, 188, 1);
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.livetv-loading {
+    text-align: center;
+    padding: 50px;
+    font-size: 18px;
+    color: #fff;
+}
+
+.channel-card-logo {
+    object-fit: contain;
+}
+
+.livetv-loading {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 50vh;
+    width: 100%;
+}
+
+.live-video-player-div {
+    width: 100%;
+    height: 50%;
+    position: relative !important;
+}
+
+/* Top overlays container */
+.live-top-overlays {
+    position: absolute;
+    top: 10px;
+    left: 0;
+    right: 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 16px;
+    z-index: 30;
+    pointer-events: none;
+}
+
+.live-channel-name {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 12px;
+    background: rgba(0, 0, 0, 0.6);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 6px;
+    font-size: 18px;
+    color: #fff;
+}
+
+.live-badge {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 6px 12px;
+    background: red;
+    color: white;
+    border-radius: 10px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    border: 2px solid rgba(255, 255, 255, 0.2);
+}
+
+.livetv-video-wrapper .live-video-player-div .video-js {
+    height: 100% !important;
+    width: 100% !important;
+}
+
+/* Flowplayer should fill container and hide native controls */
+.live-video-player-div .flowplayer,
+.live-video-player-div .flowplayer video {
+    height: 100% !important;
+    width: 100% !important;
+}
+
+.live-video-player-div .fp-ui,
+.live-video-player-div .fp-controls,
+.live-video-player-div .fp-engine {
+    background: transparent !important;
+}
+
+.live-video-player-div .fp-controls,
+.live-video-player-div .fp-playbtn,
+.live-video-player-div .fp-fullscreen,
+.live-video-player-div .fp-time,
+.live-video-player-div .fp-embed,
+.live-video-player-div .fp-brand,
+.live-video-player-div .fp-volume,
+.live-video-player-div .fp-qualities,
+.live-video-player-div .fp-chromecast,
+.live-video-player-div .fp-settings {
+    display: none !important;
+}
+
+/* Hide Flowplayer internal waiting spinner; use our loader instead */
+.live-video-player-div .fp-waiting {
+    display: none !important;
+}
+
+/* TIZEN 5.5 FIX: Ensure FlowPlayer container stays in place */
+#flowplayer-live {
+    position: static !important;
+    border-top-left-radius: 10px;
+    border-top-right-radius: 10px;
+}
+
+.live-video-player-div .flowplayer {
+    position: static !important;
+}
+
+.flowplayer video {
+    max-width: 100% !important;
+    max-height: 100% !important;
+}
+
+/* Responsive adjustments for live video controls */
+@media (max-width: 1200px) {
+    .live-video-controls {
+        gap: 15px;
+    }
+
+    .live-control-btn {
+        width: 45px;
+        height: 45px;
+    }
+}
+
+@media (max-width: 768px) {
+    .live-video-controls {
+        gap: 10px;
+    }
+
+    .live-control-btn {
+        width: 40px;
+        height: 40px;
+    }
+
+    .live-video-loader {
+        font-size: 16px;
+    }
+
+    .live-spinner {
+        width: 35px;
+        height: 35px;
+    }
+}
+
+/* Live Video Player Loading and Controls */
+.live-video-loader {
+    position: absolute;
+    top: 0;
+    left: 0;
+    height: 100%;
+    zoom: 1.5;
+    width: 100%;
+    background: rgba(0, 0, 0, 0.8);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    gap: 16px;
+    z-index: 20;
+    color: var(--gold);
+    font-size: 18px;
+}
+
+.live-video-loader.hidden {
+    display: none;
+}
+
+.live-spinner {
+    width: 40px;
+    height: 40px;
+    border: 3px solid rgba(42, 131, 197, 0.3);
+    border-top: 3px solid var(--gold);
+    border-radius: 50%;
+    animation: liveSpin 1s linear infinite;
+}
+
+@keyframes liveSpin {
+    0% {
+        transform: rotate(0deg);
+    }
+
+    100% {
+        transform: rotate(360deg);
+    }
+}
+
+/* Error Overlay */
+.live-video-error {
+    position: absolute;
+    top: 0;
+    left: 0;
+    height: 100%;
+    width: 100%;
+    background-color: black;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    gap: 16px;
+    z-index: 20;
+    color: var(--gold);
+    font-size: 18px;
+}
+
+.live-video-error.hidden {
+    display: none;
+}
+
+.live-video-error .error-icon {
+    font-size: 48px;
+}
+
+.live-video-error .retry-btn {
+    padding: 10px 20px;
+    background: var(--gold);
+    color: black;
+    border: none;
+    border-radius: 6px;
+    font-size: 16px;
+    cursor: pointer;
+    transition: background 0.2s ease;
+}
+
+.live-video-error .retry-btn:hover {
+    background: white;
+}
+
+.live-video-controls {
+    left: 50%;
+    position: absolute;
+    bottom: 0%;
+    transform: translate(-50%, -50%);
+    display: flex;
+    gap: 20px;
+    zoom: 1.4;
+    padding-right: 20px;
+    z-index: 15;
+    width: 100%;
+    justify-content: flex-end;
+
+    /* opacity: 0; */
+    transition: opacity 0.3s ease;
+}
+
+.live-video-player-div:hover .live-video-controls {
+    opacity: 1;
+}
+
+.live-control-btn {
+    width: 40px;
+    height: 40px;
+    /* border-radius: 50%; */
+    border: 2px solid var(--gold);
+    background: rgba(0, 0, 0, 0.7);
+    color: var(--gold);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.live-control-btn:hover {
+    background: var(--gold);
+    color: black;
+    transform: scale(1.1);
+}
+
+.live-control-btn:active {
+    transform: scale(0.95);
+}
+
+.live-control-btn-focused {
+    background: var(--gold) !important;
+    color: white !important;
+    transform: scale(1.1);
+    /* box-shadow: 0 0 20px rgba(245, 197, 24, 0.5); */
+}
+
+/* Hide controls when video is loading or has error */
+.live-video-loader:not(.hidden)~.live-video-controls,
+.live-video-error:not(.hidden)~.live-video-controls {
+    opacity: 0 !important;
+}
+
+.live-fullscreen-btn-icon {
+    font-size: 26px;
+}
+
+.live-volume-display {
+    position: absolute;
+    bottom: 100px;
+    right: 50px;
+    background: rgba(0, 0, 0, 0.7);
+    color: var(--gold);
+    font-size: 18px;
+    font-weight: bold;
+    padding: 8px 16px;
+    border-radius: 8px;
+    z-index: 1000;
+    display: none;
+}
+
+.live-mute-icon {
+    position: absolute;
+    bottom: 160px;
+    right: 50px;
+    background: rgba(0, 0, 0, 0.6);
+    color: var(--gold);
+    font-size: 40px;
+    padding: 10px;
+    border-radius: 50%;
+    z-index: 1001;
+    display: none;
+}
+
+.channel-card-info {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+}
+
+.channel-card {
+    padding-top: 18px;
+    padding-bottom: 18px;
+    display: flex;
+    align-items: center;
+    margin-bottom: 10px;
+    padding-left: 24px;
+    background-color: black;
+    padding-right: 24px;
+    border: 2px solid rgba(255, 255, 255, 0.25);
+}
+
+.channel-card-info {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+}
+
+.channel-fav-btn {
+    flex-shrink: 0;
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    zoom: 1.8;
+    justify-content: center;
+    background: none;
+    border: none;
+    color: white;
+    font-size: 20px;
+    cursor: pointer;
+}
+
+.channel-fav-btn-focused {
+    border: 2px solid white;
+    border-radius: 6px;
+}
+
+.channel-remove-btn-focused {
+    border: 2px solid white;
+    border-radius: 6px;
+}
+
+.channel-fav-btn .fa-solid {
+    color: red;
+}
+
+.livetv-no-data-channel {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    zoom: 1.6;
+    height: 50vh;
+    width: 100%;
+    font-size: 40px;
+    color: var(--gold);
+}
+
+.livetv-no-data-channel-category {
+    display: flex;
+    height: 50vh;
+    width: 100%;
+    font-size: 30px;
+    color: var(--gold);
+}
+
+.livetv-no-results-full-page {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background: rgba(0, 0, 0, 0.9);
+    z-index: 1000;
+}
+
+.livetv-no-results-content {
+    text-align: center;
+    padding: 40px;
+    background: rgba(0, 0, 0, 0.6);
+    border-radius: 20px;
+    border: 2px solid var(--gold);
+}
+
+.livetv-no-results-title {
+    font-size: 48px;
+    color: var(--gold);
+    margin-bottom: 20px;
+}
+
+.livetv-no-results-message {
+    font-size: 32px;
+    color: white;
+}
+
+.livetv-no-results-message span {
+    color: var(--gold);
+}
+
+.livetv-no-results-message {
+    font-size: 40px;
+    color: white;
+    margin-bottom: 15px;
+    font-weight: 400;
+}
+
+.livetv-no-results-suggestion {
+    font-size: 24px;
+    color: rgba(255, 255, 255, 0.7);
+    font-style: italic;
+}
+
+.livetv-no-results-message span {
+    color: var(--gold);
+}
+
+/* Lock icon styling for Live TV categories */
+.livetv-category-lock-icon {
+    position: absolute;
+    color: #ff6b6b;
+    transform: translate(-50%, -50%);
+    text-align: center;
+    top: 50%;
+    left: 50%;
+    background-color: rgba(0, 0, 0, 0.6);
+    width: 100%;
+    font-size: 24px;
+    padding: 20px;
+    z-index: 10;
+}
+
+/* No URL Message Styles */
+.live-no-url-message {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    background: rgba(0, 0, 0, 0.8);
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    justify-content: center;
+    align-items: center;
+    gap: 20px;
+    z-index: 10;
+    color: var(--gold);
+}
+
+.no-url-icon {
+    font-size: 80px;
+    opacity: 0.7;
+}
+
+.no-url-text {
+    font-size: 32px;
+    color: white;
+    text-align: center;
+    font-weight: 500;
+    margin: 0;
+}
+
+.sidebar-container-live {
+    position: absolute;
+    top: 80px;
+    right: 0;
+    left: 50;
+    z-index: 9999;
+}
+
+.channel-card-playing {
+    background-color: var(--gold);
+    color: white;
+}
+
+.live-video-player-div .video-js .vjs-tech {
+    height: 100% !important;
+}
+
+/* flow-player */
+.fp-message .fp-shown {
+    opacity: 0 !important;
+}
+
+.fp-ui {
+    background-color: black !important;
+}
+
+.flowplayer .fp-player {
+    background: black !important;
+}
+
+.fp-waiting {
+    display: none !important;
+}
+
+.channel-card-buttons {
+    display: flex;
+    align-items: center;
+}
+
+.channel-remove-btn {
+    margin-left: 10px;
+}
+
+.channel-remove-btn {
+    flex-shrink: 0;
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    zoom: 1.8;
+    justify-content: center;
+    background: none;
+    border: none;
+    color: white;
+    font-size: 20px;
+    cursor: pointer;
+}
+
+.channel-remove-btn:hover,
+.channel-remove-btn-focused {
+    border: 2px solid white;
+}
+
+.channel-remove-btn i {
+    color: #ff4444;
+    font-size: 14px !important;
+    font-weight: 900 !important;
+}
+
+.channel-history-dialog {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    zoom: 1.4;
+    height: 100%;
+    z-index: 9999;
+    /* Increased z-index */
+    display: block;
+}
+
+.dialog-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.8);
+    /* Darker overlay */
+}
+
+.dialog-content {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: black;
+    border: 2px solid var(--gold);
+    border-radius: 8px;
+    padding: 20px;
+    min-width: 300px;
+    z-index: 10000;
+    /* Higher than overlay */
+    box-shadow: 0 0 20px rgba(0, 0, 0, 0.7);
+}
+
+.dialog-content h3 {
+    margin: 0 0 15px 0;
+    color: white;
+    text-align: center;
+    font-size: 18px;
+}
+
+.dialog-option {
+    display: flex;
+    align-items: center;
+    padding: 12px;
+    margin: 8px 0;
+    border-radius: 4px;
+    border: 2px solid white;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    color: white;
+}
+
+.dialog-option:hover {
+    background-color: #333;
+}
+
+.dialog-option.focused {
+    background-color: var(--gold);
+    color: white;
+    border: 2px solid var(--gold);
+    outline: none !important;
+}
+
+.dialog-option i {
+    margin-right: 10px;
+    font-size: 18px;
+    width: 20px;
+    text-align: center;
+}
+
+/* NEW STYLES TO ADD - Ensure UI elements remain visible in fullscreen */
+:-webkit-full-screen .live-video-player-div,
+:-moz-full-screen .live-video-player-div,
+:-ms-fullscreen .live-video-player-div,
+:fullscreen .live-video-player-div {
+    width: 100vw !important;
+    height: 100vh !important;
+    background: #000;
+    position: relative;
+}
+
+:-webkit-full-screen .live-top-overlays,
+:-moz-full-screen .live-top-overlays,
+:-ms-fullscreen .live-top-overlays,
+:fullscreen .live-top-overlays,
+:-webkit-full-screen .live-video-controls,
+:-moz-full-screen .live-video-controls,
+:-ms-fullscreen .live-video-controls,
+:fullscreen .live-video-controls {
+    display: flex !important;
+    z-index: 1000;
+}
+
+:fullscreen .live-top-overlays {
+    position: absolute;
+    top: 20px;
+    left: 20px;
+    right: 20px;
+}
+
+:fullscreen .live-video-controls {
+    position: absolute;
+    bottom: 20px;
+    right: 20px;
+    transform: none;
+    left: auto;
+}
+
+.live-top-overlays {
+    z-index: 1000;
+}
+
+.live-video-controls {
+    z-index: 1000;
+}
+
+.live-video-loader,
+.live-video-error {
+    z-index: 1001;
+}
+
+.live-volume-display.fullscreen {
+    bottom: 120px;
+    right: 20px;
+}
+
+.live-mute-icon.fullscreen {
+    bottom: 180px;
+    right: 20px;
+}
+
+:fullscreen .video-js,
+:fullscreen .flowplayer,
+:fullscreen video {
+    height: 100% !important;
+    width: 100% !important;
+}
+
+.live-top-overlays,
+.live-video-controls {
+    transition: opacity 0.3s ease;
+}
+
+.live-video-player-div:hover .live-video-controls {
+    opacity: 1;
+}
+
+.live-channel-name,
+.live-badge {
+    display: flex !important;
+}
+
+/* ===== FULLSCREEN UI FIXES ===== */
+
+/* Ensure fullscreen video takes entire screen */
+:-webkit-full-screen .live-video-player-div,
+:-moz-full-screen .live-video-player-div,
+:-ms-fullscreen .live-video-player-div,
+:fullscreen .live-video-player-div {
+    width: 100vw !important;
+    height: 100vh !important;
+    background: #000;
+    position: relative;
+    display: flex !important;
+    flex-direction: column;
+    justify-content: center;
+}
+
+/* Make sure overlays stay visible in fullscreen */
+:-webkit-full-screen .live-top-overlays,
+:-moz-full-screen .live-top-overlays,
+:-ms-fullscreen .live-top-overlays,
+:fullscreen .live-top-overlays,
+:-webkit-full-screen .live-video-controls,
+:-moz-full-screen .live-video-controls,
+:-ms-fullscreen .live-video-controls,
+:fullscreen .live-video-controls,
+:-webkit-full-screen .live-video-loader,
+:-moz-full-screen .live-video-loader,
+:-ms-fullscreen .live-video-loader,
+:fullscreen .live-video-loader,
+:-webkit-full-screen .live-video-error,
+:-moz-full-screen .live-video-error,
+:-ms-fullscreen .live-video-error,
+:fullscreen .live-video-error {
+    display: flex !important;
+    z-index: 1000;
+}
+
+/* Position elements correctly in fullscreen */
+:fullscreen .live-top-overlays {
+    position: absolute;
+    top: 20px;
+    left: 20px;
+    right: 20px;
+}
+
+:fullscreen .live-video-controls {
+    position: absolute;
+    bottom: 20px;
+    right: 20px;
+    transform: none;
+    left: auto;
+}
+
+/* Ensure proper z-index for all overlay elements */
+.live-top-overlays {
+    z-index: 1000;
+}
+
+.live-video-controls {
+    z-index: 1000;
+}
+
+.live-video-loader,
+.live-video-error {
+    z-index: 1001;
+    /* Higher than other overlays */
+}
+
+/* Make sure video element fills container in fullscreen */
+:fullscreen .video-js,
+:fullscreen .flowplayer,
+:fullscreen video {
+    height: 100% !important;
+    width: 100% !important;
+    position: relative;
+    z-index: 1;
+}
+
+/* Additional styles to ensure UI elements remain visible */
+.live-top-overlays,
+.live-video-controls {
+    transition: opacity 0.3s ease;
+}
+
+.live-video-player-div:hover .live-video-controls {
+    opacity: 1;
+}
+
+/* Keep channel name and badge visible at all times */
+.live-channel-name,
+.live-badge {
+    display: flex !important;
+}
+
+/* Fix for Flowplayer in fullscreen */
+:fullscreen .flowplayer {
+    background: #000 !important;
+}
+
+:fullscreen .flowplayer .fp-player {
+    background: #000 !important;
+}
+
+/* Ensure EPG section stays visible */
+:fullscreen .livetv-player-epg {
+    /* display: flex !important; */
+    background: rgba(0, 0, 0, 0.8) !important;
+}
+
+#live-fullscreen-btn {
+    opacity: 0 !important;
+}
+
+.livetv-fullpage-loading {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    height: calc(100vh - 200px);
+    /* Exclude header height */
+    width: 100%;
+    background: var(--background);
+    color: white;
+}
+
+.livetv-loading-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.7);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+.livetv-loading-content {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    padding: 30px;
+    border-radius: 10px;
+}
+
+.retry-btn-focused {
+    border: 4px solid white !important;
+    outline: none !important;
+}
+
+.play-pause-icon {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    z-index: 10;
+    font-size: 60px;
+    width: 120px;
+    /* circle width */
+    height: 120px;
+    /* circle height */
+    transform: translate(-50%, -50%);
+    background: rgba(0, 0, 0, 0.7);
+    color: #fff;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+}
+
+.play-pause-icon i {
+    display: flex;
+    justify-content: center;
+    height: 100%;
+    align-items: center;
+}
+
+#live-play-pause-btn {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    z-index: 10;
+    border: none;
+    outline: none;
+    font-size: 40px;
+    background: none !important;
+    transform: translate(-50%, -50%);
+}
+
+.play-pause-btn-focused {
+    outline: 2px solid var(--gold);
+    outline-offset: 2px;
+}
+
+#live-play-pause-btn.play-pause-btn-focused {
+    outline: 2px solid var(--gold);
+    outline-offset: 2px;
+}
+
+.livetv-player-epg-focused {
+    outline: 2px solid var(--gold) !important;
+    outline-offset: 2px !important;
+}
+
+.live-volume-display {
+    position: absolute;
+    bottom: 20px;
+    right: 20px;
+    background: rgba(0, 0, 0, 0.8);
+    color: white;
+    padding: 8px 12px;
+    border-radius: 4px;
+    font-size: 30px;
+    font-weight: bold;
+    z-index: 1000;
+    display: none;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.live-volume-display.fullscreen {
+    top: 60px;
+    /* Adjust for fullscreen mode if needed */
+}
+
+.live-mute-icon {
+    position: absolute;
+    top: 50px;
+    right: 10px;
+    background: rgba(0, 0, 0, 0.7);
+    color: white;
+    padding: 5px 10px;
+    border-radius: 4px;
+    font-size: 20px;
+    z-index: 1000;
+    display: none;
+}
+
+/* Disable CSS transitions on older devices for better performance */
+.channel-card,
+.livetv-channel-category {
+    transition: none !important;
+}
+
+/* Use GPU acceleration for scrolling containers */
+.livetv-channels-list,
+.livetv-channels-list-container {
+    -webkit-transform: translateZ(0);
+    transform: translateZ(0);
+    will-change: scroll-position;
+}
+
+/* Optimize rendering */
+.channel-card-focused,
+.livetv-channel-category-focused {
+    transform: translateZ(0);
+}
+
+.channel-card-locked {
+    opacity: 0.6;
+    filter: blur(5px);
+    position: relative;
+}
+
+.channel-card-lock-icon {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 24px;
+    color: var(--gold);
+    z-index: 2;
+    background: rgba(0, 0, 0, 0.7);
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.channel-card-logo-wrapper {
+    position: relative;
+}
+
+.livetv-player-epg-item-focused {
+    border: 2px solid var(--gold) !important;
+    z-index: 10;
+    position: relative;
+}
+
+.live-top-overlays {
+    opacity: 0 !important;
+}
+
+/* Live Player Focus Styles */
+/* .aspect-ratio-button.focused,
+.play-pause-icon.focused,
+.live-control-btn.focused {
+  border: 2px solid var(--gold) !important;
+  background: rgba(255, 215, 0, 0.1) !important;
+  transform: scale(1.05);
+}
+
+.play-pause-icon {
+  transition: all 0.2s ease;
+}
+
+.aspect-ratio-container {
+  position: absolute;
+  bottom: 80px;
+  right: 20px;
+  z-index: 100;
+} */
+
+.videojs-aspect-ratio-div {
+    position: absolute;
+    z-index: 10;
+    color: #fff;
+    border-radius: 50%;
+    bottom: -20px;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+}
+
+#videojs-aspect-ratio {
+    padding: 20px;
+    border: 2px solid white;
+    color: white;
+    font-size: 20px;
+    background: black;
+    display: flex;
+    white-space: nowrap;
+    align-items: center;
+    cursor: pointer;
+}
+
+#videojs-aspect-ratio:hover {
+    padding: 10px;
+    border: 2px solid white;
+    color: white;
+    background: var(--gold);
+    cursor: pointer;
+}
+
+#videojs-aspect-ratio-focused {
+    padding: 10px;
+    border: 2px solid white;
+    color: white;
+    background: var(--gold);
+    cursor: pointer;
+}
+
+#videojs-aspect-ratio i {
+    margin-right: 10px;
+}
+
+#flowplayer-live {
+    width: 100% !important;
+    height: 100% !important;
+    display: block !important;
+}
+
+.flow-aspect-ratio-div {
+    position: absolute;
+    bottom: 0px;
+    left: 50%;
+    z-index: 10;
+    border: none;
+    outline: none;
+    font-size: 40px;
+    background: none !important;
+    transform: translate(-50%, -50%);
+}
+
+#flow-aspect-ratio {
+    padding: 10px;
+    border: 2px solid white;
+    color: white;
+    background: black;
+    display: flex;
+    white-space: nowrap;
+    align-items: center;
+    cursor: pointer;
+}
+
+#flow-aspect-ratio:hover {
+    padding: 10px;
+    border: 2px solid white;
+    color: white;
+    background: var(--gold);
+    cursor: pointer;
+}
+
+#flow-aspect-ratio-focused {
+    padding: 10px;
+    border: 2px solid white;
+    color: white;
+    background: var(--gold);
+    cursor: pointer;
+}
+
+#flow-aspect-ratio i {
+    margin-right: 10px;
+}
+
+#videojs-aspect-ratio.videojs-aspect-ratio-btn-focused,
+#flow-aspect-ratio.flow-aspect-ratio-btn-focused {
+    padding: 20px;
+    font-size: 20px;
+    border: 2px solid white;
+    color: white;
+    background: var(--gold);
+    cursor: pointer;
+}
+
+.flowplayer .fp-header .fp-icon {
+    display: none !important;
+}
+
+/* Centered Loader */
+#home-page-loader {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.7);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 99999;
+    opacity: 1;
+    transition: opacity 0.5s ease-out;
+}
+
+#home-page-loader.fade-out {
+    opacity: 0;
+    pointer-events: none;
+}
+
+.home-loader-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.home-loader-spinner {
+    width: 60px;
+    height: 60px;
+    border: 4px solid rgba(45, 170, 227, 0.1);
+    border-top: 4px solid var(--gold);
+    border-radius: 50%;
+    animation: live-page-spin 1s linear infinite;
+}
+
+@keyframes live-page-spin {
+    0% {
+        transform: rotate(0deg);
+    }
+
+    100% {
+        transform: rotate(360deg);
+    }
+}

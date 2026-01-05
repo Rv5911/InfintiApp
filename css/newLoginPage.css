@@ -1,0 +1,383 @@
+.login-page-container {
+    width: 100%;
+    color: white;
+    z-index: 10;
+    overflow: hidden;
+    height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background-size: cover;
+    background-position: center;
+    position: fixed;
+    background-image: url("../assets/bg-img.png");
+    animation: fadeInOut 1s ease-in-out;
+}
+
+.login-header {
+    z-index: 11;
+}
+
+.login-header img {
+    max-width: 100%;
+    padding: 40px;
+    height: auto;
+}
+
+.login-form-logo-container {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+}
+
+.login-form-logo {
+    object-fit: contain;
+    height: 219px;
+    width: 436px;
+
+    text-align: center;
+}
+
+.login-form {
+    color: white;
+    z-index: 10;
+    width: 1161px;
+    /* zoom: 0.9; replaced with transform for better performance */
+    transform: scale(0.9);
+    transform-origin: center;
+    overflow: hidden;
+    padding-bottom: 57px;
+    padding-top: 41px;
+    padding-left: 183px;
+    padding-right: 183px;
+    border-radius: 60px;
+    background-size: cover;
+    background-position: center;
+    position: fixed;
+    background-image: url("../assets/login-form-gradient.png");
+    /* Hardware acceleration hint */
+    will-change: transform;
+}
+
+.login-form h1 {
+    text-align: center;
+    font-size: 50px;
+    text-wrap: nowrap;
+    font-weight: 500;
+    margin-bottom: 10px;
+}
+
+.login-page-form-container {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 60px;
+    padding-bottom: 60px;
+}
+
+.login-form input {
+    width: 100%;
+    font-size: 30px;
+    height: 80px;
+    padding-left: 9%;
+    padding-right: 5%;
+    background: #d9d9d914;
+
+    color: white;
+    outline: none;
+    border-radius: 183px;
+    border: 3px solid rgba(255, 255, 255, 0.25);
+}
+
+.login-input-container img {
+    position: absolute;
+    top: 50%;
+    left: 21px;
+    transform: translateY(-50%);
+    width: 42px;
+    height: 42px;
+}
+
+.login-form input::placeholder {
+    color: #bababa;
+}
+
+.login-input-container {
+    position: relative;
+}
+
+.login-form button {
+    background: linear-gradient(90.57deg,
+            #2654a2 -1.87%,
+            #2a83c5 53.86%,
+            #2654a2 100%);
+
+    color: white;
+    padding: 10px 20px;
+    text-transform: uppercase;
+    font-size: 32px;
+    border-radius: 28px;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    width: 662px;
+    cursor: pointer;
+}
+
+.add-playlist {
+    font-size: 30px !important;
+    font-weight: 600 !important;
+    border-radius: 88px !important;
+    font-weight: 600 !important;
+}
+
+.list-playlist {
+    width: auto !important;
+    padding-left: 40px !important;
+    border-radius: 57px !important;
+    padding-right: 40px !important;
+    font-weight: 600 !important;
+    font-size: 24px !important;
+}
+
+.login-input-container img,
+.login-input-container i {
+    user-select: none;
+}
+
+.error-message {
+    color: red;
+    margin-top: 10px;
+    font-size: 14px;
+}
+
+.splash-page-container {
+    background-size: cover;
+    background-repeat: no-repeat;
+    background-position: center;
+    background-image: url("../assets/bg-gradient.png");
+    /* animation removed for performance */
+}
+
+.password-wrapper {
+    display: flex;
+    align-items: center;
+}
+
+.password-container {
+    position: relative;
+    flex: 1;
+}
+
+.toggle-password-container {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100px;
+    height: 80px;
+    margin-left: 20px;
+    background: rgba(217, 217, 217, 0.08);
+    border: 3px solid rgba(255, 255, 255, 0.25);
+    border-radius: 60px;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+
+#login-password {
+    padding-left: 73px;
+}
+
+.toggle-password-container:hover {
+    background: rgba(217, 217, 217, 0.15);
+}
+
+.toggle-password {
+    font-size: 30px;
+    color: white;
+    cursor: pointer;
+}
+
+.button-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    /* gap: 40px; */
+}
+
+.btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 240px;
+    height: 70px;
+    cursor: pointer;
+}
+
+.btn:last-child {
+    margin-top: 40px;
+}
+
+.list-playlist {
+    background: transparent !important;
+    box-shadow: none !important;
+    border: 3px solid transparent !important;
+}
+
+.login-input-focused {
+    border: 3px solid white !important;
+}
+
+.login-icon-focused {
+    border: 3px solid white !important;
+    background: transparent !important;
+    outline: none !important;
+}
+
+.add-user {
+    background-color: white;
+    color: black;
+}
+
+.login-btn-focused {
+    border: 3px solid white !important;
+}
+
+.list-users-btn-focused {
+    border: 3px solid white !important;
+}
+
+.btn.list-users {
+    width: 35%;
+}
+
+.list-users {
+    color: black;
+}
+
+.list-users:hover {
+    background-color: #f4a30d;
+}
+
+.btn i {
+    font-size: 18px;
+}
+
+@media (max-width: 1024px) {
+    .login-form {
+        padding-left: 10%;
+        padding-right: 10%;
+    }
+
+    .login-form h1 {
+        font-size: 40px;
+    }
+
+    .login-form input {
+        font-size: 24px;
+        height: 65px;
+    }
+
+    .btn {
+        width: 200px;
+        height: 60px;
+        font-size: 16px;
+    }
+}
+
+@media (max-width: 768px) {
+    .login-form {
+        padding-left: 5%;
+        padding-right: 5%;
+    }
+
+    .login-form h1 {
+        font-size: 32px;
+    }
+
+    .login-page-form-container {
+        gap: 40px;
+        padding-top: 40px;
+        padding-bottom: 40px;
+    }
+
+    .login-form input {
+        font-size: 20px;
+        height: 55px;
+        padding-left: 50px;
+    }
+
+    .login-input-container img {
+        width: 32px;
+        height: 32px;
+        left: 12px;
+    }
+
+    .btn {
+        width: 100%;
+        height: 55px;
+        font-size: 16px;
+    }
+
+    .btn.list-users {
+        width: 100%;
+    }
+}
+
+@media (max-width: 768px) {
+    .btn {
+        width: 80%;
+        max-width: 220px;
+        height: 48px;
+        font-size: 15px;
+        padding: 0 12px;
+    }
+
+    .login-form button {
+        width: 75%;
+    }
+}
+
+@media (max-width: 480px) {
+    .login-form h1 {
+        font-size: 26px;
+    }
+
+    .login-form input {
+        font-size: 18px;
+        height: 50px;
+    }
+
+    .login-input-container img {
+        width: 28px;
+        height: 28px;
+        left: 10px;
+    }
+
+    .button-container {
+        gap: 20px;
+    }
+
+    .btn {
+        font-size: 14px;
+        height: 48px;
+    }
+}
+
+.login-form-title {
+    padding-top: 20px;
+    text-align: center;
+    font-size: 50px;
+    text-wrap: nowrap;
+    margin-bottom: 10px;
+    padding-bottom: 20px;
+}
+
+.list-users-icon {
+    height: 30px;
+    width: 34px;
+    margin-right: 10px;
+    object-fit: contain;
+}
+
+.list-playlist {
+    display: flex;
+    zoom: 1.2;
+    align-items: center;
+}

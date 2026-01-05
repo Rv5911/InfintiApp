@@ -1,0 +1,225 @@
+.playlistpage-main-container {
+  /* background: url("../assets/bg-gradient.png"); */
+  background-size: cover;
+  background-repeat: no-repeat;
+  height: 100vh;
+  width: 100%;
+  background-size: cover;
+  background-position: center;
+  position: fixed;
+  background-image: url("../assets/bg-img.png");
+  display: flex;
+
+  padding-right: 40px;
+  padding-bottom: 40px;
+  padding-left: 40px;
+  flex-direction: column;
+  animation: fadeInOut 1s ease-in-out;
+  overflow-y: auto;
+
+  color: white;
+}
+
+.playlistpage-main-container::-webkit-scrollbar {
+  display: none;
+}
+
+.playlist-add-user-image {
+  width: 40px;
+  height: 40px;
+  object-fit: contain;
+}
+.playlist-add-user-img {
+  width: 276px;
+  object-fit: contain;
+  height: 139px;
+}
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 40px;
+}
+.playlist-label {
+  font-size: 40px;
+  color: white;
+  font-weight: 500;
+}
+.logo img {
+  height: 60px;
+}
+.pre-user {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  font-size: 30px;
+  font-weight: bold;
+}
+.pre-user img {
+  height: 30px;
+  width: 30px;
+}
+.title {
+  font-size: 30px;
+  font-weight: bold;
+}
+.playlist-card-container {
+  display: grid;
+  padding-top: 40px;
+  row-gap: 20px;
+  column-gap: 40px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  padding-bottom: 100px;
+}
+
+.playlist-card {
+  background: rgba(0, 0, 0, 0.6);
+  border-radius: 40px;
+  border: 5px solid white;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  min-height: 200px;
+  /* Removed constant box-shadow for performance */
+  /* box-shadow: 0px 0px 28px 0px #379bfe80; */
+  transition: transform 0.2s ease, border-color 0.2s ease;
+  will-change: transform;
+}
+.playlist-card:hover {
+  border: 2px solid #ffb400;
+}
+
+.playlist-card img {
+  height: 60px;
+  width: 60px;
+}
+.playlist-card h3 {
+  font-size: 34px;
+  margin-top: 8px;
+  margin-bottom: 8px;
+  cursor: pointer;
+}
+.playlist-card p {
+  font-size: 25px;
+  word-wrap: break-word;
+  margin-bottom: 11px;
+  cursor: pointer;
+}
+
+.playlist-add-user {
+  display: flex;
+  align-items: center;
+  border: 3px solid transparent;
+}
+
+.playlist-add-user p {
+  color: white;
+  font-size: 40px;
+  margin-left: 10px;
+  cursor: pointer;
+}
+
+.playlist-card-focused {
+  border: 5px solid var(--gold) !important;
+  transform: scale(1.1);
+  box-shadow: 0px 0px 20px 0px #379bfe80; /* Only apply shadow on focus if needed */
+  /* removed transition: all */
+}
+
+.listpage-playlist-url {
+  /* width: 100% ; */
+  max-width: 95%;
+  /* max-width: 400px; */
+
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Remove icon inside card */
+.playlist-remove-icon {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  font-size: 24px;
+  display: none;
+  color: #aaa;
+  cursor: pointer;
+  opacity: 0.7;
+  transition: color 0.2s, opacity 0.2s;
+}
+.playlist-remove-icon:hover,
+.playlist-remove-icon-focused {
+  color: #e74c3c;
+  opacity: 1;
+}
+
+/* Make playlist card relative for icon positioning */
+.playlist-card {
+  position: relative;
+}
+
+/* Modal styles */
+.playlist-modal {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.5);
+  animation: fadeInOut 0.2s ease-in-out;
+  z-index: 1000;
+}
+.playlist-modal.hidden {
+  display: none;
+}
+.playlist-modal-content {
+  background: black;
+  padding: 20px;
+  zoom: 1.8;
+  /* color: var(--gold); */
+  border-radius: 10px;
+  min-width: 280px;
+  text-align: center;
+}
+.playlist-modal-actions {
+  margin-top: 15px;
+  display: flex;
+  justify-content: space-around;
+}
+.playlist-remove-btn,
+.playlist-cancel-btn {
+  padding: 8px 16px;
+  border: 3px solid transparent;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: bold;
+}
+.playlist-remove-btn {
+  background: #e74c3c;
+  color: #fff;
+}
+.playlist-cancel-btn {
+  background: white;
+  color: #333;
+}
+
+.playlistpage-main-container .playlist-instructions {
+  position: fixed;
+  bottom: 20px;
+  transform: translateX(-50%);
+  left: 50%;
+  color: white;
+  font-size: 30px;
+  font-weight: 600;
+  z-index: 10;
+  opacity: 0;
+  text-align: center;
+  width: 100%;
+  pointer-events: none;
+}
