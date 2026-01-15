@@ -131,7 +131,14 @@
     font-size: 28px;
     white-space: nowrap;
     overflow: hidden;
+}
+
+.series-channel-category-name span {
+    display: block;
+    width: 100%;
+    overflow: hidden;
     text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .series-channel-category-count {
@@ -181,6 +188,7 @@
     /* transition: transform 0.1s ease, box-shadow 0.1s ease; */
     z-index: 1;
     transform-origin: center center;
+    will-change: transform;
 }
 
 .series-card img {
@@ -263,7 +271,44 @@
     overflow: hidden;
     text-overflow: ellipsis;
     color: white;
+    position: relative;
+    width: 100%;
 }
+
+.series-card-title span {
+    display: block;
+    width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.series-card.focused .series-card-title span.marquee {
+    display: inline-block;
+    padding-left: 0;
+    animation: marquee var(--marquee-duration, 10s) linear infinite;
+    text-overflow: clip;
+    overflow: visible;
+    width: auto;
+}
+
+.series-card-title span::after {
+    content: attr(data-title);
+    padding-left: 50px;
+    /* Gap between loop iterations */
+}
+
+@keyframes marquee {
+    0% {
+        transform: translateX(0%);
+    }
+
+    100% {
+        transform: translateX(calc(-50% - 25px));
+        /* Half of the total width (text + gap) */
+    }
+}
+
 
 .series-card-description {
     font-size: 16px;
@@ -323,6 +368,20 @@
 
 .series-channel-category-active {
     color: var(--gold);
+}
+
+.series-channel-category-focused .series-channel-category-name span.marquee {
+    display: inline-block;
+    padding-left: 0;
+    animation: marquee var(--marquee-duration, 10s) linear infinite;
+    text-overflow: clip;
+    overflow: visible;
+    width: auto;
+}
+
+.series-channel-category-name span.marquee::after {
+    content: attr(data-title);
+    padding-left: 50px;
 }
 
 .series-focused {

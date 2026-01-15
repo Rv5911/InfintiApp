@@ -575,7 +575,9 @@ function LivePage() {
           <div class="lp-category-name-wrapper" style="${
             showLock ? "filter: blur(5px);" : ""
           }">
-            <span class="lp-category-name">${cat.category_name}</span>
+            <span class="lp-category-name" data-title="${cat.category_name}">${
+          cat.category_name
+        }</span>
           </div>
           <span class="lp-category-count" style="${
             showLock ? "filter: blur(5px);" : ""
@@ -719,7 +721,9 @@ function LivePage() {
             </div>
             
             <div class="lp-channel-name-wrapper">
-                <div class="lp-channel-name">${stream.name}</div>
+                <div class="lp-channel-name" data-title="${stream.name}">${
+        stream.name
+      }</div>
             </div>
 
             <div class="lp-channel-buttons">
@@ -993,6 +997,9 @@ function LivePage() {
           name.classList.remove("marquee-active");
           if (name.scrollWidth > name.clientWidth) {
             name.classList.add("marquee-active");
+            // IMPROVED MARQUEE: Set dynamic duration
+            const duration = (name.scrollWidth / 45).toFixed(2);
+            name.style.setProperty("--marquee-duration", `${duration}s`);
           }
         }
       }
@@ -1150,6 +1157,9 @@ function LivePage() {
           name.classList.remove("marquee-active");
           if (name.scrollWidth > name.clientWidth) {
             name.classList.add("marquee-active");
+            // IMPROVED MARQUEE: Set dynamic duration
+            const duration = (name.scrollWidth / 45).toFixed(2);
+            name.style.setProperty("--marquee-duration", `${duration}s`);
           }
         }
 

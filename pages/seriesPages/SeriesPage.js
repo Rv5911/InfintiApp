@@ -1,4 +1,16 @@
 function SeriesPage() {
+  // Prevent duplicate loaders by removing any existing one first
+  const existingLoader = document.getElementById("home-page-loader");
+  if (existingLoader) {
+    existingLoader.remove();
+  }
+
+  // Also hide the global loading overlay if it's visible
+  const loadingOverlay = document.getElementById("loading-overlay");
+  if (loadingOverlay) {
+    loadingOverlay.classList.add("hidden");
+  }
+
   // Create and show custom series page loader immediately (using HomePage loader styles)
   const seriesLoader = document.createElement("div");
   seriesLoader.id = "home-page-loader";
@@ -37,6 +49,7 @@ function SeriesPage() {
   let inSeriesControls = false;
   const SERIES_LONG_PRESS_DURATION = 500;
   let seriesEnterPressTimer = null;
+  let isRenderingSeriesCards = false; // Flag to prevent navigation during card rendering
   // let adultsCategories = [];
   let visibleSeriesCount = 100;
   const SERIES_PAGE_SIZE = 100;
@@ -268,6 +281,7 @@ function SeriesPage() {
   }
 
   function renderSeriesCardsChunked(selectedCategory, targetFocusIndex = -1) {
+    isRenderingSeriesCards = true; // Block navigation during rendering
     const currentCardsContainer = qs(".series-cards-list-container");
     if (!currentCardsContainer || !selectedCategory || !selectedCategory.series)
       return;
@@ -361,6 +375,7 @@ function SeriesPage() {
             focusSeriesCards(targetFocusIndex);
           }
         }
+        isRenderingSeriesCards = false; // Re-enable navigation after rendering completes
         return;
       }
 
@@ -414,7 +429,9 @@ function SeriesPage() {
         <div class="series-card-bottom-content ${
           shouldBlur ? "blurred-text" : ""
         }">
-          <p class="series-card-title">${s.name}</p>
+          <p class="series-card-title"><span data-title="${s.name}">${
+          s.name
+        }</span></p>
           <p class="series-card-description">${s.name}</p>
         </div>
         <div class="series-card-top-content">
@@ -443,8 +460,14 @@ function SeriesPage() {
           focusSeriesCards(targetFocusIndex);
           focusApplied = true;
 
-          // FADE OUT LOADER after focus is applied
+          // FADE OUT LOADERS after focus is applied
           const seriesLoader = document.getElementById("home-page-loader");
+          const globalLoader = document.getElementById("loading-overlay");
+
+          if (globalLoader) {
+            globalLoader.classList.add("hidden");
+          }
+
           if (seriesLoader) {
             seriesLoader.classList.add("fade-out");
             setTimeout(() => {
@@ -612,11 +635,17 @@ function SeriesPage() {
   }
 
   function setSeriesFocus(list, idx, cls) {
+    // Optimization: Find solely the currently focused element to remove class
+    const currentFocused = document.querySelector(`.${cls}`);
+    if (currentFocused) {
+      currentFocused.classList.remove(cls);
+      currentFocused.classList.remove("first-row-card");
+      // Cleanup marquee from previous item
+      const prevSpan = currentFocused.querySelector("span.marquee");
+      if (prevSpan) prevSpan.classList.remove("marquee");
+    }
+
     const arr = Array.isArray(list) ? list : [list];
-    arr.forEach((el) => {
-      el.classList.remove(cls);
-      el.classList.remove("first-row-card");
-    });
     if (idx >= 0 && arr[idx]) {
       const el = arr[idx];
       el.classList.add(cls);
@@ -626,18 +655,64 @@ function SeriesPage() {
         if (el.offsetTop === arr[0].offsetTop) {
           el.classList.add("first-row-card");
         }
+
+        // IMPROVED MARQUEE: Set dynamic duration based on title width
+        const titleSpan = el.querySelector(".series-card-title span");
+        if (titleSpan) {
+          const scrollWidth = titleSpan.scrollWidth;
+          const clientWidth = titleSpan.clientWidth;
+          if (scrollWidth > clientWidth + 2) {
+            // Added 2px buffer
+            // "slightly fast" - base speed 45px/s
+            const duration = (scrollWidth / 45).toFixed(2);
+            titleSpan.style.setProperty("--marquee-duration", `${duration}s`);
+            titleSpan.classList.add("marquee");
+          } else {
+            titleSpan.classList.remove("marquee");
+          }
+        }
       }
 
-      // Robust scrolling for Tizen OS
-      try {
-        el.scrollIntoView({
-          block: "center",
-          behavior: "auto",
-          inline: "nearest",
-        });
-      } catch (e) {
-        // Fallback for older Tizen versions
-        el.scrollIntoView(true);
+      if (cls === "series-channel-category-focused") {
+        const nameSpan = el.querySelector(".series-channel-category-name span");
+        if (nameSpan) {
+          const scrollWidth = nameSpan.scrollWidth;
+          const clientWidth = nameSpan.clientWidth;
+          if (scrollWidth > clientWidth + 2) {
+            // Added 2px buffer
+            const duration = (scrollWidth / 45).toFixed(2);
+            nameSpan.style.setProperty("--marquee-duration", `${duration}s`);
+            nameSpan.classList.add("marquee");
+          } else {
+            nameSpan.classList.remove("marquee");
+          }
+        }
+      }
+
+      // Optimized Scrolling: Only scroll if absolutely necessary
+      const container =
+        el.parentElement ||
+        el.closest(".series-cards-list-container") ||
+        el.closest(".series-channels-list");
+      if (container) {
+        const elRect = el.getBoundingClientRect();
+        const containerRect = container.getBoundingClientRect();
+
+        // Check if out of view
+        const isAbove = elRect.top < containerRect.top;
+        const isBelow = elRect.bottom > containerRect.bottom;
+
+        if (isAbove || isBelow) {
+          try {
+            el.scrollIntoView({
+              block: "center",
+              behavior: "auto",
+              inline: "nearest",
+            });
+          } catch (e) {
+            el.scrollIntoView(true);
+          }
+        }
       }
     }
   }
@@ -808,7 +883,9 @@ function SeriesPage() {
               ? '<i class="fas fa-lock series-category-lock-icon"></i>'
               : ""
           }
-          <p class="series-channel-category-name">${c.name}</p>
+          <p class="series-channel-category-name"><span data-title="${
+            c.name
+          }">${c.name}</span></p>
           <p class="series-channel-category-count">${
             c._seriesCount || c.series.length
           }</p>
@@ -1912,6 +1989,12 @@ function SeriesPage() {
 
     function seriesPageKeydownHandler(e) {
       if (localStorage.getItem("currentPage") !== "seriesPage") return;
+
+      // Block all navigation during card rendering
+      if (isRenderingSeriesCards) {
+        e.preventDefault();
+        return;
+      }
 
       // Handle dropdown open state
       if (isSeriesDropdownOpen) {
