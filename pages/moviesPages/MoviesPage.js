@@ -33,7 +33,7 @@ function MoviesPage() {
     if (!searchQuery.trim() || !selectedCategoryId) return;
 
     const selectedCategory = window.moviesCategories.find(
-      (c) => c.id === selectedCategoryId
+      (c) => c.id === selectedCategoryId,
     );
     if (!selectedCategory || !selectedCategory._sortedCache) return;
 
@@ -80,11 +80,11 @@ function MoviesPage() {
   const shouldBlurAdultCard = (movie) => {
     // Don't blur if the adult category is already unlocked
     const currentCategory = window.moviesCategories.find(
-      (c) => c.id === selectedCategoryId
+      (c) => c.id === selectedCategoryId,
     );
     if (currentCategory && isMovieAdultCategory(currentCategory.name)) {
       const isUnlocked = unlockedMovieAdultCatIds.has(
-        String(selectedCategoryId)
+        String(selectedCategoryId),
       );
       return !isUnlocked; // Only blur if category is locked
     }
@@ -96,13 +96,14 @@ function MoviesPage() {
   };
 
   let visibleCount = 100;
+  let categoryChunk = 1;
   const PAGE_SIZE = 100;
 
   const currentPlaylistName = JSON.parse(
-    localStorage.getItem("selectedPlaylist")
+    localStorage.getItem("selectedPlaylist"),
   ).playlistName;
   const currentPlaylist = JSON.parse(
-    localStorage.getItem("playlistsData")
+    localStorage.getItem("playlistsData"),
   ).filter((pl) => pl.playlistName === currentPlaylistName)[0];
 
   const favoritesMoviesIds = Array.isArray(currentPlaylist.favouriteMovies)
@@ -110,7 +111,7 @@ function MoviesPage() {
     : [];
 
   const allFavoritesMovies = window.allMoviesStreams.filter((m) =>
-    favoritesMoviesIds.includes(m.stream_id)
+    favoritesMoviesIds.includes(m.stream_id),
   );
 
   const allContiueWatchMovies = (() => {
@@ -131,7 +132,7 @@ function MoviesPage() {
     const continueMovies = window.allMoviesStreams
       .map((m) => {
         const cw = continueWatchingData.find(
-          (item) => Number(item.itemId) === Number(m.stream_id)
+          (item) => Number(item.itemId) === Number(m.stream_id),
         );
 
         if (cw) {
@@ -172,8 +173,8 @@ function MoviesPage() {
     qsa(".movie-channel-category").forEach((el) =>
       el.classList.toggle(
         "movie-channel-category-active",
-        Number(el.dataset.categoryId) === Number(selectedCategoryId)
-      )
+        Number(el.dataset.categoryId) === Number(selectedCategoryId),
+      ),
     );
 
   const clearHeaderFocus = () => {
@@ -245,15 +246,21 @@ function MoviesPage() {
   async function renderCardsChunked(selectedCategory) {
     isRenderingCards = true; // Block navigation during rendering
     const currentCardsContainer = qs(".movies-cards-list-container");
-    if (!currentCardsContainer || !selectedCategory || !selectedCategory.movies)
+    if (
+      !currentCardsContainer ||
+      !selectedCategory ||
+      !selectedCategory.movies
+    ) {
+      isRenderingCards = false;
       return;
+    }
 
     const isAdultSelectedAgain = isMovieAdultCategory(
-      selectedCategory && selectedCategory.name
+      selectedCategory && selectedCategory.name,
     );
     const parentalLockEnabledAgain = !!currentPlaylist.parentalPassword;
     const isUnlockedAgain = unlockedMovieAdultCatIds.has(
-      String(selectedCategoryId)
+      String(selectedCategoryId),
     );
 
     if (parentalLockEnabledAgain && isAdultSelectedAgain && !isUnlockedAgain) {
@@ -266,7 +273,7 @@ function MoviesPage() {
         setFocus(
           qsa(".movie-channel-category"),
           focusedChannelIndex,
-          "movie-channel-category-focused"
+          "movie-channel-category-focused",
         );
       }
       return;
@@ -284,23 +291,27 @@ function MoviesPage() {
     if (searchQuery.trim()) {
       moviesToShow = (selectedCategory._sortedCache || []).slice(
         0,
-        Math.max(visibleCount, 30)
+        Math.max(visibleCount, 30),
       );
     } else {
       moviesToShow = selectedCategory._sortedCache.slice(0, visibleCount);
     }
+
     if (!moviesToShow.length) {
       const container = document.querySelector(".movies-cards-list-container");
       if (container) {
         container.style.display = "flex";
         container.innerHTML = `
-        <div class="movie-no-data">
-          <p>No results found for "${
-            searchQuery.trim() || selectedCategory.name
-          }"</p>
-        </div>
-      `;
+            <div class="movie-no-data">
+              <p>No results found for "${
+                searchQuery.trim() || selectedCategory.name
+              }"</p>
+            </div>
+          `;
       }
+      // Force focus back to categories since no cards are available
+      focusChannels(focusedChannelIndex);
+      isRenderingCards = false;
       return;
     }
 
@@ -326,7 +337,7 @@ function MoviesPage() {
           setFocus(
             qsa(".movie-channel-category"),
             focusedChannelIndex,
-            "movie-channel-category-focused"
+            "movie-channel-category-focused",
           );
         }
         isRenderingCards = false; // Re-enable navigation after rendering completes
@@ -335,7 +346,7 @@ function MoviesPage() {
 
       const chunk = moviesToShow.slice(
         currentIndex,
-        currentIndex + CARD_CHUNK_SIZE
+        currentIndex + CARD_CHUNK_SIZE,
       );
       const fragment = document.createDocumentFragment();
 
@@ -384,8 +395,8 @@ function MoviesPage() {
           shouldBlur ? "blurred-text" : ""
         }">
           <p class="movies-card-title"><span data-title="${m.name}">${
-          m.name
-        }</span></p>
+            m.name
+          }</span></p>
           <p class="movies-card-description">${m.name}</p>
         </div>
         <div class="movie-card-top-content">
@@ -490,14 +501,14 @@ function MoviesPage() {
       ];
 
       const cleanedCategories = categoriesWithMovies.filter(
-        (c) => c.id !== -1 && c.id !== -2 && c.id !== -3
+        (c) => c.id !== -1 && c.id !== -2 && c.id !== -3,
       );
 
       window.moviesCategories = [...specialCategories, ...cleanedCategories];
       window.allMovies = allMovies;
 
       const firstWithMovies = window.moviesCategories.find(
-        (c) => c._movieCount > 0
+        (c) => c._movieCount > 0,
       );
       selectedCategoryId = -3;
 
@@ -519,7 +530,7 @@ function MoviesPage() {
   // Helper function to sync favorites data
   function syncFavoritesData() {
     const playlist = JSON.parse(localStorage.getItem("playlistsData")).find(
-      (pl) => pl.playlistName === currentPlaylistName
+      (pl) => pl.playlistName === currentPlaylistName,
     );
 
     if (playlist) {
@@ -531,10 +542,12 @@ function MoviesPage() {
       const favCategory = window.moviesCategories.find((c) => c.id === -1);
       if (favCategory) {
         const updatedFavMovies = window.allMoviesStreams.filter((m) =>
-          favoritesMoviesIds.includes(m.stream_id)
+          favoritesMoviesIds.includes(m.stream_id),
         );
         favCategory.movies = updatedFavMovies;
         favCategory._movieCount = updatedFavMovies.length;
+        delete favCategory._sortedCache;
+        delete favCategory._lastSortValue;
       }
     }
   }
@@ -558,16 +571,14 @@ function MoviesPage() {
   }
 
   function setFocus(list, idx, cls) {
-    // Optimization: Find solely the currently focused element to remove class
-    // This avoids O(N) iteration which is slow on Tizen
-    const currentFocused = document.querySelector(`.${cls}`);
-    if (currentFocused) {
-      currentFocused.classList.remove(cls);
-      currentFocused.classList.remove("first-row-card");
-      // Cleanup marquee from previous item
-      const prevSpan = currentFocused.querySelector("span.marquee");
-      if (prevSpan) prevSpan.classList.remove("marquee");
-    }
+    const allFocused = document.querySelectorAll(`.${cls}`);
+    allFocused.forEach((el) => {
+      el.classList.remove(cls);
+      el.classList.remove("first-row-card");
+      // Cleanup marquee from item
+      const span = el.querySelector("span.marquee");
+      if (span) span.classList.remove("marquee");
+    });
 
     const arr = Array.isArray(list) ? list : [list];
     if (idx >= 0 && arr[idx]) {
@@ -615,27 +626,17 @@ function MoviesPage() {
 
       // Optimized Scrolling: Only scroll if absolutely necessary
       const container =
-        el.parentElement ||
         el.closest(".movies-cards-list-container") ||
         el.closest(".movies-channels-list");
       if (container) {
-        const elRect = el.getBoundingClientRect();
-        const containerRect = container.getBoundingClientRect();
-
-        // Check if out of view
-        const isAbove = elRect.top < containerRect.top;
-        const isBelow = elRect.bottom > containerRect.bottom;
-
-        if (isAbove || isBelow) {
-          try {
-            el.scrollIntoView({
-              block: "center",
-              behavior: "auto",
-              inline: "nearest",
-            });
-          } catch (e) {
-            el.scrollIntoView(true);
-          }
+        try {
+          el.scrollIntoView({
+            block: "nearest",
+            behavior: "auto",
+            inline: "nearest",
+          });
+        } catch (e) {
+          el.scrollIntoView(true);
         }
       }
     }
@@ -779,7 +780,7 @@ function MoviesPage() {
       ) {
         // Original card still exists, focus on it
         const cardIndex = Array.from(currentCards).indexOf(
-          selectedCardForDropdown
+          selectedCardForDropdown,
         );
         if (cardIndex >= 0) {
           focusedCardIndex = cardIndex;
@@ -801,7 +802,7 @@ function MoviesPage() {
         setFocus(
           categories,
           focusedChannelIndex,
-          "movie-channel-category-focused"
+          "movie-channel-category-focused",
         );
       }
     }
@@ -828,7 +829,7 @@ function MoviesPage() {
     // Update the heart icon on the current card
     const currentCards = qsa(".movies-card");
     const currentCard = currentCards.find(
-      (card) => Number(card.dataset.movieId) === Number(movieId)
+      (card) => Number(card.dataset.movieId) === Number(movieId),
     );
 
     if (currentCard) {
@@ -867,7 +868,7 @@ function MoviesPage() {
       // Get current playlists data
       const playlistsData = JSON.parse(localStorage.getItem("playlistsData"));
       const playlistIndex = playlistsData.findIndex(
-        (pl) => pl.playlistName === currentPlaylistName
+        (pl) => pl.playlistName === currentPlaylistName,
       );
 
       if (playlistIndex === -1) return;
@@ -879,7 +880,7 @@ function MoviesPage() {
         const originalLength = playlist.continueWatchingMovies.length;
         playlist.continueWatchingMovies =
           playlist.continueWatchingMovies.filter(
-            (item) => Number(item.itemId) !== Number(movieId)
+            (item) => Number(item.itemId) !== Number(movieId),
           );
 
         // Only proceed if something was actually removed
@@ -899,9 +900,22 @@ function MoviesPage() {
       const continueCategory = window.moviesCategories.find((c) => c.id === -2);
       if (continueCategory) {
         continueCategory.movies = continueCategory.movies.filter(
-          (m) => Number(m.stream_id) !== Number(movieId)
+          (m) => Number(m.stream_id) !== Number(movieId),
         );
         continueCategory._movieCount = continueCategory.movies.length;
+        delete continueCategory._sortedCache;
+        delete continueCategory._lastSortValue;
+
+        // Update UI count immediately
+        const contCatEl = qs('.movie-channel-category[data-category-id="-2"]');
+        if (contCatEl) {
+          const countEl = contCatEl.querySelector(
+            ".movie-channel-category-count",
+          );
+          if (countEl) {
+            countEl.textContent = continueCategory.movies.length;
+          }
+        }
       }
 
       // Update global continue watching array
@@ -909,7 +923,7 @@ function MoviesPage() {
         window.allMoviesStreams
           .map((m) => {
             const cw = (playlist.continueWatchingMovies || []).find(
-              (item) => Number(item.itemId) === Number(m.stream_id)
+              (item) => Number(item.itemId) === Number(m.stream_id),
             );
             if (cw) {
               const duration = Number(cw.duration) || 0;
@@ -956,7 +970,7 @@ function MoviesPage() {
           if (remainingCards.length > 0 && wasFocused) {
             focusedCardIndex = Math.min(
               focusedCardIndex,
-              remainingCards.length - 1
+              remainingCards.length - 1,
             );
             setFocus(remainingCards, focusedCardIndex, "focused");
           } else if (remainingCards.length === 0) {
@@ -973,18 +987,18 @@ function MoviesPage() {
             setFocus(
               qsa(".movie-channel-category"),
               focusedChannelIndex,
-              "movie-channel-category-focused"
+              "movie-channel-category-focused",
             );
           }
         }
 
         // Update category count in sidebar
         const continueWatchingEl = qs(
-          '.movie-channel-category[data-category-id="-2"]'
+          '.movie-channel-category[data-category-id="-2"]',
         );
         if (continueWatchingEl) {
           const countEl = continueWatchingEl.querySelector(
-            ".movie-channel-category-count"
+            ".movie-channel-category-count",
           );
           if (countEl) countEl.textContent = continueCategory.movies.length;
         }
@@ -1023,7 +1037,7 @@ function MoviesPage() {
     if (validChannels.length > 0) {
       // Find the index in the original array that corresponds to the first valid channel
       validIndex = Array.from(channelList).indexOf(
-        validChannels[Math.min(idx, validChannels.length - 1)]
+        validChannels[Math.min(idx, validChannels.length - 1)],
       );
     } else {
       validIndex = 0;
@@ -1033,9 +1047,9 @@ function MoviesPage() {
       channelList,
       (focusedChannelIndex = Math.max(
         0,
-        Math.min(validIndex, channelList.length - 1)
+        Math.min(validIndex, channelList.length - 1),
       )),
-      "movie-channel-category-focused"
+      "movie-channel-category-focused",
     );
   }
 
@@ -1106,7 +1120,7 @@ function MoviesPage() {
 
       // Filter movies based on search query
       const filteredMovies = loadedCategory.movies.filter(
-        (movie) => movie && movie.name && movie.name.toLowerCase().includes(q)
+        (movie) => movie && movie.name && movie.name.toLowerCase().includes(q),
       );
 
       if (filteredMovies.length === 0) return [];
@@ -1150,8 +1164,8 @@ function MoviesPage() {
               : ""
           }
           <p class="movie-channel-category-name"><span data-title="${c.name}">${
-          c.name
-        }</span></p> 
+            c.name
+          }</span></p> 
           <p class="movie-channel-category-count">${
             c._movieCount || c.movies.length
           }</p>
@@ -1237,7 +1251,7 @@ function MoviesPage() {
 
       case "top":
         return [...movies].sort(
-          (a, b) => (b.rating_5based || 0) - (a.rating_5based || 0)
+          (a, b) => (b.rating_5based || 0) - (a.rating_5based || 0),
         );
 
       default:
@@ -1258,7 +1272,7 @@ function MoviesPage() {
     if (cardsContainer)
       cardsContainer.classList.toggle(
         "movies-cards-full-width",
-        !isSidebarVisible
+        !isSidebarVisible,
       );
 
     if (toggleBtn) {
@@ -1295,7 +1309,7 @@ function MoviesPage() {
       (!Array.isArray(filtered) || filtered.length === 0)
     ) {
       const selectedCategory = window.moviesCategories.find(
-        (c) => c.id === selectedCategoryId
+        (c) => c.id === selectedCategoryId,
       );
       const categoryName = selectedCategory
         ? selectedCategory.name
@@ -1316,7 +1330,7 @@ function MoviesPage() {
         setFocus(
           qsa(".movie-channel-category"),
           focusedChannelIndex,
-          "movie-channel-category-focused"
+          "movie-channel-category-focused",
         );
       }
       return;
@@ -1332,7 +1346,7 @@ function MoviesPage() {
     // Select the appropriate category to display
     if (Array.isArray(categoriesToShow) && categoriesToShow.length > 0) {
       selectedCategory = categoriesToShow.find(
-        (c) => c.id === selectedCategoryId
+        (c) => c.id === selectedCategoryId,
       );
       if (!selectedCategory && categoriesToShow.length > 0) {
         selectedCategory = categoriesToShow[0];
@@ -1344,7 +1358,7 @@ function MoviesPage() {
 
     if (!selectedCategory) {
       selectedCategory = window.moviesCategories.find(
-        (c) => c.id === selectedCategoryId
+        (c) => c.id === selectedCategoryId,
       );
     }
 
@@ -1363,7 +1377,7 @@ function MoviesPage() {
 
       container.innerHTML = `
       <div class="movies-channels-list ${sidebarHiddenClass}">
-        ${renderCategories(categoriesToShow)}
+        ${renderCategories(categoriesToShow.slice(0, categoryChunk * PAGE_SIZE))}
       </div>
       <div class="movies-cards-list-container ${cardsFullWidthClass}">
         <div class="cards-loading-spinner"><div class="spinner"></div></div>
@@ -1374,12 +1388,14 @@ function MoviesPage() {
       // Also ensure sidebar visibility class is maintained
       const catList = qs(".movies-channels-list");
       catList.classList.toggle("movies-channels-hidden", !isSidebarVisible);
-      catList.innerHTML = renderCategories(filterCategoriesList());
+      catList.innerHTML = renderCategories(
+        filterCategoriesList().slice(0, categoryChunk * PAGE_SIZE),
+      );
 
       const cardsContainer = qs(".movies-cards-list-container");
       cardsContainer.classList.toggle(
         "movies-cards-full-width",
-        !isSidebarVisible
+        !isSidebarVisible,
       );
 
       // Show spinner while loading new category
@@ -1391,7 +1407,7 @@ function MoviesPage() {
       selectedCategory && isMovieAdultCategory(selectedCategory.name);
     const parentalLockEnabled = !!currentPlaylist.parentalPassword;
     const isSelectedUnlocked = unlockedMovieAdultCatIds.has(
-      String(selectedCategoryId)
+      String(selectedCategoryId),
     );
 
     if (
@@ -1411,7 +1427,7 @@ function MoviesPage() {
         setFocus(
           qsa(".movie-channel-category"),
           focusedChannelIndex,
-          "movie-channel-category-focused"
+          "movie-channel-category-focused",
         );
       }
       return;
@@ -1486,7 +1502,7 @@ function MoviesPage() {
                   setFocus(
                     qsa(".movie-channel-category"),
                     focusedChannelIndex,
-                    "movie-channel-category-focused"
+                    "movie-channel-category-focused",
                   );
                   setFlags(true, false, false);
                 }
@@ -1497,12 +1513,12 @@ function MoviesPage() {
             setFocus(
               qsa(".movie-channel-category"),
               focusedChannelIndex,
-              "movie-channel-category-focused"
+              "movie-channel-category-focused",
             );
             setFlags(true, false, false);
           },
           currentPlaylist,
-          "moviesPage"
+          "moviesPage",
         );
         return;
       }
@@ -1529,7 +1545,7 @@ function MoviesPage() {
         setFocus(
           qsa(".movie-channel-category"),
           focusedChannelIndex,
-          "movie-channel-category-focused"
+          "movie-channel-category-focused",
         );
         setFlags(true, false, false);
       }, 10);
@@ -1541,19 +1557,19 @@ function MoviesPage() {
       const movieId = Number(card.dataset.movieId);
       const allMoviesData = window.allMovies || [];
       const selectedMovieObj = allMoviesData.find(
-        (m) => Number(m.stream_id) === movieId
+        (m) => Number(m.stream_id) === movieId,
       );
 
       if (selectedMovieObj) {
         const parentalLockEnabled = !!currentPlaylist.parentalPassword;
         const isAdultMovie = isMovieAdult(selectedMovieObj);
         const currentCategory = window.moviesCategories.find(
-          (c) => c.id === selectedCategoryId
+          (c) => c.id === selectedCategoryId,
         );
         const isAdultCategory =
           currentCategory && isMovieAdultCategory(currentCategory.name);
         const isAdultCategoryUnlocked = unlockedMovieAdultCatIds.has(
-          String(selectedCategoryId)
+          String(selectedCategoryId),
         );
 
         const shouldAskForPin =
@@ -1575,7 +1591,7 @@ function MoviesPage() {
               localStorage.setItem("currentPage", "moviesDetailPage");
               localStorage.setItem(
                 "selectedMovieData",
-                JSON.stringify(selectedMovieObj)
+                JSON.stringify(selectedMovieObj),
               );
               document.querySelector("#loading-progress").style.display =
                 "none";
@@ -1588,7 +1604,7 @@ function MoviesPage() {
               }
             },
             currentPlaylist,
-            "moviesPage"
+            "moviesPage",
           );
           return;
         } else {
@@ -1599,7 +1615,7 @@ function MoviesPage() {
           localStorage.setItem("currentPage", "moviesDetailPage");
           localStorage.setItem(
             "selectedMovieData",
-            JSON.stringify(selectedMovieObj)
+            JSON.stringify(selectedMovieObj),
           );
           document.querySelector("#loading-progress").style.display = "none";
           Router.showPage("movieDetail");
@@ -1666,7 +1682,7 @@ function MoviesPage() {
         const cardsNeededToShow = focusedCardIndex + 1;
         visibleCount = Math.max(
           PAGE_SIZE,
-          Math.ceil(cardsNeededToShow / PAGE_SIZE) * PAGE_SIZE
+          Math.ceil(cardsNeededToShow / PAGE_SIZE) * PAGE_SIZE,
         );
 
         // Load the category movies first
@@ -1694,7 +1710,7 @@ function MoviesPage() {
             // REMOVE OVERLAY with slight delay for smooth transition
             setTimeout(() => {
               const overlay = document.getElementById(
-                "movies-focus-restore-overlay"
+                "movies-focus-restore-overlay",
               );
               if (overlay) overlay.remove();
             }, 300);
@@ -1715,7 +1731,7 @@ function MoviesPage() {
             // REMOVE OVERLAY with slight delay
             setTimeout(() => {
               const overlay = document.getElementById(
-                "movies-focus-restore-overlay"
+                "movies-focus-restore-overlay",
               );
               if (overlay) overlay.remove();
             }, 300);
@@ -1729,18 +1745,32 @@ function MoviesPage() {
         localStorage.removeItem("moviesCategoryIndex");
         localStorage.removeItem("moviesCardIndex");
       } else {
-        // Normal initialization - Focus on search input
+        // Normal initialization - Focus on first card instead of search
+        selectedCategoryId = -3; // Default to "All"
+        focusedChannelIndex = 0;
+        focusedCardIndex = 0;
+        inChannelList = false; // Aim for card focus
+
         renderMovies();
         highlightActiveCategory();
 
-        // Focus on header search input
-        setTimeout(() => {
-          const searchInput = qs("#movies-header-search");
-          if (searchInput) {
-            searchInput.classList.add("movies-header-search-input-focused");
-            setFlags(false, true, false); // inSearch = true
+        // Wait for cards to render and focus on the first one
+        const initialFocusCheck = (attempts = 0) => {
+          const cards = qsa(".movies-card");
+          const MAX_ATTEMPTS = 30; // 6 seconds
+
+          if (cards.length > 0) {
+            setFocus(cards, 0, "focused");
+            focusedCardIndex = 0;
+            setFlags(false, false, false);
+          } else if (attempts < MAX_ATTEMPTS) {
+            setTimeout(() => initialFocusCheck(attempts + 1), 200);
+          } else {
+            // Fallback: If no cards appear (e.g. empty favorites), focus on category
+            focusChannels(0);
           }
-        }, 100);
+        };
+        initialFocusCheck();
       }
     }, 10);
 
@@ -1749,7 +1779,7 @@ function MoviesPage() {
       if (localStorage.getItem("currentPage") !== "moviesPage") return;
 
       const playlist = JSON.parse(localStorage.getItem("playlistsData")).find(
-        (pl) => pl.playlistName === currentPlaylistName
+        (pl) => pl.playlistName === currentPlaylistName,
       );
       if (!playlist) return;
 
@@ -1767,9 +1797,9 @@ function MoviesPage() {
         "playlistsData",
         JSON.stringify(
           JSON.parse(localStorage.getItem("playlistsData")).map((pl) =>
-            pl.playlistName === currentPlaylistName ? playlist : pl
-          )
-        )
+            pl.playlistName === currentPlaylistName ? playlist : pl,
+          ),
+        ),
       );
 
       favoritesMoviesIds.length = 0;
@@ -1779,7 +1809,7 @@ function MoviesPage() {
 
       Toaster.showToast(
         isAdding ? "success" : "error",
-        isAdding ? "Added to Favorites" : "Removed from Favorites"
+        isAdding ? "Added to Favorites" : "Removed from Favorites",
       );
     }
 
@@ -1792,7 +1822,7 @@ function MoviesPage() {
       if (favCategory) {
         if (isAdding) {
           const movieToAdd = window.allMoviesStreams.find(
-            (m) => m.stream_id === movieId
+            (m) => m.stream_id === movieId,
           );
           if (
             movieToAdd &&
@@ -1802,18 +1832,20 @@ function MoviesPage() {
           }
         } else {
           favCategory.movies = favCategory.movies.filter(
-            (m) => m.stream_id !== movieId
+            (m) => m.stream_id !== movieId,
           );
         }
 
         // Update the count property
         favCategory._movieCount = favCategory.movies.length;
+        delete favCategory._sortedCache;
+        delete favCategory._lastSortValue;
 
         // Update UI count immediately
         const favCatEl = qs('.movie-channel-category[data-category-id="-1"]');
         if (favCatEl) {
           const countEl = favCatEl.querySelector(
-            ".movie-channel-category-count"
+            ".movie-channel-category-count",
           );
           if (countEl) {
             countEl.textContent = favCategory.movies.length;
@@ -1874,7 +1906,7 @@ function MoviesPage() {
               if (remainingCards.length > 0) {
                 focusedCardIndex = Math.min(
                   focusedCardIndex,
-                  remainingCards.length - 1
+                  remainingCards.length - 1,
                 );
                 setFocus(remainingCards, focusedCardIndex, "focused");
               } else {
@@ -1891,7 +1923,7 @@ function MoviesPage() {
                 setFocus(
                   qsa(".movie-channel-category"),
                   focusedChannelIndex,
-                  "movie-channel-category-focused"
+                  "movie-channel-category-focused",
                 );
               }
             }
@@ -2147,7 +2179,7 @@ function MoviesPage() {
             setFocus(
               channelList,
               --focusedChannelIndex,
-              "movie-channel-category-focused"
+              "movie-channel-category-focused",
             );
           }
           e.preventDefault();
@@ -2183,24 +2215,27 @@ function MoviesPage() {
             setFocus(
               channelList,
               ++focusedChannelIndex,
-              "movie-channel-category-focused"
+              "movie-channel-category-focused",
             );
             e.preventDefault();
             return;
           } else {
-            const filtered = getFilteredCategories();
-            if (channelList.length < filtered.length) {
-              const moreToShow = channelList.length + PAGE_SIZE;
-              const limited = filtered.slice(0, moreToShow);
+            const allFiltered = filterCategoriesList();
+            if (channelList.length < allFiltered.length) {
+              categoryChunk++;
+              const limited = allFiltered.slice(0, categoryChunk * PAGE_SIZE);
               qs(".movies-channels-list").innerHTML = renderCategories(limited);
               highlightActiveCategory();
-              const listContainer = qs(".movies-channels-list");
-              const lastItem = qsa(".movie-channel-category")[
-                focusedChannelIndex
-              ];
-              if (lastItem && listContainer) {
-                listContainer.scrollTop = lastItem.offsetTop;
-              }
+
+              // Move to next item after rendering
+              focusedChannelIndex++;
+              const newChannelList = qsa(".movie-channel-category");
+              setFocus(
+                newChannelList,
+                focusedChannelIndex,
+                "movie-channel-category-focused",
+              );
+
               e.preventDefault();
               return;
             }
@@ -2222,7 +2257,7 @@ function MoviesPage() {
           if (isLastRow) {
             // We're in the last row, need to load more cards
             const category = window.moviesCategories.find(
-              (c) => c.id === selectedCategoryId
+              (c) => c.id === selectedCategoryId,
             );
             if (!category) {
               e.preventDefault();
@@ -2249,7 +2284,7 @@ function MoviesPage() {
               // FIXED: Get next chunk from SORTED movies array
               const newMovies = sortedMovies.slice(
                 cards.length,
-                cards.length + PAGE_SIZE
+                cards.length + PAGE_SIZE,
               );
               const fragment = document.createDocumentFragment();
               const showFavHeartIcon = Number(selectedCategoryId) === -1;
@@ -2273,10 +2308,10 @@ function MoviesPage() {
                 div.innerHTML = `
           <div class="movie-card-image-wrapper">
             <img src="${m.stream_icon || "/assets/noImageFound.png"}" alt="${
-                  m.name
-                }" onerror="this.onerror=null; this.src='/assets/noImageFound.png';" loading="lazy" class="movies-card-img ${
-                  shouldBlur ? "blurred-image" : ""
-                }"/>
+              m.name
+            }" onerror="this.onerror=null; this.src='/assets/noImageFound.png';" loading="lazy" class="movies-card-img ${
+              shouldBlur ? "blurred-image" : ""
+            }"/>
           </div>
           <div class="movie-card-bottom-content ${
             shouldBlur ? "blurred-text" : ""
@@ -2286,10 +2321,10 @@ function MoviesPage() {
           </div>
           <div class="movie-card-top-content">
             <p class="movie-card-rating ${shouldBlur ? "blurred-text" : ""}">${
-                  isNaN(m.rating_5based)
-                    ? 0
-                    : Math.min(5, parseInt(m.rating_5based, 10))
-                }</p>
+              isNaN(m.rating_5based)
+                ? 0
+                : Math.min(5, parseInt(m.rating_5based, 10))
+            }</p>
             ${
               showFavHeartIcon ||
               (Array.isArray(favoritesMoviesIds) &&
@@ -2321,7 +2356,7 @@ function MoviesPage() {
                 const newRowStartIndex = cards.length;
                 const newRowEndIndex = Math.min(
                   newRowStartIndex + cardsPerRow - 1,
-                  newCards.length - 1
+                  newCards.length - 1,
                 );
                 nextFocusIndex = newRowEndIndex;
               }
@@ -2352,7 +2387,7 @@ function MoviesPage() {
           // If same column doesn't exist, move to last card in next row
           const nextRowEndIndex = Math.min(
             nextRowStartIndex + cardsPerRow - 1,
-            cards.length - 1
+            cards.length - 1,
           );
           if (
             nextRowEndIndex >= nextRowStartIndex &&
@@ -2386,13 +2421,9 @@ function MoviesPage() {
             // Always focus on first card (index 0) regardless of blur status
             focusCards(0);
           } else {
-            // No cards available, go to search
-            document
-              .querySelectorAll(".movie-channel-category-focused")
-              .forEach((el) => {
-                el.classList.remove("movie-channel-category-focused");
-              });
-            focusSearch();
+            // No cards available, stay on category
+            e.preventDefault();
+            return;
           }
           e.preventDefault();
           return;
@@ -2407,7 +2438,7 @@ function MoviesPage() {
           } else if (focusedCardIndex === cards.length - 1) {
             // We are at the last card, check if we can load more
             const category = window.moviesCategories.find(
-              (c) => c.id === selectedCategoryId
+              (c) => c.id === selectedCategoryId,
             );
 
             if (category) {
@@ -2427,7 +2458,7 @@ function MoviesPage() {
                 // Load next chunk
                 const newMovies = sortedMovies.slice(
                   cards.length,
-                  cards.length + PAGE_SIZE
+                  cards.length + PAGE_SIZE,
                 );
 
                 const fragment = document.createDocumentFragment();
@@ -2453,10 +2484,10 @@ function MoviesPage() {
                   div.innerHTML = `
             <div class="movie-card-image-wrapper">
               <img src="${m.stream_icon || "/assets/noImageFound.png"}" alt="${
-                    m.name
-                  }" onerror="this.onerror=null; this.src='/assets/noImageFound.png';" loading="lazy" class="movies-card-img ${
-                    shouldBlur ? "blurred-image" : ""
-                  }"/>
+                m.name
+              }" onerror="this.onerror=null; this.src='/assets/noImageFound.png';" loading="lazy" class="movies-card-img ${
+                shouldBlur ? "blurred-image" : ""
+              }"/>
             </div>
             <div class="movie-card-bottom-content ${
               shouldBlur ? "blurred-text" : ""
@@ -2468,10 +2499,10 @@ function MoviesPage() {
               <p class="movie-card-rating ${
                 shouldBlur ? "blurred-text" : ""
               }">${
-                    isNaN(m.rating_5based)
-                      ? 0
-                      : Math.min(5, parseInt(m.rating_5based, 10))
-                  }</p>
+                isNaN(m.rating_5based)
+                  ? 0
+                  : Math.min(5, parseInt(m.rating_5based, 10))
+              }</p>
               ${
                 showFavHeartIcon ||
                 (Array.isArray(favoritesMoviesIds) &&
@@ -2560,7 +2591,7 @@ function MoviesPage() {
           if (sidebar.style.display === "none") {
             // Refresh sidebar with current movies page data before opening
             const sidebarContainer = document.querySelector(
-              ".sidebar-container-movie"
+              ".sidebar-container-movie",
             );
             if (sidebarContainer) {
               // Re-render sidebar with fresh movies data
@@ -2616,7 +2647,7 @@ function MoviesPage() {
                     setFocus(
                       channelList,
                       focusedChannelIndex,
-                      "movie-channel-category-focused"
+                      "movie-channel-category-focused",
                     );
                     setFlags(true, false, false);
                   }
@@ -2626,12 +2657,12 @@ function MoviesPage() {
                 setFocus(
                   channelList,
                   focusedChannelIndex,
-                  "movie-channel-category-focused"
+                  "movie-channel-category-focused",
                 );
                 setFlags(true, false, false);
               },
               currentPlaylist,
-              "moviesPage"
+              "moviesPage",
             );
             e.preventDefault();
             return;
@@ -2697,19 +2728,19 @@ function MoviesPage() {
             const movieId = Number(card.dataset.movieId);
             const allMoviesData = window.allMovies || [];
             const selectedMovieObj = allMoviesData.find(
-              (m) => Number(m.stream_id) === movieId
+              (m) => Number(m.stream_id) === movieId,
             );
 
             if (selectedMovieObj) {
               const parentalLockEnabled = !!currentPlaylist.parentalPassword;
               const isAdultMovie = isMovieAdult(selectedMovieObj);
               const currentCategory = window.moviesCategories.find(
-                (c) => c.id === selectedCategoryId
+                (c) => c.id === selectedCategoryId,
               );
               const isAdultCategory =
                 currentCategory && isMovieAdultCategory(currentCategory.name);
               const isAdultCategoryUnlocked = unlockedMovieAdultCatIds.has(
-                String(selectedCategoryId)
+                String(selectedCategoryId),
               );
 
               const shouldAskForPin =
@@ -2728,7 +2759,7 @@ function MoviesPage() {
                     localStorage.setItem("currentPage", "moviesDetailPage");
                     localStorage.setItem(
                       "selectedMovieData",
-                      JSON.stringify(selectedMovieObj)
+                      JSON.stringify(selectedMovieObj),
                     );
                     document.querySelector("#loading-progress").style.display =
                       "none";
@@ -2741,7 +2772,7 @@ function MoviesPage() {
                     }
                   },
                   currentPlaylist,
-                  "moviesPage"
+                  "moviesPage",
                 );
               } else {
                 // Store current focus state before navigating
@@ -2751,7 +2782,7 @@ function MoviesPage() {
                 localStorage.setItem("currentPage", "moviesDetailPage");
                 localStorage.setItem(
                   "selectedMovieData",
-                  JSON.stringify(selectedMovieObj)
+                  JSON.stringify(selectedMovieObj),
                 );
                 document.querySelector("#loading-progress").style.display =
                   "none";
@@ -2809,7 +2840,7 @@ function MoviesPage() {
             visibleCount = 30; // Limited for Tizen performance
             // Clear cache to force fresh search
             const selectedCategory = window.moviesCategories.find(
-              (c) => c.id === selectedCategoryId
+              (c) => c.id === selectedCategoryId,
             );
             if (selectedCategory) {
               delete selectedCategory._sortedCache;
@@ -2838,10 +2869,13 @@ function MoviesPage() {
     if (catSearchElement) {
       catSearchElement.addEventListener("input", (e) => {
         searchCategoryQuery = e.target.value;
+        categoryChunk = 1; // Reset pagination on search
         // Re-render categories
         const catList = qs(".movies-channels-list");
         if (catList)
-          catList.innerHTML = renderCategories(filterCategoriesList());
+          catList.innerHTML = renderCategories(
+            filterCategoriesList().slice(0, categoryChunk * PAGE_SIZE),
+          );
         highlightActiveCategory();
       });
     }
