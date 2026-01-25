@@ -1,141 +1,151 @@
 function SettingsPage() {
-    setTimeout(function() {
-        if (SettingsPage.cleanup) SettingsPage.cleanup();
+  setTimeout(function () {
+    if (SettingsPage.cleanup) SettingsPage.cleanup();
 
-        const container = document.querySelector(".settings-pages-container");
-        const items = Array.from(container.querySelectorAll("p"));
-        let activeIndex = 0;
-        let isInSubPage = true;
-        let currentOpenTab = items[0]; // Default to first item
+    const container = document.querySelector(".settings-pages-container");
+    const items = Array.from(container.querySelectorAll("p"));
+    let activeIndex = 0;
+    let isInSubPage = true;
+    let currentOpenTab = items[0]; // Default to first item
 
-        // Show StreamFormat by default
-        const secondContainer = document.querySelector(
-            ".settings-second-container"
-        );
-        secondContainer.innerHTML = StreamFormat();
-        isInSubPage = true;
+    // Show StreamFormat by default
+    const secondContainer = document.querySelector(
+      ".settings-second-container",
+    );
+    secondContainer.innerHTML = StreamFormat();
+    isInSubPage = true;
 
-        function updateActiveItem() {
-            items.forEach((item, index) => {
-                if (index === activeIndex) {
-                    item.classList.add("settings-pages-container-active");
-                    const img = item.querySelector("img");
-                    if (img) img.classList.add("settings-pages-container-image-active");
-                } else {
-                    item.classList.remove("settings-pages-container-active");
-                    const img = item.querySelector("img");
-                    if (img)
-                        img.classList.remove("settings-pages-container-image-active");
-                }
-            });
+    function updateActiveItem() {
+      items.forEach((item, index) => {
+        if (index === activeIndex) {
+          item.classList.add("settings-pages-container-active");
+          const img = item.querySelector("img");
+          if (img) img.classList.add("settings-pages-container-image-active");
+        } else {
+          item.classList.remove("settings-pages-container-active");
+          const img = item.querySelector("img");
+          if (img)
+            img.classList.remove("settings-pages-container-image-active");
         }
+      });
+    }
 
-        updateActiveItem();
+    updateActiveItem();
 
-        function settingsKeydownEvents(e) {
-            if (isInSubPage) return;
-            if (document.querySelector(".parental-pin-dialog-container")) return;
+    function settingsKeydownEvents(e) {
+      if (isInSubPage) return;
+      if (document.querySelector(".parental-pin-dialog-container")) return;
 
-            if (
-                localStorage.getItem("currentPage") !== "settingsPage" &&
-                localStorage.getItem("settingPage") !== "settingsPage"
-            )
-                return;
+      if (
+        localStorage.getItem("currentPage") !== "settingsPage" &&
+        localStorage.getItem("settingPage") !== "settingsPage"
+      )
+        return;
 
-            const key = e.key;
-            const selectedItem = items[activeIndex];
-            console.log(selectedItem, "selectedItem");
+      const key = e.key;
+      const selectedItem = items[activeIndex];
+      console.log(selectedItem, "selectedItem");
 
-            switch (key) {
-                case "ArrowDown":
-                    if (selectedItem.classList.contains("clear-app-cache")) return;
-                    if (activeIndex < items.length - 1) {
-                        activeIndex++;
-                        updateActiveItem();
-                    }
-                    break;
-
-                case "ArrowUp":
-                    if (selectedItem.classList.contains("stream-format")) return;
-                    activeIndex = (activeIndex - 1 + items.length) % items.length;
-                    updateActiveItem();
-                    break;
-
-                case "ArrowLeft":
-                    // Do nothing
-                    break;
-
-                case "ArrowRight":
-                    localStorage.setItem("settingPage", "settingsPage");
-                    handleSelection(currentOpenTab); // Use currently open tab
-                    break;
-
-                case "Enter":
-                    handleSelection(selectedItem);
-                    break;
-
-                case "Backspace":
-                case "Escape":
-                case "Back":
-                case "BrowserBack":
-                case "XF86Back":
-                case "10009":
-                    SettingsPage.cleanup();
-                    localStorage.setItem("currentPage", "dashboard");
-                    Router.showPage("dashboard");
-                    break;
-
-                default:
-                    break;
-            }
-        }
-
-        function handleSelection(item) {
-            const container = document.querySelector(".settings-second-container");
-
-            isInSubPage = true;
-
-            // Only update currentOpenTab if it's a valid subpage item
-            if (!item.classList.contains("clear-app-cache")) {
-                currentOpenTab = item;
-            }
-
-            if (item.classList.contains("stream-format")) {
-                container.innerHTML = StreamFormat();
-                // Set up cleanup for when returning from StreamFormat
-                setupSubPageCleanup();
-            } else if (item.classList.contains("time-format")) {
-                container.innerHTML = TimeFormat();
-                setupSubPageCleanup();
-            } else if (item.classList.contains("parental-control")) {
-                container.innerHTML = ParentalControl();
-                setupSubPageCleanup();
-            } else if (item.classList.contains("clear-app-cache")) {
-                alert("Clear App Cache selected");
-            }
-        }
-
-        function setupSubPageCleanup() {}
-
-        setupSubPageCleanup();
-
-        // Listen for exit event from subpages
-        function handleSubPageExit() {
-            isInSubPage = false;
+      switch (key) {
+        case "ArrowDown":
+          if (selectedItem.classList.contains("clear-app-cache")) return;
+          if (activeIndex < items.length - 1) {
+            activeIndex++;
             updateActiveItem();
+          }
+          break;
+
+        case "ArrowUp":
+          if (selectedItem.classList.contains("stream-format")) return;
+          activeIndex = (activeIndex - 1 + items.length) % items.length;
+          updateActiveItem();
+          break;
+
+        case "ArrowLeft":
+          // Do nothing
+          break;
+
+        case "ArrowRight":
+          localStorage.setItem("settingPage", "settingsPage");
+          handleSelection(currentOpenTab); // Use currently open tab
+          break;
+
+        case "Enter":
+          handleSelection(selectedItem);
+          break;
+
+        case "Backspace":
+        case "Escape":
+        case "Back":
+        case "BrowserBack":
+        case "XF86Back":
+        case "10009":
+          SettingsPage.cleanup();
+          localStorage.setItem("currentPage", "dashboard");
+          Router.showPage("dashboard");
+          break;
+
+        default:
+          break;
+      }
+    }
+
+    function handleSelection(item) {
+      const container = document.querySelector(".settings-second-container");
+
+      isInSubPage = true;
+
+      // Only update currentOpenTab if it's a valid subpage item
+      if (!item.classList.contains("clear-app-cache")) {
+        currentOpenTab = item;
+      }
+
+      if (item.classList.contains("stream-format")) {
+        container.innerHTML = StreamFormat();
+        // Set up cleanup for when returning from StreamFormat
+        setupSubPageCleanup();
+      } else if (item.classList.contains("time-format")) {
+        container.innerHTML = TimeFormat();
+        setupSubPageCleanup();
+      } else if (item.classList.contains("parental-control")) {
+        let restoredValues = null;
+        const existingContainer = container.querySelector(
+          ".parental-control-container",
+        );
+        if (existingContainer) {
+          const inputs = existingContainer.querySelectorAll(".parental-input");
+          if (inputs.length >= 2) {
+            restoredValues = [inputs[0].value, inputs[1].value];
+          }
         }
-        document.addEventListener("settings-subpage-exit", handleSubPageExit);
+        container.innerHTML = ParentalControl(restoredValues);
+        setupSubPageCleanup();
+      } else if (item.classList.contains("clear-app-cache")) {
+        alert("Clear App Cache selected");
+      }
+    }
 
-        document.addEventListener("keydown", settingsKeydownEvents);
+    function setupSubPageCleanup() {}
 
-        SettingsPage.cleanup = function() {
-            document.removeEventListener("keydown", settingsKeydownEvents);
-            document.removeEventListener("settings-subpage-exit", handleSubPageExit);
-            isInSubPage = false;
-        };
-    }, 0);
+    setupSubPageCleanup();
 
-    return `
+    // Listen for exit event from subpages
+    function handleSubPageExit() {
+      isInSubPage = false;
+      updateActiveItem();
+    }
+    document.addEventListener("settings-subpage-exit", handleSubPageExit);
+
+    document.addEventListener("keydown", settingsKeydownEvents);
+
+    SettingsPage.cleanup = function () {
+      document.removeEventListener("keydown", settingsKeydownEvents);
+      document.removeEventListener("settings-subpage-exit", handleSubPageExit);
+      isInSubPage = false;
+    };
+  }, 0);
+
+  return `
   <div class="settings-inner-container">
          <div class="settings-header">
             <div class="setting-login-header">

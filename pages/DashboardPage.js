@@ -1,259 +1,260 @@
 function DashboardPage() {
-    logAllDnsEntries();
+  logAllDnsEntries();
 
-    function handleClick(e) {
-        if (localStorage.getItem("currentPage") !== "dashboard") return;
+  function handleClick(e) {
+    if (localStorage.getItem("currentPage") !== "dashboard") return;
 
-        // Get the clicked element or its parent if it's a child element
-        let targetElement = e.target;
+    // Get the clicked element or its parent if it's a child element
+    let targetElement = e.target;
 
-        // Check if the click is on a child element (like svg or p tag)
-        if (
-            !targetElement.classList.contains("logout-icon") &&
-            !targetElement.classList.contains("settings-box") &&
-            !targetElement.classList.contains("account-box") &&
-            !targetElement.classList.contains("movies-box") &&
-            !targetElement.classList.contains("series-box") &&
-            !targetElement.classList.contains("list-users-box") &&
-            !targetElement.classList.contains("livetv-box")
-        ) {
-            targetElement = e.target.closest(
-                ".logout-icon, .settings-box, .account-box, .movies-box, .series-box, .list-users-box, .livetv-box"
-            );
-        }
-
-        if (!targetElement) return;
-
-        // Only process click if the element has focus class
-        if (!targetElement.classList.contains("menu-box-focused")) return;
-
-        if (targetElement.classList.contains("logout-icon")) {
-            localStorage.setItem("isLogin", false);
-
-            localStorage.setItem("currentPage", "playlistPage");
-            DashboardPage.cleanup();
-            localStorage.removeItem("selectedStreamOption");
-            localStorage.removeItem("selectedStreamFormat");
-            // clearLocalStorageExcept([
-            //     "all_dns","playlistsData"
-            // ])
-            Router.showPage("playlistPage");
-
-            return;
-        }
-
-        if (targetElement.classList.contains("settings-box")) {
-            localStorage.setItem("movieSortValue", "default");
-
-            localStorage.setItem("currentPage", "settingsPage");
-            Router.showPage("settings");
-            return;
-        }
-
-        if (targetElement.classList.contains("account-box")) {
-            localStorage.setItem("movieSortValue", "default");
-
-            localStorage.setItem("currentPage", "accountPage");
-            Router.showPage("accountPage");
-            return;
-        }
-
-        if (targetElement.classList.contains("movies-box")) {
-            localStorage.setItem("movieSortValue", "default");
-            localStorage.setItem("currentPage", "moviesPage");
-
-            Router.showPage("movies");
-            return;
-        }
-
-        if (targetElement.classList.contains("series-box")) {
-            localStorage.setItem("movieSortValue", "default");
-            localStorage.setItem("currentPage", "seriesPage");
-
-            Router.showPage("series");
-            localStorage.removeItem("seriesLastCategoryId");
-            localStorage.removeItem("seriesLastChannelIndex");
-            localStorage.removeItem("seriesLastCardIndex");
-            return;
-        }
-
-        if (targetElement.classList.contains("list-users-box")) {
-            localStorage.setItem("isLogin", false);
-            localStorage.setItem("movieSortValue", "default");
-            localStorage.setItem("currentPage", "playlistPage");
-            Router.showPage("playlistPage");
-            return;
-        }
-
-        if (targetElement.classList.contains("livetv-box")) {
-            localStorage.setItem("movieSortValue", "default");
-            localStorage.setItem("currentPage", "liveTvPage");
-            localStorage.setItem("navigationFocus", "liveTvPage");
-
-            localStorage.setItem("isLivePageOpen", true);
-            Router.showPage("liveTvPage");
-            return;
-        }
+    // Check if the click is on a child element (like svg or p tag)
+    if (
+      !targetElement.classList.contains("logout-icon") &&
+      !targetElement.classList.contains("settings-box") &&
+      !targetElement.classList.contains("account-box") &&
+      !targetElement.classList.contains("movies-box") &&
+      !targetElement.classList.contains("series-box") &&
+      !targetElement.classList.contains("list-users-box") &&
+      !targetElement.classList.contains("livetv-box")
+    ) {
+      targetElement = e.target.closest(
+        ".logout-icon, .settings-box, .account-box, .movies-box, .series-box, .list-users-box, .livetv-box",
+      );
     }
 
-    setTimeout(() => {
-        const loadingEl = document.querySelector("#loading-overlay");
-        if (loadingEl) {
-            loadingEl.style.background = "rgba(0, 0, 0, 0.7)";
-            loadingEl.style.marginTop = "0px";
-        }
-        // Cache DOM elements once
-        var focusableItems = [
-            document.querySelector(".livetv-box"),
-            document.querySelector(".list-users-box"),
-            document.querySelector(".settings-box"),
-            document.querySelector(".account-box"),
-            document.querySelector(".movies-box"),
-            document.querySelector(".series-box"),
-            document.querySelector(".logout-icon"),
-        ].filter(function(el) {
-            return el !== null;
-        });
+    if (!targetElement) return;
 
-        var focusIndex = 0;
-        var lastIndex = focusableItems.length - 1;
-        var currentFocusedElement = null;
-        var pendingUpdate = false;
+    // Only process click if the element has focus class
+    if (!targetElement.classList.contains("menu-box-focused")) return;
 
-        // Cache constants
-        var FOCUSED_CLASS = "menu-box-focused";
-        var BACK_KEYS = [
-            10009,
-            "Escape",
-            "Back",
-            "BrowserBack",
-            "XF86Back",
-            "Escape",
-        ];
-        var IS_TIZEN = typeof tizen !== "undefined";
+    if (targetElement.classList.contains("logout-icon")) {
+      localStorage.setItem("isLogin", false);
+      localStorage.removeItem("currentPage");
 
-        // Optimized focus update using requestAnimationFrame
-        function updateFocus() {
-            if (pendingUpdate) return;
-            pendingUpdate = true;
+      Router.showPage("login");
+      DashboardPage.cleanup();
+      localStorage.removeItem("selectedStreamOption");
+      localStorage.removeItem("selectedStreamFormat");
+      // clearLocalStorageExcept([
+      //     "all_dns","playlistsData"
+      // ])
+      Router.showPage("playlistPage");
 
-            requestAnimationFrame(function() {
-                // Remove focus from previous element
-                if (currentFocusedElement) {
-                    currentFocusedElement.classList.remove(FOCUSED_CLASS);
-                }
+      return;
+    }
 
-                // Add focus to new element
-                if (focusableItems[focusIndex]) {
-                    focusableItems[focusIndex].classList.add(FOCUSED_CLASS);
-                    currentFocusedElement = focusableItems[focusIndex];
-                }
+    if (targetElement.classList.contains("settings-box")) {
+      localStorage.setItem("movieSortValue", "default");
 
-                pendingUpdate = false;
-            });
-        }
+      localStorage.setItem("currentPage", "settingsPage");
+      Router.showPage("settings");
+      return;
+    }
 
-        // Single unified keydown handler
-        function handleKeydown(e) {
-            // Don't handle any keys if exit modal is open
-            if (localStorage.getItem("currentPage") === "exitPage") return;
+    if (targetElement.classList.contains("account-box")) {
+      localStorage.setItem("movieSortValue", "default");
 
-            // Quick check without localStorage call for arrow keys
-            var key = e.key;
-            var isArrowKey =
-                key === "ArrowDown" ||
-                key === "ArrowUp" ||
-                key === "ArrowLeft" ||
-                key === "ArrowRight" ||
-                key === "Enter";
+      localStorage.setItem("currentPage", "accountPage");
+      Router.showPage("accountPage");
+      return;
+    }
 
-            // Only check localStorage when necessary
-            if (!isArrowKey) {
-                if (localStorage.getItem("currentPage") !== "dashboard") return;
+    if (targetElement.classList.contains("movies-box")) {
+      localStorage.setItem("movieSortValue", "default");
+      localStorage.setItem("currentPage", "moviesPage");
 
-                // Handle back/exit keys
-                if (
-                    e.key === "XF86Exit" ||
-                    e.key === "XF86Home" ||
-                    e.keyCode === 10071 ||
-                    BACK_KEYS.includes(e.keyCode) ||
-                    BACK_KEYS.includes(e.key)
-                ) {
-                    e.preventDefault();
-                    localStorage.setItem("currentPage", "exitPage");
-                    Router.showPage("exitModal");
-                    return;
-                }
-                return;
-            }
+      Router.showPage("movies");
+      return;
+    }
 
-            // Arrow key handling - no localStorage check for performance
-            switch (key) {
-                case "ArrowDown":
-                    e.preventDefault();
-                    if (focusIndex === 0) focusIndex = 4;
-                    else if (focusIndex === 1) focusIndex = 2;
-                    else if (focusIndex === 2) focusIndex = 3;
-                    else if (focusIndex === 3) focusIndex = 5;
-                    else if (focusIndex === 4) {
-                        return;
-                    } else if (focusIndex === 5) {
-                        return;
-                    } else if (focusIndex === lastIndex) focusIndex = 0;
-                    updateFocus();
-                    break;
+    if (targetElement.classList.contains("series-box")) {
+      localStorage.setItem("movieSortValue", "default");
+      localStorage.setItem("currentPage", "seriesPage");
 
-                case "ArrowUp":
-                    e.preventDefault();
-                    if (focusIndex === 0 || focusIndex === 1) focusIndex = lastIndex;
-                    else if (focusIndex === 2) focusIndex = 1;
-                    else if (focusIndex === 3) focusIndex = 2;
-                    else if (focusIndex === 4) focusIndex = 0;
-                    else if (focusIndex === 5) focusIndex = 3;
-                    else if (focusIndex === lastIndex) focusIndex = 1;
-                    updateFocus();
-                    break;
+      Router.showPage("series");
+      localStorage.removeItem("seriesLastCategoryId");
+      localStorage.removeItem("seriesLastChannelIndex");
+      localStorage.removeItem("seriesLastCardIndex");
+      return;
+    }
 
-                case "ArrowRight":
-                    e.preventDefault();
-                    if (focusIndex === 0) focusIndex = 1;
-                    else if (focusIndex === 4) focusIndex = 5;
-                    else if (focusIndex === 1 || focusIndex === 2 || focusIndex === 3)
-                        focusIndex = 6;
-                    updateFocus();
-                    break;
+    if (targetElement.classList.contains("list-users-box")) {
+      localStorage.setItem("isLogin", false);
+      localStorage.setItem("movieSortValue", "default");
+      localStorage.setItem("currentPage", "playlistPage");
+      Router.showPage("playlistPage");
+      return;
+    }
 
-                case "ArrowLeft":
-                    e.preventDefault();
-                    if (focusIndex === 1 || focusIndex === 2 || focusIndex === 3)
-                        focusIndex = 0;
-                    else if (focusIndex === 5) focusIndex = 4;
-                    else if (focusIndex === 6) focusIndex = 1;
-                    updateFocus();
-                    break;
+    if (targetElement.classList.contains("livetv-box")) {
+      localStorage.setItem("movieSortValue", "default");
+      localStorage.setItem("currentPage", "liveTvPage");
+      localStorage.setItem("navigationFocus", "liveTvPage");
 
-                case "Enter":
-                    if (focusableItems[focusIndex]) {
-                        focusableItems[focusIndex].click();
-                    }
-                    break;
-            }
+      localStorage.setItem("isLivePageOpen", true);
+      Router.showPage("liveTvPage");
+      return;
+    }
+  }
+
+  setTimeout(() => {
+    const loadingEl = document.querySelector("#loading-overlay");
+    if (loadingEl) {
+      loadingEl.style.background = "rgba(0, 0, 0, 0.7)";
+      loadingEl.style.marginTop = "0px";
+    }
+    // Cache DOM elements once
+    var focusableItems = [
+      document.querySelector(".livetv-box"),
+      document.querySelector(".list-users-box"),
+      document.querySelector(".settings-box"),
+      document.querySelector(".account-box"),
+      document.querySelector(".movies-box"),
+      document.querySelector(".series-box"),
+      document.querySelector(".logout-icon"),
+    ].filter(function (el) {
+      return el !== null;
+    });
+
+    var focusIndex = 0;
+    var lastIndex = focusableItems.length - 1;
+    var currentFocusedElement = null;
+    var pendingUpdate = false;
+
+    // Cache constants
+    var FOCUSED_CLASS = "menu-box-focused";
+    var BACK_KEYS = [
+      10009,
+      "Escape",
+      "Back",
+      "BrowserBack",
+      "XF86Back",
+      "Escape",
+    ];
+    var IS_TIZEN = typeof tizen !== "undefined";
+
+    // Optimized focus update using requestAnimationFrame
+    function updateFocus() {
+      if (pendingUpdate) return;
+      pendingUpdate = true;
+
+      requestAnimationFrame(function () {
+        // Remove focus from previous element
+        if (currentFocusedElement) {
+          currentFocusedElement.classList.remove(FOCUSED_CLASS);
         }
 
-        document.addEventListener("click", handleClick);
-        document.addEventListener("keydown", handleKeydown);
+        // Add focus to new element
+        if (focusableItems[focusIndex]) {
+          focusableItems[focusIndex].classList.add(FOCUSED_CLASS);
+          currentFocusedElement = focusableItems[focusIndex];
+        }
 
-        DashboardPage.cleanup = function() {
-            document.removeEventListener("click", handleClick);
-            document.removeEventListener("keydown", handleKeydown);
-            currentFocusedElement = null;
-            pendingUpdate = false;
-        };
+        pendingUpdate = false;
+      });
+    }
 
-        updateFocus();
-    }, 0);
+    // Single unified keydown handler
+    function handleKeydown(e) {
+      // Don't handle any keys if exit modal is open
+      if (localStorage.getItem("currentPage") === "exitPage") return;
 
-    return `
+      // Quick check without localStorage call for arrow keys
+      var key = e.key;
+      var isArrowKey =
+        key === "ArrowDown" ||
+        key === "ArrowUp" ||
+        key === "ArrowLeft" ||
+        key === "ArrowRight" ||
+        key === "Enter";
+
+      // Only check localStorage when necessary
+      if (!isArrowKey) {
+        if (localStorage.getItem("currentPage") !== "dashboard") return;
+
+        // Handle back/exit keys
+        if (
+          e.key === "XF86Exit" ||
+          e.key === "XF86Home" ||
+          e.keyCode === 10071 ||
+          BACK_KEYS.includes(e.keyCode) ||
+          BACK_KEYS.includes(e.key)
+        ) {
+          e.preventDefault();
+          localStorage.setItem("currentPage", "exitPage");
+          Router.showPage("exitModal");
+          return;
+        }
+        return;
+      }
+
+      // Arrow key handling - no localStorage check for performance
+      switch (key) {
+        case "ArrowDown":
+          e.preventDefault();
+          if (focusIndex === 0) focusIndex = 4;
+          else if (focusIndex === 1) focusIndex = 2;
+          else if (focusIndex === 2) focusIndex = 3;
+          else if (focusIndex === 3) focusIndex = 5;
+          else if (focusIndex === 4) {
+            return;
+          } else if (focusIndex === 5) {
+            return;
+          } else if (focusIndex === lastIndex) focusIndex = 0;
+          updateFocus();
+          break;
+
+        case "ArrowUp":
+          e.preventDefault();
+          if (focusIndex === 0 || focusIndex === 1) focusIndex = lastIndex;
+          else if (focusIndex === 2) focusIndex = 1;
+          else if (focusIndex === 3) focusIndex = 2;
+          else if (focusIndex === 4) focusIndex = 0;
+          else if (focusIndex === 5) focusIndex = 3;
+          else if (focusIndex === lastIndex) focusIndex = 1;
+          updateFocus();
+          break;
+
+        case "ArrowRight":
+          e.preventDefault();
+          if (focusIndex === 0) focusIndex = 1;
+          else if (focusIndex === 4) focusIndex = 5;
+          else if (focusIndex === 1 || focusIndex === 2 || focusIndex === 3)
+            focusIndex = 6;
+          updateFocus();
+          break;
+
+        case "ArrowLeft":
+          e.preventDefault();
+          if (focusIndex === 1 || focusIndex === 2 || focusIndex === 3)
+            focusIndex = 0;
+          else if (focusIndex === 5) focusIndex = 4;
+          else if (focusIndex === 6) focusIndex = 1;
+          updateFocus();
+          break;
+
+        case "Enter":
+          if (focusableItems[focusIndex]) {
+            focusableItems[focusIndex].click();
+          }
+          break;
+      }
+    }
+
+    document.addEventListener("click", handleClick);
+    document.addEventListener("keydown", handleKeydown);
+
+    DashboardPage.cleanup = function () {
+      document.removeEventListener("click", handleClick);
+      document.removeEventListener("keydown", handleKeydown);
+      currentFocusedElement = null;
+      pendingUpdate = false;
+    };
+
+    updateFocus();
+  }, 0);
+
+  return `
      <div class="dashboard-main-container">
       <header>
         <div class="dashboard-logo-header">
@@ -365,7 +366,7 @@ Series
           <span>Expiration : </span> ${
             formatUnixDate(
               (JSON.parse(localStorage.getItem("currentPlaylistData")) || {})
-                .user_info.exp_date
+                .user_info.exp_date,
             ) || "N/A"
           }
         </p>

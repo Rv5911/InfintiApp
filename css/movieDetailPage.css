@@ -165,6 +165,8 @@
     color: white;
     font-weight: 600;
     outline: none;
+    padding-left: 20px;
+    padding-right: 20px;
     border: 3px solid white;
     white-space: nowrap;
     font-size: 24px;
@@ -285,6 +287,7 @@
 .movie-detail-fav-button .heart-icon {
     font-size: 18px;
     line-height: 1;
+    margin-right: 10px;
 }
 
 .heart-icon .fa-solid {

@@ -662,6 +662,10 @@
     justify-content: center;
 }
 
+.series-detail-fav-button i {
+    margin-right: 10px;
+}
+
 .seasons-episodes-item {
     position: relative;
     /* important for absolute child positioning */
