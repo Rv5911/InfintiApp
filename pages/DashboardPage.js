@@ -32,7 +32,7 @@ function DashboardPage() {
       DashboardPage.cleanup();
       localStorage.removeItem("selectedStreamOption");
       localStorage.removeItem("selectedStreamFormat");
-      Router.showPage("playlistPage");
+      // Router.showPage("playlistPage");
 
       return;
     }
@@ -365,7 +365,7 @@ Series
           }
         </p>
         <p class="footer-logged-in">
-         <span> Logged in : </span>${
+         <span> Logged In : </span>${
            (JSON.parse(localStorage.getItem("selectedPlaylist")) || {})
              .playlistName || "N/A"
          }

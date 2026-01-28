@@ -137,7 +137,7 @@ function ListPlaylistPage() {
       if (focusIndex >= 0 && focusIndex < playlistsData.length) {
         modal.classList.remove("hidden");
         modalOpen = true;
-        modalFocusIndex = 0;
+        modalFocusIndex = -1;
         updateFocus();
       }
     }
@@ -167,24 +167,33 @@ function ListPlaylistPage() {
     function listPlaylistKeydown(e) {
       if (localStorage.getItem("currentPage") !== "playlistPage") return;
 
-      if (modalOpen) {
-        switch (e.key) {
-          case "ArrowRight":
-            modalFocusIndex = (modalFocusIndex + 1) % modalButtons.length;
-            updateFocus();
-            e.preventDefault();
-            break;
-          case "ArrowLeft":
-            modalFocusIndex =
-              (modalFocusIndex - 1 + modalButtons.length) % modalButtons.length;
-            updateFocus();
-            e.preventDefault();
-            break;
-          case "Enter":
-            if (modalFocusIndex === 0) removePlaylist();
-            else closeModal();
-            e.preventDefault();
-            break;
+     if (modalOpen) {
+  switch (e.key) {
+    case "ArrowRight":
+      if (modalFocusIndex === -1) {
+        modalFocusIndex = 0; // Start from first button
+      } else {
+        modalFocusIndex = (modalFocusIndex + 1) % modalButtons.length;
+      }
+      updateFocus();
+      e.preventDefault();
+      break;
+    case "ArrowLeft":
+      if (modalFocusIndex === -1) {
+        modalFocusIndex = modalButtons.length - 1; // Start from last button
+      } else {
+        modalFocusIndex =
+          (modalFocusIndex - 1 + modalButtons.length) % modalButtons.length;
+      }
+      updateFocus();
+      e.preventDefault();
+      break;
+    case "Enter":
+      if (modalFocusIndex === 0) removePlaylist();
+      else if (modalFocusIndex === 1) closeModal();
+      // Do nothing if modalFocusIndex === -1
+      e.preventDefault();
+      break;
           case "Escape":
             closeModal();
             e.preventDefault();

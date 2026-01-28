@@ -26,7 +26,7 @@ function MoviesPage() {
   let selectedCardForDropdown = null;
   let isDropdownOpen = false;
   let isCatSearchFocused = false;
-  const LONG_PRESS_DURATION = 500;
+  const LONG_PRESS_DURATION = 200;
   let enterPressTimer = null;
 
   const loadMoreSearchResults = () => {

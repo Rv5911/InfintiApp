@@ -22,17 +22,30 @@ function ParentalControl(restoredValues) {
         ? currentPlaylist.parentalPassword
         : "";
 
-    // Restore values if provided
-    if (restoredValues) {
-      if (restoredValues[0] !== undefined && restoredValues[0] !== null)
-        inputs[0].value = restoredValues[0];
-      if (restoredValues[1] !== undefined && restoredValues[1] !== null)
-        inputs[1].value = restoredValues[1];
-    } else if (savedPassword) {
-      // Autofill from saved password if no restoration data
-      inputs[0].value = savedPassword;
-      inputs[1].value = savedPassword;
-    }
+        var hasSavedPassword = !!(
+  currentPlaylist &&
+  currentPlaylist.parentalPassword &&
+  currentPlaylist.parentalPassword.length > 0
+);
+
+
+if (restoredValues) {
+  inputs[0].value = restoredValues[0] ?? "";
+  inputs[1].value = restoredValues[1] ?? "";
+} else if (savedPassword) {
+  inputs[0].value = savedPassword;
+  inputs[1].value = savedPassword;
+}
+
+
+
+    // Decide visibility mode
+const shouldMask = !!savedPassword;
+
+// Show password while editing, hide only if already saved
+inputs.forEach(function (inp) {
+  inp.type = shouldMask ? "password" : "text";
+});
 
     // Set initial focus styles without focusing the input
     updateFocusStyles();

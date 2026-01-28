@@ -31,8 +31,9 @@
 .logout-icon {
     margin-top: 30px;
     zoom: 1.2;
-    /* width: 50px; */
-    height: 50px;
+    width: 55px;
+    /* padding: 10px; */
+    height: 60px;
     cursor: pointer;
     will-change: transform;
     backface-visibility: hidden;
@@ -207,6 +208,7 @@ header {
 
 .menu-box-focused {
     border: 1px solid #ffffff !important;
+    
     box-shadow: 0 0 0 3px #ffffff;
     transform: scale(1.05) translateZ(0);
     backface-visibility: hidden;
@@ -215,7 +217,7 @@ header {
 }
 
 .logout-icon.menu-box-focused {
-    transform: scale(1.2);
+    /* transform: scale(1.2); */
 }
 
 
