@@ -153,6 +153,7 @@
     grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
     row-gap: 30px;
     column-gap: 22px;
+    margin-top: 20px;
     position: relative;
     /* justify-content: center; */
     margin-left: 20px;

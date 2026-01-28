@@ -72,8 +72,8 @@ header {
 }
 
 .livetv-box {
-    background:
-        linear-gradient(231.82deg, #0b1a3b 1.99%, #094279 93.05%);
+    background: rgba(0, 0, 0, 0.081);
+
     display: flex;
     justify-content: space-evenly;
     align-items: center;
@@ -109,8 +109,7 @@ header {
 }
 
 .movies-box {
-    background:
-        linear-gradient(231.82deg, #0b1a3b 1.99%, #094279 93.05%);
+    background: rgba(0, 0, 0, 0.081);
     display: flex;
     justify-content: space-evenly;
     align-items: center;
@@ -138,8 +137,8 @@ header {
 }
 
 .series-box {
-    background:
-        linear-gradient(231.82deg, #0b1a3b 1.99%, #094279 93.05%);
+    background: rgba(0, 0, 0, 0.081);
+
     display: flex;
     justify-content: space-evenly;
     align-items: center;
@@ -174,9 +173,9 @@ header {
     grid-template-columns: auto auto;
 }
 
-.series-box {
+/* .series-box {
     background-color: brown;
-}
+} */
 
 .side-options {
     display: grid;

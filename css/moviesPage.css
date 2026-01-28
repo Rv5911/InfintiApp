@@ -163,6 +163,7 @@
     grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
     row-gap: 30px;
     column-gap: 22px;
+    margin-top: 20px;
     position: relative;
     /* justify-content: center; REMOVED to prevent centering issues with few items */
     margin-left: 20px;
@@ -639,7 +640,7 @@
     width: 100%;
     box-sizing: border-box;
     margin-top: 10px;
-    margin-bottom: 0;
+    margin-bottom: 0px;
     gap: 20px;
 }
 

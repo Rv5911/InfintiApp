@@ -4,10 +4,8 @@ function DashboardPage() {
   function handleClick(e) {
     if (localStorage.getItem("currentPage") !== "dashboard") return;
 
-    // Get the clicked element or its parent if it's a child element
     let targetElement = e.target;
 
-    // Check if the click is on a child element (like svg or p tag)
     if (
       !targetElement.classList.contains("logout-icon") &&
       !targetElement.classList.contains("settings-box") &&
@@ -24,7 +22,6 @@ function DashboardPage() {
 
     if (!targetElement) return;
 
-    // Only process click if the element has focus class
     if (!targetElement.classList.contains("menu-box-focused")) return;
 
     if (targetElement.classList.contains("logout-icon")) {
@@ -35,9 +32,6 @@ function DashboardPage() {
       DashboardPage.cleanup();
       localStorage.removeItem("selectedStreamOption");
       localStorage.removeItem("selectedStreamFormat");
-      // clearLocalStorageExcept([
-      //     "all_dns","playlistsData"
-      // ])
       Router.showPage("playlistPage");
 
       return;
