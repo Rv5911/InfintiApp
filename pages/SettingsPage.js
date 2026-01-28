@@ -93,6 +93,18 @@ function SettingsPage() {
     function handleSelection(item) {
       const container = document.querySelector(".settings-second-container");
 
+      if (
+        isInSubPage &&
+        currentOpenTab === item &&
+        container.innerHTML.trim() !== ""
+      ) {
+        return;
+      }
+
+      if (window.parentalControlCleanup) {
+        window.parentalControlCleanup();
+      }
+
       isInSubPage = true;
 
       // Only update currentOpenTab if it's a valid subpage item
@@ -102,7 +114,6 @@ function SettingsPage() {
 
       if (item.classList.contains("stream-format")) {
         container.innerHTML = StreamFormat();
-        // Set up cleanup for when returning from StreamFormat
         setupSubPageCleanup();
       } else if (item.classList.contains("time-format")) {
         container.innerHTML = TimeFormat();
@@ -139,6 +150,9 @@ function SettingsPage() {
     document.addEventListener("keydown", settingsKeydownEvents);
 
     SettingsPage.cleanup = function () {
+      if (window.parentalControlCleanup) {
+        window.parentalControlCleanup();
+      }
       document.removeEventListener("keydown", settingsKeydownEvents);
       document.removeEventListener("settings-subpage-exit", handleSubPageExit);
       isInSubPage = false;

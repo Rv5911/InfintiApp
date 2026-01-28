@@ -1,4 +1,8 @@
 function ParentalControl(restoredValues) {
+  if (window.parentalControlCleanup) {
+    window.parentalControlCleanup();
+  }
+
   setTimeout(function () {
     var container = document.querySelector(".parental-control-container");
     if (!container) return;
@@ -16,28 +20,18 @@ function ParentalControl(restoredValues) {
     var savedPassword =
       currentPlaylist && currentPlaylist.parentalPassword
         ? currentPlaylist.parentalPassword
-        : null;
-
-    if (savedPassword && savedPassword.length > 0) {
-      inputs.forEach(function (inp) {
-        inp.type = "password";
-      });
-
-      // Autofill both fields if not restoring
-      if (!restoredValues) {
-        inputs[0].value = savedPassword;
-        inputs[1].value = savedPassword;
-      }
-    } else {
-      inputs.forEach(function (inp) {
-        inp.type = "text";
-      });
-    }
+        : "";
 
     // Restore values if provided
     if (restoredValues) {
-      if (restoredValues[0] !== undefined) inputs[0].value = restoredValues[0];
-      if (restoredValues[1] !== undefined) inputs[1].value = restoredValues[1];
+      if (restoredValues[0] !== undefined && restoredValues[0] !== null)
+        inputs[0].value = restoredValues[0];
+      if (restoredValues[1] !== undefined && restoredValues[1] !== null)
+        inputs[1].value = restoredValues[1];
+    } else if (savedPassword) {
+      // Autofill from saved password if no restoration data
+      inputs[0].value = savedPassword;
+      inputs[1].value = savedPassword;
     }
 
     // Set initial focus styles without focusing the input
@@ -220,6 +214,12 @@ function ParentalControl(restoredValues) {
 
     document.addEventListener("keydown", parentalControlKeydownEvents);
 
+    // Global cleanup reference
+    window.parentalControlCleanup = function () {
+      document.removeEventListener("keydown", parentalControlKeydownEvents);
+      window.parentalControlCleanup = null;
+    };
+
     // Add click handlers for custom input fields
     inputFields.forEach(function (field, index) {
       field.addEventListener("click", function () {
@@ -374,10 +374,7 @@ function ParentalControl(restoredValues) {
     });
 
     // Clean up when component is destroyed
-    return function cleanup() {
-      document.removeEventListener("keydown", parentalControlKeydownEvents);
-      removeAllFocusStyles();
-    };
+    return window.parentalControlCleanup;
   }, 0);
 
   return `
