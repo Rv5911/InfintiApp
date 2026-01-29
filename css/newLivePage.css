@@ -671,8 +671,8 @@
 }
 
 .lp-channel-fav-btn.lp-focused {
-    color: #fdbd0f;
-    border: 2px solid #fdbd0f;
+    color: var(--gold);
+    border: 2px solid var(--gold);
     transform: scale(1.2);
 }
 

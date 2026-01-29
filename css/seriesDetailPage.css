@@ -791,3 +791,7 @@
     padding: 60px 0;
     width: 100%;
 }
+
+#series-detail-title-heart-icon {
+    zoom: 3;
+}

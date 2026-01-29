@@ -203,6 +203,7 @@ function LivePage() {
     document.addEventListener("mozfullscreenchange", handleFullscreenChange);
     document.addEventListener("msfullscreenchange", handleFullscreenChange);
 
+    localStorage.setItem("navigationFocus", "liveTvPage");
     window.cleanupLivePage = cleanup;
     // Listen for focus changes from Navbar
     window.addEventListener(
@@ -1149,7 +1150,6 @@ function LivePage() {
 
         // Smooth scroll item into view
         items[channelIndex].scrollIntoView({
-          behavior: "smooth",
           block: "nearest",
           inline: "nearest",
         });
@@ -2083,9 +2083,14 @@ function LivePage() {
         channelIndex++;
         buttonFocusIndex = -1;
       } else {
-        // BOTTOM of column (or last item) -> FOCUS PLAYER (Play/Pause) DIRECTLY
-        focusedSection = "player";
-        playerSubFocus = 1; // Play/Pause
+        // BOTTOM of column (or last item) -> FOCUS EPG if exists, otherwise Player
+        if (currentEpgData && currentEpgData.length > 0) {
+          focusedSection = "epg";
+          epgIndex = 0;
+        } else {
+          focusedSection = "player";
+          playerSubFocus = 1; // Play/Pause
+        }
         buttonFocusIndex = -1;
       }
       updateFocus();
@@ -2242,15 +2247,10 @@ function LivePage() {
         channelIndex = nextIndex;
         buttonFocusIndex = -1;
       } else {
-        // User Request: If no EPG, focus player.
-        // Navigate to EPG if available, otherwise Player
-        if (currentEpgData && currentEpgData.length > 0) {
-          focusedSection = "epg";
-          epgIndex = 0;
-        } else {
-          focusedSection = "player";
-          playerSubFocus = 0;
-        }
+        // User Request: If last item, focus player.
+        focusedSection = "player";
+        playerSubFocus = 1; // Focus Play/Pause
+        buttonFocusIndex = -1;
       }
       updateFocus();
     } else if (focusedSection === "epg") {

@@ -374,3 +374,7 @@
     padding: 60px 0;
     width: 100%;
 }
+
+#movie-detail-title-heart-icon{
+    zoom: 3;
+}

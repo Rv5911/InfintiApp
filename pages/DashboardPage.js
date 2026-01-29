@@ -162,11 +162,9 @@ function DashboardPage() {
         key === "ArrowRight" ||
         key === "Enter";
 
-      // Only check localStorage when necessary
       if (!isArrowKey) {
         if (localStorage.getItem("currentPage") !== "dashboard") return;
 
-        // Handle back/exit keys
         if (
           e.key === "XF86Exit" ||
           e.key === "XF86Home" ||

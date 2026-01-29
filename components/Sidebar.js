@@ -27,7 +27,7 @@ function cleanupLivePlayer() {
 
     // Clean up any remaining video elements
     const videoElements = document.querySelectorAll(
-      "#live-videojs-player, #flowplayer-live video"
+      "#live-videojs-player, #flowplayer-live video",
     );
     videoElements.forEach((video) => {
       if (video.pause) video.pause();
@@ -53,10 +53,10 @@ function Sidebar({
   globalShowContiueButton = showOpenContinueButton;
 
   const currentPlaylistName = JSON.parse(
-    localStorage.getItem("selectedPlaylist")
+    localStorage.getItem("selectedPlaylist"),
   ).playlistName;
   const currentPlaylist = JSON.parse(
-    localStorage.getItem("playlistsData")
+    localStorage.getItem("playlistsData"),
   ).filter((pl) => pl.playlistName === currentPlaylistName)[0];
 
   const continueWatchingLive = currentPlaylist.ChannelListLive
@@ -106,14 +106,14 @@ function Sidebar({
                     from == "moviesPage"
                       ? "movie-clear"
                       : from == "seriesPage"
-                      ? "series-clear"
-                      : "live-clear"
+                        ? "series-clear"
+                        : "live-clear"
                   } "><span class="clear-history-span"><i class=" fa-solid fa-trash"></i></span>${
                     from == "moviesPage"
                       ? "Clear Continue Watching"
                       : from == "seriesPage"
-                      ? "Clear Continue Watching"
-                      : "Clear Channel History"
+                        ? "Clear Continue Watching"
+                        : "Clear Channel History"
                   }</a>`
                 : `<a href="#" style="display: ${
                     globalShowContiueButton ? "flex" : "none"
@@ -235,7 +235,7 @@ function closeSortingDialog() {
 
 function applySorting() {
   const checked = document.querySelector(
-    '.sorting-option input[type="radio"]:checked'
+    '.sorting-option input[type="radio"]:checked',
   );
   if (checked) {
     const sortValue = checked.value;
@@ -368,6 +368,8 @@ function sidebarKeyHandler(event) {
       } else if (selectedLinkClassName.includes("live-clear")) {
         removeAllFromHistory("ChannelListLive");
         Toaster.showToast("error", "Channel history cleared");
+        if (window.cleanupLivePage) window.cleanupLivePage();
+        localStorage.setItem("navigationFocus", "liveTvPage");
         localStorage.setItem("currentPage", "liveTvPage");
         localStorage.setItem("isLivePageOpen", true);
         Router.showPage("liveTvPage");
@@ -496,14 +498,14 @@ function openSidebar(from = "") {
     from === "moviesPage"
       ? document.querySelector(".sidebar-container-movie")
       : from === "seriesPage"
-      ? document.querySelector(".sidebar-container-series")
-      : from === "liveTvPage"
-      ? document.querySelector(".sidebar-container-live")
-      : from === "moviesDetailPage"
-      ? document.querySelector(".sidebar-container-movie-detail")
-      : from === "seriesDetailPage"
-      ? document.querySelector(".sidebar-container-series-detail")
-      : null;
+        ? document.querySelector(".sidebar-container-series")
+        : from === "liveTvPage"
+          ? document.querySelector(".sidebar-container-live")
+          : from === "moviesDetailPage"
+            ? document.querySelector(".sidebar-container-movie-detail")
+            : from === "seriesDetailPage"
+              ? document.querySelector(".sidebar-container-series-detail")
+              : null;
 
   if (!sidebar) return;
   sidebar.style.display = "block";
@@ -514,7 +516,7 @@ function openSidebar(from = "") {
     (link) => {
       if (globalShowContiueButton) return true;
       return !link.classList.contains("continue-watching-link");
-    }
+    },
   );
 
   selectedIndex = 0;
@@ -530,14 +532,14 @@ function closeSidebar(from = "") {
     from === "moviesPage"
       ? document.querySelector(".sidebar-container-movie")
       : from === "seriesPage"
-      ? document.querySelector(".sidebar-container-series")
-      : from === "liveTvPage"
-      ? document.querySelector(".sidebar-container-live")
-      : from === "moviesDetailPage"
-      ? document.querySelector(".sidebar-container-movie-detail")
-      : from === "seriesDetailPage"
-      ? document.querySelector(".sidebar-container-series-detail")
-      : null;
+        ? document.querySelector(".sidebar-container-series")
+        : from === "liveTvPage"
+          ? document.querySelector(".sidebar-container-live")
+          : from === "moviesDetailPage"
+            ? document.querySelector(".sidebar-container-movie-detail")
+            : from === "seriesDetailPage"
+              ? document.querySelector(".sidebar-container-series-detail")
+              : null;
 
   if (!sidebar) return;
 

@@ -1,6 +1,6 @@
 function ExitModal() {
   // Remove existing modal and listeners if any
-  const existingModal = document.querySelector('.exit-main-container');
+  const existingModal = document.querySelector(".exit-main-container");
   if (existingModal) {
     existingModal.remove();
     if (ExitModal.cleanup) ExitModal.cleanup();
@@ -18,8 +18,8 @@ function ExitModal() {
       if (ExitModal.cleanup) ExitModal.cleanup();
 
       try {
-              const app = tizen.application.getCurrentApplication();
-      if (app) app.exit();
+        const app = tizen.application.getCurrentApplication();
+        if (app) app.exit();
       } catch (err) {
         Toaster.showToast("error", "Failed to exit app");
       }
@@ -35,10 +35,19 @@ function ExitModal() {
   function closeModal() {
     if (ExitModal.cleanup) ExitModal.cleanup();
 
-    const modal = document.querySelector('.exit-main-container');
+    const modal = document.querySelector(".exit-main-container");
     if (modal) modal.remove();
-    localStorage.setItem("currentPage", "dashboard");
-    Router.showPage("dashboard");
+    if (localStorage.getItem("exitFrom") == "playlistPage") {
+      localStorage.setItem("currentPage", "playlistPage");
+      localStorage.removeItem("exitFrom");
+
+      Router.showPage("playlistPage");
+    } else {
+      localStorage.setItem("currentPage", "dashboard");
+      localStorage.removeItem("exitFrom");
+
+      Router.showPage("dashboard");
+    }
     document.body.style.backgroundImage = "none";
     document.body.style.backgroundColor = "black";
   }
@@ -50,7 +59,7 @@ function ExitModal() {
     let focusIndex = 0;
     const buttons = [
       document.querySelector("#saveBtnExit"),
-      document.querySelector("#backBtnExit")
+      document.querySelector("#backBtnExit"),
     ].filter(Boolean);
 
     function setFocus(index) {

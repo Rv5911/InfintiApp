@@ -16,8 +16,17 @@ function ListPlaylistPage() {
   setTimeout(() => {
     if (ListPlaylistPage.cleanup) ListPlaylistPage.cleanup();
 
+    const BACK_KEYS = [
+      10009,
+      "Escape",
+      "Back",
+      "BrowserBack",
+      "XF86Back",
+      "Escape",
+    ];
+
     const cardElements = Array.from(
-      document.querySelectorAll(".playlist-card")
+      document.querySelectorAll(".playlist-card"),
     );
     const addPlaylistBtn = document.querySelector(".playlist-add-user");
     const modal = document.querySelector(".playlist-modal");
@@ -34,7 +43,10 @@ function ListPlaylistPage() {
     function updateFocus() {
       if (modalOpen) {
         modalButtons.forEach((btn, i) => {
-          btn.classList.toggle("playlist-card-focused", i === modalFocusIndex);
+          btn.classList.toggle(
+            "remove-daldog-button-focsud",
+            i === modalFocusIndex,
+          );
         });
         return;
       }
@@ -48,7 +60,9 @@ function ListPlaylistPage() {
       if (focusIndex === -1 && !removeFocus) {
         addPlaylistBtn.classList.add("playlist-card-focused");
         if (prevFocusIndex !== -1) {
-          scrollBy({ top: 0 });
+          scrollBy({
+            top: 0,
+          });
           addPlaylistBtn.scrollIntoView({
             block: "nearest",
             inline: "nearest",
@@ -60,7 +74,10 @@ function ListPlaylistPage() {
           card.classList.add("playlist-card-focused");
           // Only scroll if focus actually changed to this card
           if (prevFocusIndex !== focusIndex) {
-            card.scrollIntoView({ block: "nearest", inline: "nearest" });
+            card.scrollIntoView({
+              block: "nearest",
+              inline: "nearest",
+            });
           }
         }
       }
@@ -79,16 +96,18 @@ function ListPlaylistPage() {
         Router.showPage("login");
         return;
       } else if (targetIndex >= 0 && targetIndex < playlistsData.length) {
-
-            const loadingEl = document.querySelector("#loading-overlay");
-    if (loadingEl && localStorage.getItem("currentPage") === "preLoginPage") {
-      loadingEl.style.background = "rgba(0, 0, 0, 0.7)";
-      loadingEl.style.marginTop = "0%";
-    }
+        const loadingEl = document.querySelector("#loading-overlay");
+        if (
+          loadingEl &&
+          localStorage.getItem("currentPage") === "preLoginPage"
+        ) {
+          loadingEl.style.background = "rgba(0, 0, 0, 0.7)";
+          loadingEl.style.marginTop = "0%";
+        }
 
         if (loadingEl) {
-            loadingEl.style.background = "rgba(0, 0, 0, 0.7)";
-            loadingEl.style.marginTop = "0px";
+          loadingEl.style.background = "rgba(0, 0, 0, 0.7)";
+          loadingEl.style.marginTop = "0px";
         }
         if (playlistsData[targetIndex]) {
           loginApi(
@@ -96,16 +115,16 @@ function ListPlaylistPage() {
             "",
             playlistsData[targetIndex].playlistName,
             true,
-            playlistsData[targetIndex].playlistUrl
+            playlistsData[targetIndex].playlistUrl,
           ).then((response) => {
             if (response) {
               const currentPlaylistData = JSON.parse(
-                localStorage.getItem("currentPlaylistData")
+                localStorage.getItem("currentPlaylistData"),
               );
 
               localStorage.setItem(
                 "selectedPlaylist",
-                JSON.stringify(playlistsData[targetIndex])
+                JSON.stringify(playlistsData[targetIndex]),
               );
               // if (!currentPlaylistData.streamFormat) {
               //   currentPlaylistData.streamFormat = "ts";
@@ -167,34 +186,39 @@ function ListPlaylistPage() {
     function listPlaylistKeydown(e) {
       if (localStorage.getItem("currentPage") !== "playlistPage") return;
 
-     if (modalOpen) {
-  switch (e.key) {
-    case "ArrowRight":
-      if (modalFocusIndex === -1) {
-        modalFocusIndex = 0; // Start from first button
-      } else {
-        modalFocusIndex = (modalFocusIndex + 1) % modalButtons.length;
-      }
-      updateFocus();
-      e.preventDefault();
-      break;
-    case "ArrowLeft":
-      if (modalFocusIndex === -1) {
-        modalFocusIndex = modalButtons.length - 1; // Start from last button
-      } else {
-        modalFocusIndex =
-          (modalFocusIndex - 1 + modalButtons.length) % modalButtons.length;
-      }
-      updateFocus();
-      e.preventDefault();
-      break;
-    case "Enter":
-      if (modalFocusIndex === 0) removePlaylist();
-      else if (modalFocusIndex === 1) closeModal();
-      // Do nothing if modalFocusIndex === -1
-      e.preventDefault();
-      break;
+      if (modalOpen) {
+        switch (e.key) {
+          case "ArrowRight":
+            if (modalFocusIndex === -1) {
+              modalFocusIndex = 0; // Start from first button
+            } else {
+              modalFocusIndex = (modalFocusIndex + 1) % modalButtons.length;
+            }
+            updateFocus();
+            e.preventDefault();
+            break;
+          case "ArrowLeft":
+            if (modalFocusIndex === -1) {
+              modalFocusIndex = modalButtons.length - 1; // Start from last button
+            } else {
+              modalFocusIndex =
+                (modalFocusIndex - 1 + modalButtons.length) %
+                modalButtons.length;
+            }
+            updateFocus();
+            e.preventDefault();
+            break;
+          case "Enter":
+            if (modalFocusIndex === 0) removePlaylist();
+            else if (modalFocusIndex === 1) closeModal();
+            // Do nothing if modalFocusIndex === -1
+            e.preventDefault();
+            break;
+
           case "Escape":
+          case "Back":
+          case "BrowserBack":
+          case "XF86Back":
             closeModal();
             e.preventDefault();
             break;
@@ -290,6 +314,21 @@ function ListPlaylistPage() {
             }
           }
           break;
+
+        case "Escape":
+        case "Back":
+        case "BrowserBack":
+        case "XF86Back":
+        case "10009":
+          if (BACK_KEYS.includes(e.keyCode) || BACK_KEYS.includes(e.key)) {
+            e.preventDefault();
+            localStorage.setItem("currentPage", "exitPage");
+            localStorage.setItem("exitFrom", "playlistPage");
+
+            Router.showPage("exitModal");
+            return;
+          }
+          break;
       }
     }
 
@@ -362,7 +401,7 @@ function ListPlaylistPage() {
                     <p>Username: ${playlist.playlistUsername}</p>
             <div class="playlist-remove-icon"><i class="fa-solid fa-trash" style="color: #ff0000;"></i></div>
                 </div>
-            `
+            `,
               )
               .join("")}
         </div>
