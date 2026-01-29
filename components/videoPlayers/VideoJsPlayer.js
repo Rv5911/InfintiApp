@@ -24,10 +24,10 @@ function VideoJsPlayer(poster = "") {
   const titleText = playingItemData.title || playingItemData.name;
 
   const currentPlaylistName = JSON.parse(
-    localStorage.getItem("selectedPlaylist")
+    localStorage.getItem("selectedPlaylist"),
   ).playlistName;
   const currentPlaylist = JSON.parse(
-    localStorage.getItem("playlistsData")
+    localStorage.getItem("playlistsData"),
   ).filter((pl) => pl.playlistName === currentPlaylistName)[0];
 
   const continueWatchingMoviesData = currentPlaylist.continueWatchingMovies
@@ -130,7 +130,7 @@ function VideoJsPlayer(poster = "") {
         const duration = player.duration();
         const newTime = Math.max(
           0,
-          Math.min(duration, currentTime + accumulatedSeekOffset)
+          Math.min(duration, currentTime + accumulatedSeekOffset),
         );
         seekBar.value = newTime;
 
@@ -168,7 +168,7 @@ function VideoJsPlayer(poster = "") {
         const duration = player.duration();
         const newTime = Math.max(
           0,
-          Math.min(duration, currentTime + accumulatedSeekOffset)
+          Math.min(duration, currentTime + accumulatedSeekOffset),
         );
 
         // Execute the accumulated seek
@@ -268,10 +268,10 @@ function VideoJsPlayer(poster = "") {
 
     const playOverlay = document.querySelector(".video-action-overlay.center");
     const forwardOverlay = document.querySelector(
-      ".video-action-overlay.right"
+      ".video-action-overlay.right",
     );
     const backwardOverlay = document.querySelector(
-      ".video-action-overlay.left"
+      ".video-action-overlay.left",
     );
 
     [playOverlay, forwardOverlay, backwardOverlay].forEach((el) => {
@@ -283,33 +283,29 @@ function VideoJsPlayer(poster = "") {
     switch (type) {
       case "play":
         if (playOverlay) {
-          playOverlay.querySelector(
-            ".video-action-icon"
-          ).innerHTML = `<i class="fa-solid fa-play"></i>`;
+          playOverlay.querySelector(".video-action-icon").innerHTML =
+            `<i class="fa-solid fa-play"></i>`;
           targetOverlay = playOverlay;
         }
         break;
       case "pause":
         if (playOverlay) {
-          playOverlay.querySelector(
-            ".video-action-icon"
-          ).innerHTML = `<i class="fa-solid fa-pause"></i>`;
+          playOverlay.querySelector(".video-action-icon").innerHTML =
+            `<i class="fa-solid fa-pause"></i>`;
           targetOverlay = playOverlay;
         }
         break;
       case "forward":
         if (forwardOverlay) {
-          forwardOverlay.querySelector(
-            ".video-action-icon"
-          ).innerHTML = `<i class="fa-solid fa-rotate-right"></i>`;
+          forwardOverlay.querySelector(".video-action-icon").innerHTML =
+            `<i class="fa-solid fa-rotate-right"></i>`;
           targetOverlay = forwardOverlay;
         }
         break;
       case "backward":
         if (backwardOverlay) {
-          backwardOverlay.querySelector(
-            ".video-action-icon"
-          ).innerHTML = `<i class="fa-solid fa-rotate-left"></i>`;
+          backwardOverlay.querySelector(".video-action-icon").innerHTML =
+            `<i class="fa-solid fa-rotate-left"></i>`;
           targetOverlay = backwardOverlay;
         }
         break;
@@ -421,14 +417,8 @@ function VideoJsPlayer(poster = "") {
 
   // 🔴 Function to hide controls
   function hideControls() {
-    // Don't hide if paused, if seek bar is focused, or if error active
-    if (
-      !player ||
-      player.paused() ||
-      isSeekBarFocused ||
-      isSeekBarDragging ||
-      errorActive
-    ) {
+    // Don't hide if paused, if dragging or if error active
+    if (!player || player.paused() || isSeekBarDragging || errorActive) {
       return;
     }
 
@@ -437,6 +427,13 @@ function VideoJsPlayer(poster = "") {
 
     if (controlsBar) controlsBar.classList.add("hidden");
     if (titleBar) titleBar.style.display = "none";
+
+    // Hide all overlays when hiding controls (if not paused)
+    const overlays = document.querySelectorAll(".video-action-overlay");
+    overlays.forEach((o) => o.classList.add("hidden"));
+
+    // Unfocus everything to ensure next time they show up, they can be focused fresh
+    unfocusAll();
   }
 
   function initPlayer(attempt = 0) {
@@ -482,7 +479,7 @@ function VideoJsPlayer(poster = "") {
       if (fromValue === "movie") {
         const movieId = localStorage.getItem("selectedMovieId");
         const matched = continueWatchingMoviesData.find(
-          (item) => item.itemId === movieId
+          (item) => item.itemId === movieId,
         );
         if (matched && matched.resumeTime) {
           resumeTime = matched.resumeTime;
@@ -492,7 +489,7 @@ function VideoJsPlayer(poster = "") {
         const episodeId = localStorage.getItem("selectedEpisodeId");
 
         const matched = continueWatchingSeriesData.find(
-          (item) => item.itemId === seriesId && item.episodeId === episodeId
+          (item) => item.itemId === seriesId && item.episodeId === episodeId,
         );
         if (matched && matched.resumeTime) {
           resumeTime = matched.resumeTime;
@@ -659,7 +656,7 @@ function VideoJsPlayer(poster = "") {
         loadingEl.classList.remove("hidden");
         // Hide pause overlay when loading starts
         const playOverlay = document.querySelector(
-          ".video-action-overlay.center"
+          ".video-action-overlay.center",
         );
         if (playOverlay) {
           playOverlay.classList.add("hidden");
@@ -717,9 +714,6 @@ function VideoJsPlayer(poster = "") {
         if (!isSeekBarDragging && !player.seeking()) {
           showOverlay("play");
         }
-
-        // Remove focus when playing
-        unfocusAll();
 
         // Reset manual pause flag when video starts playing
         userManuallyPaused = false;
@@ -870,7 +864,7 @@ function VideoJsPlayer(poster = "") {
               // Find current episode and get next one
               const seasonEpisodes = seriesEpisodes[currentSeason] || [];
               const currentEpisodeIndex = seasonEpisodes.findIndex(
-                (ep) => ep.id.toString() === currentEpisodeId
+                (ep) => ep.id.toString() === currentEpisodeId,
               );
 
               if (
@@ -882,7 +876,7 @@ function VideoJsPlayer(poster = "") {
                   seasonEpisodes[currentEpisodeIndex + 1].id;
                 localStorage.setItem(
                   "lastPlayedEpisodeId",
-                  nextEpisodeId.toString()
+                  nextEpisodeId.toString(),
                 );
               } else {
                 // No next episode, remove the focus marker
@@ -895,19 +889,19 @@ function VideoJsPlayer(poster = "") {
               // Only remove from continue watching if ALL episodes in the series are completed
               const allEpisodesCompleted = checkIfAllEpisodesCompleted(
                 currentEpisodeId,
-                seriesEpisodes
+                seriesEpisodes,
               );
               if (allEpisodesCompleted) {
                 removeItemFromHistoryById(
                   localStorage.getItem("selectedSeriesId"),
-                  "continueWatchingSeries"
+                  "continueWatchingSeries",
                 );
               }
             } else if (fromValue === "movie") {
               // MOVIES: Remove from continue watching when completed
               removeItemFromHistoryById(
                 localStorage.getItem("selectedMovieId"),
-                "continueWatchingMovies"
+                "continueWatchingMovies",
               );
             }
             // If there are still incomplete episodes, keep the series in continue watching
@@ -938,7 +932,7 @@ function VideoJsPlayer(poster = "") {
                     !(
                       item.itemId === continueWatchingItem.itemId &&
                       item.episodeId === continueWatchingItem.episodeId
-                    )
+                    ),
                 );
                 pl = {
                   ...pl,
@@ -947,7 +941,7 @@ function VideoJsPlayer(poster = "") {
               } else {
                 // Remove old entry for same movie
                 let updatedMovies = (pl.continueWatchingMovies || []).filter(
-                  (item) => item.itemId !== continueWatchingItem.itemId
+                  (item) => item.itemId !== continueWatchingItem.itemId,
                 );
                 pl = {
                   ...pl,
@@ -993,12 +987,12 @@ function VideoJsPlayer(poster = "") {
         if (fromValue == "movie") {
           const isContinueWatchingMovie = allRecentlyWatchedMovies.some(
             (movie) =>
-              movie && movie.itemId === localStorage.getItem("selectedMovieId")
+              movie && movie.itemId === localStorage.getItem("selectedMovieId"),
           );
 
           localStorage.setItem(
             "isContinueWatchingMovie",
-            isContinueWatchingMovie == false ? "true" : "false"
+            isContinueWatchingMovie == false ? "true" : "false",
           );
 
           // buildDynamicSidebarOptions();
@@ -1008,12 +1002,12 @@ function VideoJsPlayer(poster = "") {
           const isContinueWatchingSeries = allRecentlyWatchedSeries.some(
             (series) =>
               series &&
-              series.itemId === localStorage.getItem("selectedSeriesId")
+              series.itemId === localStorage.getItem("selectedSeriesId"),
           );
 
           localStorage.setItem(
             "isContinueWatchingSeries",
-            isContinueWatchingSeries === false ? "true" : "false"
+            isContinueWatchingSeries === false ? "true" : "false",
           );
           // buildDynamicSidebarOptions();
           localStorage.setItem("currentPage", "seriesDetailPage");
@@ -1038,12 +1032,12 @@ function VideoJsPlayer(poster = "") {
       try {
         const seriesId = localStorage.getItem("selectedSeriesId");
         const currentPlaylistName = JSON.parse(
-          localStorage.getItem("selectedPlaylist")
+          localStorage.getItem("selectedPlaylist"),
         ).playlistName;
         const playlistsData =
           JSON.parse(localStorage.getItem("playlistsData")) || [];
         const currentPlaylist = playlistsData.filter(
-          (pl) => pl.playlistName === currentPlaylistName
+          (pl) => pl.playlistName === currentPlaylistName,
         )[0];
 
         if (!currentPlaylist || !currentPlaylist.continueWatchingSeries) return;
@@ -1055,7 +1049,7 @@ function VideoJsPlayer(poster = "") {
               !(
                 item.itemId === seriesId &&
                 item.episodeId === completedEpisodeId.toString()
-              )
+              ),
           );
 
         // Update the playlist
@@ -1073,7 +1067,7 @@ function VideoJsPlayer(poster = "") {
         localStorage.setItem("playlistsData", JSON.stringify(updatedPlaylists));
 
         console.log(
-          `Removed episode ${completedEpisodeId} from continue watching`
+          `Removed episode ${completedEpisodeId} from continue watching`,
         );
       } catch (error) {
         console.warn("Error removing episode from continue watching:", error);
@@ -1085,12 +1079,12 @@ function VideoJsPlayer(poster = "") {
       try {
         const seriesId = localStorage.getItem("selectedSeriesId");
         const currentPlaylistName = JSON.parse(
-          localStorage.getItem("selectedPlaylist")
+          localStorage.getItem("selectedPlaylist"),
         ).playlistName;
         const playlistsData =
           JSON.parse(localStorage.getItem("playlistsData")) || [];
         const currentPlaylist = playlistsData.filter(
-          (pl) => pl.playlistName === currentPlaylistName
+          (pl) => pl.playlistName === currentPlaylistName,
         )[0];
         const continueWatchingEpisodes = currentPlaylist
           ? currentPlaylist.continueWatchingSeries || []
@@ -1119,7 +1113,7 @@ function VideoJsPlayer(poster = "") {
 
           // Check if this episode exists in continueWatching (meaning it's incomplete)
           const isInContinueWatching = continueWatchingEpisodes.some(
-            (cw) => cw.itemId === seriesId && cw.episodeId === episode.id
+            (cw) => cw.itemId === seriesId && cw.episodeId === episode.id,
           );
 
           // If it's in continueWatching, it means it's incomplete
@@ -1145,8 +1139,39 @@ function VideoJsPlayer(poster = "") {
       const key = e.keyCode || e.which;
       const keyChar = e.key;
 
+      // Handle Back/Exit early
+      if (
+        e.key === "Escape" ||
+        e.key === "Back" ||
+        e.key === "BrowserBack" ||
+        e.key === "XF86Back" ||
+        key === 10009
+      ) {
+        goBack();
+        e.preventDefault();
+        return;
+      }
+
+      const controlsBar = document.querySelector(".custom-video-controls");
+      const isHidden = controlsBar && controlsBar.classList.contains("hidden");
+
       // Show controls on any key press
       showControls();
+
+      // If controls were hidden and it's not a volume key, focus Play/Pause and return
+      if (isHidden && !errorActive) {
+        const isVolumeKey =
+          keyChar === "w" ||
+          keyChar === "s" ||
+          keyChar === "m" ||
+          [447, 448, 449].includes(key);
+        if (!isVolumeKey) {
+          showOverlay("pause"); // Show the center button/overlay
+          focusPlayPause();
+          e.preventDefault();
+          return;
+        }
+      }
 
       // Tizen Volume Controls with keyboard (w/s/m)
       if (typeof window.tizen !== "undefined" && window.tizen.tvaudiocontrol) {
@@ -1235,16 +1260,9 @@ function VideoJsPlayer(poster = "") {
         }
       }
 
-      // Error handling → Enter & Back keys = goBack()
+      // Error handling → Enter key = goBack() (Back keys handled above)
       if (errorActive) {
-        if (
-          e.key === "Enter" ||
-          e.key === "Escape" ||
-          e.key === "Back" ||
-          e.key === "BrowserBack" ||
-          e.key === "XF86Back" ||
-          key === 10009
-        ) {
+        if (e.key === "Enter") {
           goBack();
         }
         return;
@@ -1264,20 +1282,12 @@ function VideoJsPlayer(poster = "") {
             case "Enter":
               // Apply aspect ratio change using utility
               const videoEl = document.querySelector(
-                "#videojs-player-tag_html5_api"
+                "#videojs-player-tag_html5_api",
               );
               if (videoEl && window.VideoAspectRatio) {
                 const newLabel = window.VideoAspectRatio.cycle(videoEl);
                 window.VideoAspectRatio.showOverlay(newLabel);
               }
-              e.preventDefault();
-              break;
-
-            case "Escape":
-            case "Back":
-            case "BrowserBack":
-            case "XF86Back":
-              goBack();
               e.preventDefault();
               break;
           }
@@ -1341,14 +1351,6 @@ function VideoJsPlayer(poster = "") {
             case "Enter":
               // Just unfocus seek bar, don't play/pause
               focusPlayPause();
-              e.preventDefault();
-              break;
-
-            case "Escape":
-            case "Back":
-            case "BrowserBack":
-            case "XF86Back":
-              goBack();
               e.preventDefault();
               break;
           }
@@ -1417,7 +1419,7 @@ function VideoJsPlayer(poster = "") {
         }
 
         // If we handled the key in play/pause mode, return
-        if (["ArrowDown", "Enter"].includes(e.key)) {
+        if (["ArrowDown", "Enter", "ArrowRight", "ArrowLeft"].includes(e.key)) {
           return;
         }
       }
@@ -1439,6 +1441,13 @@ function VideoJsPlayer(poster = "") {
           break;
 
         case "ArrowRight":
+          // If controls are visible but nothing is focused, focus Play/Pause
+          if (!isHidden && !errorActive) {
+            focusPlayPause();
+            e.preventDefault();
+            return;
+          }
+
           if (
             !isLive &&
             player &&
@@ -1456,6 +1465,13 @@ function VideoJsPlayer(poster = "") {
           break;
 
         case "ArrowLeft":
+          // If controls are visible but nothing is focused, focus Play/Pause
+          if (!isHidden && !errorActive) {
+            focusPlayPause();
+            e.preventDefault();
+            return;
+          }
+
           if (
             !isLive &&
             player &&
@@ -1472,12 +1488,13 @@ function VideoJsPlayer(poster = "") {
           }
           break;
 
-        case "Escape":
-        case "Back":
-        case "BrowserBack":
-        case "XF86Back":
-        case 10009:
-          goBack();
+        case "ArrowUp":
+        case "ArrowDown":
+          // If controls are visible but nothing is focused, focus Play/Pause
+          if (!isHidden && !errorActive) {
+            focusPlayPause();
+            e.preventDefault();
+          }
           break;
       }
     }
@@ -1547,7 +1564,7 @@ function VideoJsPlayer(poster = "") {
 
   setTimeout(() => {
     const videoHtmlElement = document.querySelector(
-      "#videojs-player-tag_html5_api"
+      "#videojs-player-tag_html5_api",
     );
     if (videoHtmlElement && window.VideoAspectRatio) {
       window.VideoAspectRatio.initialize(videoHtmlElement);
