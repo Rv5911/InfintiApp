@@ -92,7 +92,7 @@ function ParentalPinDialog(onSuccess, onCancel, currentPlaylist, fromPage) {
   function keydownHandler(e) {
     if (!isDialogActive) return;
     
-    console.log("Key pressed:", e.key); // Debug log
+    // console.log("Key pressed:", e.key); // Debug log
     
     switch (e.key) {
       case "ArrowDown":

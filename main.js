@@ -73,7 +73,7 @@ window.onload = function () {
 function showSplashScreen() {
   const splashPage = document.getElementById("splash-page");
   splashPage.innerHTML = `
-    <div class="splash-page-container" style="background-image: url('/assets/bg-img.png');">
+    <div class="splash-page-container" style="background-image: url('/assets/bg-img.webp');">
       <img src="/assets/app-logo.png" alt="Logo" class="logo" />
     </div>
   `;

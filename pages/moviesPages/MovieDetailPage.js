@@ -393,6 +393,7 @@ async function MovieDetailPage() {
       e.key === "BrowserBack" ||
       e.key === "XF86Back"
     ) {
+      if (typeof clearAllLoaders === "function") clearAllLoaders();
       localStorage.removeItem("selectedMovieId");
       localStorage.setItem("currentPage", "moviesPage");
       Router.showPage("movies");
@@ -404,8 +405,27 @@ async function MovieDetailPage() {
     setFocus(focusableEls[currentFocusIndex]);
   }
 
+  const clearAllLoaders = () => {
+    const loaders = [
+      "home-page-loader",
+      "movies-focus-restore-overlay",
+      "series-focus-restore-overlay",
+    ];
+    loaders.forEach((id) => {
+      const el = document.getElementById(id);
+      if (el) el.remove();
+    });
+
+    const loadingOverlay = document.getElementById("loading-overlay");
+    if (loadingOverlay) loadingOverlay.classList.add("hidden");
+
+    const loadingProgress = document.querySelector("#loading-progress");
+    if (loadingProgress) loadingProgress.style.display = "none";
+  };
+
   document.addEventListener("keydown", moviesDetailPageKeydownHandler);
   MovieDetailPage.cleanup = function () {
+    clearAllLoaders();
     document.removeEventListener("keydown", moviesDetailPageKeydownHandler);
   };
 

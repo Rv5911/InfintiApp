@@ -7,7 +7,7 @@ let globalShowContiueButton = false;
 function cleanupLivePlayer() {
   try {
     if (window.livePlayer) {
-      console.log("Disposing live player...");
+      // console.log("Disposing live player...");
 
       // Store player reference to avoid race conditions
       const currentPlayer = window.livePlayer;
@@ -239,7 +239,7 @@ function applySorting() {
   );
   if (checked) {
     const sortValue = checked.value;
-    console.log("Applied sorting:", sortValue);
+    // console.log("Applied sorting:", sortValue);
     localStorage.setItem("movieSortValue", sortValue);
   }
 

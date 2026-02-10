@@ -10,7 +10,7 @@
     max-height: 100vh;
     box-sizing: border-box;
     color: white;
-    background-image: url("../assets/bg-img.png");
+    background-image: url("../assets/bg-img.webp");
     animation: fadeInOut 1s ease-in-out;
     display: flex;
     flex-direction: column;
@@ -184,7 +184,7 @@
 /* Top Section */
 .lp-top-section {
     display: flex;
-    height: 50%;
+    height: 60%;
     z-index: 0;
     flex-direction: row-reverse;
     margin-bottom: 0px;
@@ -348,7 +348,7 @@
 
 /* Channels Section */
 .lp-channels-section {
-    height: 50%;
+    height: 40%;
     display: flex;
     flex-direction: column;
     overflow: hidden;

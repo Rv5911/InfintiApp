@@ -1,25 +1,41 @@
 function SeriesPage() {
-  // Prevent duplicate loaders by removing any existing one first
-  const existingLoader = document.getElementById("home-page-loader");
-  if (existingLoader) {
-    existingLoader.remove();
-  }
+  // --- Standardized Loader Cleanup ---
+  const clearAllLoaders = () => {
+    const loaders = [
+      "home-page-loader",
+      "movies-focus-restore-overlay",
+      "series-focus-restore-overlay",
+    ];
+    loaders.forEach((id) => {
+      const el = document.getElementById(id);
+      if (el) el.remove();
+    });
 
-  // Also hide the global loading overlay if it's visible
-  const loadingOverlay = document.getElementById("loading-overlay");
-  if (loadingOverlay) {
-    loadingOverlay.classList.add("hidden");
-  }
+    const loadingOverlay = document.getElementById("loading-overlay");
+    if (loadingOverlay) loadingOverlay.classList.add("hidden");
+
+    const loadingProgress = document.querySelector("#loading-progress");
+    if (loadingProgress) loadingProgress.style.display = "none";
+  };
+
+  // Prevent duplicate loaders by removing any existing ones first
+  clearAllLoaders();
+
+  // Track if we are returning from detail page
+  const isRestoringFocus = localStorage.getItem("seriesLastCardIndex") !== null;
 
   // Create and show custom series page loader immediately (using HomePage loader styles)
-  const seriesLoader = document.createElement("div");
-  seriesLoader.id = "home-page-loader";
-  seriesLoader.innerHTML = `
-    <div class="home-loader-content">
-      <div class="home-loader-spinner"></div>
-    </div>
-  `;
-  document.body.appendChild(seriesLoader);
+  // Only show if NOT restoring focus (restoration has its own handling)
+  if (!isRestoringFocus) {
+    const seriesLoader = document.createElement("div");
+    seriesLoader.id = "home-page-loader";
+    seriesLoader.innerHTML = `
+      <div class="home-loader-content">
+        <div class="home-loader-spinner"></div>
+      </div>
+    `;
+    document.body.appendChild(seriesLoader);
+  }
 
   let selectedSeriesCategoryId = localStorage.getItem("seriesLastCategoryId")
     ? Number(localStorage.getItem("seriesLastCategoryId"))
@@ -31,8 +47,6 @@ function SeriesPage() {
     ? Number(localStorage.getItem("seriesLastCardIndex"))
     : 0;
 
-  // Track if we are returning from detail page
-  const isRestoringFocus = localStorage.getItem("seriesLastCardIndex") !== null;
   let inSeriesChannelList = true;
   let inSeriesSearch = false;
   let inSeriesMenu = false;
@@ -1936,11 +1950,25 @@ function SeriesPage() {
 
   // Show UI immediately, then load data
   setTimeout(() => {
+    // Standardize cleanup
+    if (typeof clearAllLoaders === "function") clearAllLoaders();
+    else {
+      const el = document.getElementById("home-page-loader");
+      if (el) el.remove();
+    }
+
     if (SeriesPage.cleanup) SeriesPage.cleanup();
 
-    // Show loading state first
+    // Check if returning from detail page BEFORE showing initial spinner
+    const savedCategoryId = localStorage.getItem("seriesLastCategoryId");
+    const savedChannelIndex = localStorage.getItem("seriesLastChannelIndex");
+    const savedCardIndex = localStorage.getItem("seriesLastCardIndex");
+    const isRestoring =
+      savedCategoryId && savedChannelIndex !== null && savedCardIndex !== null;
+
+    // Only show loading spinner if NOT restoring focus (restoration has its own overlay)
     const container = qs(".series-content-container");
-    if (container) {
+    if (container && !isRestoring) {
       container.innerHTML = `
         <div class="series-loading-spinner">
           <div class="spinner"></div>
@@ -1952,16 +1980,7 @@ function SeriesPage() {
     setTimeout(async () => {
       await processSeriesData();
 
-      // Check if we have saved focus state
-      const savedCategoryId = localStorage.getItem("seriesLastCategoryId");
-      const savedChannelIndex = localStorage.getItem("seriesLastChannelIndex");
-      const savedCardIndex = localStorage.getItem("seriesLastCardIndex");
-
-      if (
-        savedCategoryId &&
-        savedChannelIndex !== null &&
-        savedCardIndex !== null
-      ) {
+      if (isRestoring) {
         // Restore sidebar state
         const savedSidebarVisible =
           localStorage.getItem("seriesSidebarVisible") === "true";

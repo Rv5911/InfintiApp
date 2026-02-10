@@ -1,11 +1,11 @@
 const firebaseConfig = {
-  apiKey: "AIzaSyDK5uF-816i4_R9UlT0v5_BD12qu3rpF8E",
-  authDomain: "smarttvapp-5f8ca.firebaseapp.com",
-  projectId: "smarttvapp-5f8ca",
-  storageBucket: "smarttvapp-5f8ca.firebasestorage.app",
-  messagingSenderId: "430801978001",
-  appId: "1:430801978001:web:74d60528a2d1c37dfdb530",
-  measurementId: "G-3G73FDKF4B"
+ apiKey: "AIzaSyBba7XBrY1FC59OX9qztjgMNoNH1umPPq0",
+  authDomain: "infintiapp.firebaseapp.com",
+  projectId: "infintiapp",
+  storageBucket: "infintiapp.firebasestorage.app",
+  messagingSenderId: "617030192842",
+  appId: "1:617030192842:web:f847f1030ce9e9613f2e33",
+  measurementId: "G-8QDHMZ0QJZ"
 };
 
 firebase.initializeApp(firebaseConfig);
@@ -23,7 +23,8 @@ window.logAllDnsEntries = function () {
 
     })
     .catch(function (error) {
-      alert("Error getting DNS entries: " + error.message);
+      Toaster.showToast("error", "Error getting DNS entries: " + error.message);
+      // alert("Error getting DNS entries: " + error.message);
     });
 };
 
@@ -38,6 +39,8 @@ window.getTmbdId = function () {
 
     })
     .catch(function (error) {
-      alert("Error getting TMDBID entries: " + error.message);
+        Toaster.showToast("error",
+          "Error getting TMDBID entries: " + error.message);
+      // alert("Error getting TMDBID entries: " + error.message);
     });
 };

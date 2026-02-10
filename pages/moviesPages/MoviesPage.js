@@ -1,4 +1,32 @@
 function MoviesPage() {
+  // --- Standardized Loader Cleanup ---
+  const clearAllLoaders = () => {
+    const loaders = [
+      "home-page-loader",
+      "movies-focus-restore-overlay",
+      "series-focus-restore-overlay",
+    ];
+    loaders.forEach((id) => {
+      const el = document.getElementById(id);
+      if (el) el.remove();
+    });
+
+    const loadingOverlay = document.getElementById("loading-overlay");
+    if (loadingOverlay) loadingOverlay.classList.add("hidden");
+
+    const loadingProgress = document.querySelector("#loading-progress");
+    if (loadingProgress) loadingProgress.style.display = "none";
+
+    // Also remove any inner spinners
+    const innerSpinners = document.querySelectorAll(
+      ".movies-loading-spinner, .series-loading-spinner",
+    );
+    innerSpinners.forEach((s) => s.remove());
+  };
+
+  // Prevent duplicate loaders
+  clearAllLoaders();
+
   let selectedCategoryId = null;
   let focusedChannelIndex = 0;
   let focusedCardIndex = 0;
@@ -1626,34 +1654,32 @@ function MoviesPage() {
 
   // Show UI immediately, then load data
   setTimeout(() => {
-    // Remove stale loader from other pages if it exists
-    const staleLoader = document.getElementById("home-page-loader");
-    if (staleLoader) staleLoader.remove();
+    // Standardize cleanup
+    clearAllLoaders();
 
     if (MoviesPage.cleanup) MoviesPage.cleanup();
 
-    // Show loading state first
+    // Check if returning from detail page BEFORE showing initial spinner
+    const savedCategoryId = localStorage.getItem("moviesSelectedCategoryId");
+    const savedCategoryIndex = localStorage.getItem("moviesCategoryIndex");
+    const savedCardIndex = localStorage.getItem("moviesCardIndex");
+    const isRestoring =
+      savedCategoryId && savedCategoryIndex !== null && savedCardIndex !== null;
+
+    // Only show loading spinner if NOT restoring focus (restoration has its own overlay)
     const container = qs(".movies-content-container");
-    if (container) {
+    if (container && !isRestoring) {
       container.innerHTML = `
         <div class="movies-loading-spinner">
           <div class="spinner"></div>
         </div>
       `;
     }
+
     setTimeout(async () => {
       await processData();
 
-      // Check if returning from detail page
-      const savedCategoryId = localStorage.getItem("moviesSelectedCategoryId");
-      const savedCategoryIndex = localStorage.getItem("moviesCategoryIndex");
-      const savedCardIndex = localStorage.getItem("moviesCardIndex");
-
-      if (
-        savedCategoryId &&
-        savedCategoryIndex !== null &&
-        savedCardIndex !== null
-      ) {
+      if (isRestoring) {
         // Restore sidebar state
         const savedSidebarVisible =
           localStorage.getItem("moviesSidebarVisible") === "true";
@@ -1677,6 +1703,10 @@ function MoviesPage() {
           overlay.innerHTML = '<div class="spinner"></div>';
           document.body.appendChild(overlay);
         }
+
+        // Ensure global loader is hidden when restoration overlay is active
+        const loadingOverlay = document.getElementById("loading-overlay");
+        if (loadingOverlay) loadingOverlay.classList.add("hidden");
 
         // Calculate how many cards need to be visible to show the focused card
         const cardsNeededToShow = focusedCardIndex + 1;

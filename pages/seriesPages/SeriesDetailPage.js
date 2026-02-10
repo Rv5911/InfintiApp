@@ -42,6 +42,7 @@ function SeriesDetailPage() {
         navigationInterrupted = true;
 
         if (loadingOverlay) loadingOverlay.classList.add("hidden");
+        if (typeof clearAllLoaders === "function") clearAllLoaders();
 
         document.removeEventListener(
           "keydown",
@@ -1345,6 +1346,7 @@ function SeriesDetailPage() {
             hideDropdown();
             return;
           }
+          if (typeof clearAllLoaders === "function") clearAllLoaders();
           localStorage.removeItem("selectedSeriesId");
           localStorage.removeItem("lastPlayedEpisodeId");
           localStorage.setItem("currentPage", "seriesPage");
@@ -1360,8 +1362,27 @@ function SeriesDetailPage() {
 
     document.addEventListener("keydown", seriesDetailPageKeydownHandler);
     SeriesDetailPage.cleanup = function () {
+      if (typeof clearAllLoaders === "function") clearAllLoaders();
       document.removeEventListener("keydown", seriesDetailPageKeydownHandler);
     };
+
+    function clearAllLoaders() {
+      const loaders = [
+        "home-page-loader",
+        "movies-focus-restore-overlay",
+        "series-focus-restore-overlay",
+      ];
+      loaders.forEach((id) => {
+        const el = document.getElementById(id);
+        if (el) el.remove();
+      });
+
+      const loadingOverlay = document.getElementById("loading-overlay");
+      if (loadingOverlay) loadingOverlay.classList.add("hidden");
+
+      const loadingProgress = document.querySelector("#loading-progress");
+      if (loadingProgress) loadingProgress.style.display = "none";
+    }
 
     setTimeout(function () {
       showSeasons(); // Show Season 1 episodes by default
