@@ -1133,9 +1133,73 @@
 }
 
 /* Header Integration Styles */
+.live-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    color: white;
+    padding-top: 30px;
+    width: 100%;
+}
+
+.first-live-header {
+    width: 45%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.live-header-right {
+    margin-left: 20px;
+}
+
+.second-live-header {
+    width: 70%;
+    padding-left: 15%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.live-header-title {
+    font-size: 44px;
+    padding-top: 20px;
+    font-weight: 500;
+}
+
+.second-live-header-div {
+    display: flex;
+    align-items: center;
+}
+
+.live-header-search {
+    position: relative;
+}
+
+.live-header-search-icon {
+    position: absolute;
+    top: 50%;
+    right: 30px;
+    transform: translateY(-50%);
+    height: 30px;
+    width: 30px;
+}
+
 .live-header-search-input-focused {
     border: 4px solid var(--gold) !important;
     outline: none;
+}
+
+.live-header-menu {
+    border: 2px solid transparent;
+    border-radius: 8px;
+    padding: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: border-color 0.2s ease;
+    margin-left: 60px;
 }
 
 .live-header-menu-focused {
