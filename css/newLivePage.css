@@ -38,12 +38,7 @@
     height: 100%;
     display: flex;
     background: rgba(0, 0, 0, 0.4);
-
-    mask-image: linear-gradient(to bottom, black 0%, black 90%, transparent 100%);
-    -webkit-mask-image: linear-gradient(to bottom,
-            black 0%,
-            black 90%,
-            transparent 100%);
+    /* mask-image: removed for performance on old TVs */
     flex-direction: column;
     overflow: hidden;
 }
@@ -94,6 +89,7 @@
     overflow-y: auto;
     list-style: none;
     padding: 0;
+    zoom: 1.4;
     margin: 0;
     /* max-height: calc(100vh - 260px); */
 }
@@ -102,12 +98,11 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    zoom: 1.3;
+    /* zoom: 1.3; */
     padding: 15px 20px;
     border-radius: 31px;
     cursor: pointer;
     border-left: 3px solid transparent;
-    transition: all 0.2s;
 }
 
 .lp-category-item:hover {
@@ -469,7 +464,6 @@
     overflow: visible;
     justify-content: center;
     cursor: pointer;
-    transition: all 0.2s;
     display: flex;
     flex-direction: column;
     padding: 10px;
@@ -478,7 +472,6 @@
 
 .lp-channel-card:hover {
     transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
 }
 
 .lp-channel-card.lp-focused {
@@ -732,9 +725,9 @@
 
 /* Parental Lock */
 .lp-channel-card-locked {
-    opacity: 0.6;
-    filter: blur(5px);
+    opacity: 0.4;
     position: relative;
+    background: #1a1a1a;
 }
 
 .lp-channel-lock-icon {

@@ -30,8 +30,8 @@ function ParentalControl(restoredValues) {
 
 
 if (restoredValues) {
-  inputs[0].value = restoredValues[0] ?? "";
-  inputs[1].value = restoredValues[1] ?? "";
+  inputs[0].value = restoredValues && restoredValues[0] ? restoredValues[0] : "";
+  inputs[1].value = restoredValues && restoredValues[1] ? restoredValues[1] : "";
 } else if (savedPassword) {
   inputs[0].value = savedPassword;
   inputs[1].value = savedPassword;

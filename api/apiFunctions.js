@@ -1,5 +1,4 @@
 const TMBD_API_KEY = localStorage.getItem("tmbdId");
-// const TMBD_API_KEY = localStorage.getItem("tmbdId") ? localStorage.getItem("tmbdId") : "a21eeaca44af5d2a4349214ecba1b338";
 
 const castImageUrl = "https://image.tmdb.org/t/p/w500";
 
@@ -95,7 +94,7 @@ async function loginApi(
   fromPlaylist = false,
   playlistUrl = ""
 ) {
-  const defaultDns = "http://mega2025.site:8080/";
+  const defaultDns = "http://infinitistreamapp.com:8080/";
   let alldns = JSON.parse(localStorage.getItem("all_dns")) || [];
   // let alldns = [];
 

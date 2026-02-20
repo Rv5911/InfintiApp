@@ -531,7 +531,7 @@
     border-radius: 6px;
     font-size: 16px;
     cursor: pointer;
-    transition: background 0.2s ease;
+    /* transition: background 0.2s ease; */
 }
 
 .live-video-error .retry-btn:hover {
@@ -552,7 +552,7 @@
     justify-content: flex-end;
 
     /* opacity: 0; */
-    transition: opacity 0.3s ease;
+    /* transition: opacity 0.3s ease; */
 }
 
 .live-video-player-div:hover .live-video-controls {
@@ -570,7 +570,7 @@
     justify-content: center;
     align-items: center;
     cursor: pointer;
-    transition: all 0.2s ease;
+    /* transition: all 0.2s ease; */
 }
 
 .live-control-btn:hover {
@@ -920,7 +920,7 @@
     border-radius: 4px;
     border: 2px solid white;
     cursor: pointer;
-    transition: background-color 0.2s;
+    /* transition: background-color 0.2s; */
     color: white;
 }
 
@@ -1010,10 +1010,10 @@
     width: 100% !important;
 }
 
-.live-top-overlays,
+/* .live-top-overlays,
 .live-video-controls {
     transition: opacity 0.3s ease;
-}
+} */
 
 .live-video-player-div:hover .live-video-controls {
     opacity: 1;
@@ -1103,10 +1103,10 @@
 }
 
 /* Additional styles to ensure UI elements remain visible */
-.live-top-overlays,
+/* .live-top-overlays,
 .live-video-controls {
     transition: opacity 0.3s ease;
-}
+} */
 
 .live-video-player-div:hover .live-video-controls {
     opacity: 1;
@@ -1285,7 +1285,6 @@
 
 .channel-card-locked {
     opacity: 0.6;
-    filter: blur(5px);
     position: relative;
 }
 

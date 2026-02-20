@@ -1950,12 +1950,6 @@ function LivePage() {
       }
     } else if (focusedSection === "channels") {
       // Horizontal 3-Row Grid Up Navigation
-      if (buttonFocusIndex >= 0) {
-        buttonFocusIndex = -1;
-        updateFocus();
-        return;
-      }
-
       if (channelIndex % 3 === 0) {
         // Top Row -> Header (Search Input)
         focusedSection = "header";
@@ -2065,20 +2059,6 @@ function LivePage() {
       }
     } else if (focusedSection === "channels") {
       // Horizontal 3-Row Grid Down Navigation
-      const currentCard =
-        document.querySelectorAll(".lp-channel-card")[channelIndex];
-      const buttons = currentCard
-        ? currentCard.querySelectorAll(
-            ".lp-channel-fav-btn, .lp-channel-remove-btn",
-          )
-        : [];
-
-      if (buttonFocusIndex === -1 && buttons.length > 0) {
-        buttonFocusIndex = 0;
-        updateFocus();
-        return;
-      }
-
       if (channelIndex % 3 !== 2 && channelIndex + 1 < filteredStreams.length) {
         // Not at bottom of column AND there is a next item -> Move down
         channelIndex++;
@@ -2172,6 +2152,10 @@ function LivePage() {
     } else if (focusedSection === "channels") {
       if (buttonFocusIndex > 0) {
         buttonFocusIndex--;
+        updateFocus();
+        return;
+      } else if (buttonFocusIndex === 0) {
+        buttonFocusIndex = -1;
         updateFocus();
         return;
       }
