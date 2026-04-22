@@ -60,11 +60,17 @@ function VideoJsPlayer(poster = "") {
   // 🔴 Track if user manually paused
   let userManuallyPaused = false;
 
+  // 🔴 When we pause only to perform a seek, don't treat it as a user pause
+  let isProgrammaticPauseForSeek = false;
+
   // 🔴 Debouncing variables for seek operations
   let pendingSeekTimeout = null;
   let accumulatedSeekOffset = 0;
   let lastSeekTime = 0;
   let pendingResumeTimeout = null;
+
+  // 🔴 Track last stable playback time (for recovery after seek errors)
+  let lastStableTime = 0;
 
   // 🔴 Track if video has started playing for the first time
   let hasStartedPlayingOnce = false;
@@ -108,6 +114,7 @@ function VideoJsPlayer(poster = "") {
     if (isFirstSeek) {
       wasPlayingBeforeSeek = !player.paused();
       if (wasPlayingBeforeSeek && !userManuallyPaused) {
+        isProgrammaticPauseForSeek = true;
         player.pause();
       }
     }
@@ -164,6 +171,13 @@ function VideoJsPlayer(poster = "") {
       }
 
       try {
+        // Seeking is now happening; clear flag shortly after pause event fires
+        if (isProgrammaticPauseForSeek) {
+          setTimeout(() => {
+            isProgrammaticPauseForSeek = false;
+          }, 0);
+        }
+
         const currentTime = player.currentTime();
         const duration = player.duration();
         const newTime = Math.max(
@@ -193,9 +207,16 @@ function VideoJsPlayer(poster = "") {
         // Resume playback if it was playing before
         if (wasPlayingBeforeSeek && !userManuallyPaused) {
           pendingResumeTimeout = setTimeout(() => {
-            player.play().catch((err) => {
-              console.log("Resume after debounced seek failed:", err);
-            });
+            player
+              .play()
+              .then(() => {
+                // Keep overlays in sync after auto-resume
+                showOverlay("play");
+              })
+              .catch((err) => {
+                console.log("Resume after debounced seek failed:", err);
+                showOverlay("pause");
+              });
           }, 200);
         }
       } catch (err) {
@@ -514,9 +535,15 @@ function VideoJsPlayer(poster = "") {
         !userManuallyPaused
       ) {
         setTimeout(() => {
-          player.play().catch((err) => {
-            console.log("Auto-play after seek failed:", err);
-          });
+          player
+            .play()
+            .then(() => {
+              showOverlay("play");
+            })
+            .catch((err) => {
+              console.log("Auto-play after seek failed:", err);
+              showOverlay("pause");
+            });
         }, 100);
       }
     });
@@ -621,6 +648,14 @@ function VideoJsPlayer(poster = "") {
           seekBar.value = player.currentTime();
         }
 
+        // Track stable time only when not seeking/dragging
+        if (!isSeekBarDragging && !player.seeking()) {
+          const t = player.currentTime();
+          if (typeof t === "number" && !isNaN(t) && isFinite(t)) {
+            lastStableTime = t;
+          }
+        }
+
         // Update current time display
         if (currentTimeEl) {
           currentTimeEl.textContent = formatTime(player.currentTime());
@@ -721,6 +756,11 @@ function VideoJsPlayer(poster = "") {
     });
 
     player.on("pause", () => {
+      // If we paused only to execute a seek, don't mark as user pause or force pause UI.
+      if (isProgrammaticPauseForSeek) {
+        return;
+      }
+
       // Don't show pause UI if video is still loading/buffering
       if (!errorActive && !loadingEl.classList.contains("hidden")) {
         return;
@@ -745,6 +785,39 @@ function VideoJsPlayer(poster = "") {
 
     player.on("error", () => {
       console.log("❌ Player error:", player.error());
+      const err = player.error && player.error();
+
+      // If an error happens during seeking/dragging/debounced seek, attempt recovery
+      if (
+        !errorActive &&
+        (player.seeking() || isSeekBarDragging || pendingSeekTimeout !== null)
+      ) {
+        console.warn("Recovering from error during seek:", err);
+        try {
+          // Hide dialog if it was shown
+          if (errorDialog) errorDialog.classList.add("hidden");
+
+          // Try to jump back to a stable time and resume playback
+          const target = Math.max(
+            0,
+            Math.min(player.duration() || lastStableTime || 0, lastStableTime),
+          );
+          setTimeout(() => {
+            if (errorActive) return;
+            try {
+              player.currentTime(target);
+            } catch (e) {}
+            player
+              .play()
+              .then(() => showOverlay("play"))
+              .catch(() => showOverlay("pause"));
+          }, 200);
+          return;
+        } catch (e) {
+          // Fall through to showing error dialog
+        }
+      }
+
       errorActive = true;
 
       loadingEl.classList.add("hidden");
@@ -767,11 +840,10 @@ function VideoJsPlayer(poster = "") {
       ) {
         const errorMsgEl = document.getElementById("errorDialogMessage");
         if (errorMsgEl) {
-          const playerError = player.error();
           let errorMessage = "Something went wrong";
-          if (playerError) {
+          if (err) {
             errorMessage =
-              playerError.message || `Error Code: ${playerError.code}`;
+              err.message || `Error Code: ${err.code}`;
           }
           errorMsgEl.innerText = `⚠️ ${errorMessage}`;
         }
