@@ -9,11 +9,8 @@ async function MovieDetailPage() {
 
   function handleBackNavigationDuringLoading(e) {
     if (
-      (e.keyCode === 10009 ||
-        e.key === "Escape" ||
-        e.key === "Back" ||
-        e.key === "BrowserBack" ||
-        e.key === "XF86Back") &&
+      typeof isBackKey === "function" &&
+      isBackKey(e) &&
       localStorage.getItem("currentPage") === "moviesDetailPage"
     ) {
       e.preventDefault();
@@ -387,11 +384,7 @@ async function MovieDetailPage() {
 
     // --- Back / Exit ---
     if (
-      e.keyCode === 10009 ||
-      e.key === "Escape" ||
-      e.key === "Back" ||
-      e.key === "BrowserBack" ||
-      e.key === "XF86Back"
+      typeof isBackKey === "function" && isBackKey(e)
     ) {
       if (typeof clearAllLoaders === "function") clearAllLoaders();
       localStorage.removeItem("selectedMovieId");

@@ -62,6 +62,24 @@ function StreamFormat() {
     }
 
     function streamFormatKeydownEvents(e) {
+      if (typeof isBackKey === "function" && isBackKey(e)) {
+        // Only back keys remove the subpage
+        removeAllFocusStyles();
+        if (
+          document.activeElement &&
+          typeof document.activeElement.blur === "function"
+        ) {
+          document.activeElement.blur();
+        }
+        if (saveButton && typeof saveButton.blur === "function") {
+          saveButton.blur();
+        }
+        document.removeEventListener("keydown", streamFormatKeydownEvents);
+        localStorage.setItem("currentPage", "dashboard");
+        Router.showPage("dashboard");
+        return;
+      }
+
       switch (e.key) {
         case "ArrowDown":
           currentFocus = (currentFocus + 1) % (radios.length + 1);
@@ -144,28 +162,6 @@ function StreamFormat() {
             saveButton.click();
           }
           e.preventDefault();
-          break;
-
-        case "Backspace":
-        case "Escape":
-        case "Back":
-        case "BrowserBack":
-        case "XF86Back":
-        case "10009":
-          // Only back keys remove the subpage
-          removeAllFocusStyles();
-          if (
-            document.activeElement &&
-            typeof document.activeElement.blur === "function"
-          ) {
-            document.activeElement.blur();
-          }
-          if (saveButton && typeof saveButton.blur === "function") {
-            saveButton.blur();
-          }
-          document.removeEventListener("keydown", streamFormatKeydownEvents);
-        localStorage.setItem("currentPage", "dashboard");
-        Router.showPage("dashboard");
           break;
 
         default:

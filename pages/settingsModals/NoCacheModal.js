@@ -65,6 +65,11 @@ function NoCacheModal() {
     function noCacheKeydownHandler(e) {
       if (localStorage.getItem("currentPage") !== "nocachePage") return;
 
+      if (typeof isBackKey === "function" && isBackKey(e)) {
+        closeModal();
+        return;
+      }
+
       switch (e.key) {
         case "ArrowRight":
         case "39":
@@ -85,14 +90,6 @@ function NoCacheModal() {
         case "Enter":
         case "13":
           handleNoCacheClick(buttons[focusIndex]);
-          break;
-
-        case "Escape":
-        case "Back":
-        case "BrowserBack":
-        case "XF86Back":
-        case "SoftLeft":
-          closeModal();
           break;
       }
     }

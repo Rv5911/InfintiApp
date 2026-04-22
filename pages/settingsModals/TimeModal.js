@@ -78,6 +78,14 @@ function TimeModal() {
     function timeKeydownHandler(e) {
       if (localStorage.getItem("currentPage") !== "timeModal") return;
 
+      if (typeof isBackKey === "function" && isBackKey(e)) {
+        localStorage.setItem("currentPage", "settingsPage");
+        Router.showPage("settings");
+        document.body.style.backgroundImage = "none";
+        document.body.style.backgroundColor = "black";
+        return;
+      }
+
       const timeFormInputs = document.querySelectorAll(".part-option");
       const saveBtnTime = document.querySelector("#saveBtnTime");
       const backBtnTime = document.querySelector("#backBtnTime");
@@ -134,16 +142,6 @@ function TimeModal() {
           } else {
             handleTimeClick(focused);
           }
-          break;
-
-        case "Escape":
-        case "Back":
-        case "BrowserBack":
-        case "XF86Back":
-             localStorage.setItem("currentPage", "settingsPage");
-      Router.showPage("settings");
-      document.body.style.backgroundImage = "none";
-      document.body.style.backgroundColor = "black";
           break;
       }
     }

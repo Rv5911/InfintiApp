@@ -91,6 +91,14 @@ function StreamFormatModal() {
     function streamKeydownHandler(e) {
       if (localStorage.getItem("currentPage") !== "streamFormat") return;
 
+      if (typeof isBackKey === "function" && isBackKey(e)) {
+        localStorage.setItem("currentPage", "settingsPage");
+        Router.showPage("settings");
+        document.body.style.backgroundImage = "none";
+        document.body.style.backgroundColor = "black";
+        return;
+      }
+
       const streamFormInputs = document.querySelectorAll(".option");
       const saveBtn = document.querySelector("#saveBtn");
       const backBtn = document.querySelector("#backBtn");
@@ -146,16 +154,6 @@ function StreamFormatModal() {
           } else {
             handleStreamClick(focused);
           }
-          break;
-
-        case "Escape":
-        case "Back":
-        case "BrowserBack":
-        case "XF86Back":
-          localStorage.setItem("currentPage", "settingsPage");
-          Router.showPage("settings");
-          document.body.style.backgroundImage = "none";
-          document.body.style.backgroundColor = "black";
           break;
       }
     }

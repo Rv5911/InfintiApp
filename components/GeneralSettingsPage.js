@@ -139,6 +139,22 @@ function GeneralSettingsPage() {
       const dropdownOptions = document.querySelectorAll(".gs-dropdown-option");
       const isDropdownOpen = document.querySelector(".gs-dropdown").style.display === "block";
 
+      if (typeof isBackKey === "function" && isBackKey(e)) {
+        if (isDropdownOpen) {
+          document.querySelector(".gs-dropdown").style.display = "none";
+          gsFocusIndex = 0;
+          const mainItems = [limitOption, saveBtn, backBtn];
+          setGeneralFocus(mainItems, gsFocusIndex);
+        } else {
+          localStorage.setItem("currentPage", "settingsPage");
+          Router.showPage("settings");
+          document.body.style.backgroundImage = "none";
+          document.body.style.backgroundColor = "black";
+        }
+        e.preventDefault();
+        return;
+      }
+
       let gsFormItems;
       
       if (isDropdownOpen) {
@@ -165,17 +181,6 @@ function GeneralSettingsPage() {
               const mainItems = [limitOption, saveBtn, backBtn];
               setGeneralFocus(mainItems, gsFocusIndex);
             }
-            e.preventDefault();
-            break;
-            
-          case "Escape":
-          case "Back":
-          case "BrowserBack":
-          case "XF86Back":
-            document.querySelector(".gs-dropdown").style.display = "none";
-            gsFocusIndex = 0; // Focus back to limit option (now first item)
-            const mainItems = [limitOption, saveBtn, backBtn];
-            setGeneralFocus(mainItems, gsFocusIndex);
             e.preventDefault();
             break;
         }
@@ -246,16 +251,6 @@ function GeneralSettingsPage() {
               // Let the button handle its own click
               return;
             }
-            break;
-
-          case "Escape":
-          case "Back":
-          case "BrowserBack":
-          case "XF86Back":
-            localStorage.setItem("currentPage", "settingsPage");
-            Router.showPage("settings");
-            document.body.style.backgroundImage = "none";
-            document.body.style.backgroundColor = "black";
             break;
         }
       }

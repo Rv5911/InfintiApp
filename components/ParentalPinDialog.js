@@ -93,6 +93,11 @@ function ParentalPinDialog(onSuccess, onCancel, currentPlaylist, fromPage) {
     if (!isDialogActive) return;
     
     // console.log("Key pressed:", e.key); // Debug log
+    if (typeof isBackKey === "function" ? isBackKey(e) : e.key === "Escape") {
+      e.preventDefault();
+      handleCancel();
+      return;
+    }
     
     switch (e.key) {
       case "ArrowDown":
@@ -141,11 +146,6 @@ case "Enter":
     handleCancel();
   }
   break;
-
-      case "Escape":
-        e.preventDefault();
-        handleCancel();
-        break;
     }
   }
 

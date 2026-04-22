@@ -596,6 +596,28 @@ function decodeBase64(str) {
   }
 }
 
+// Common "Back" keys across platforms/remotes/browsers
+const BACK_KEYS = {
+  codes: [10009, 461, 8, 27, 10079, 100079],
+  names: [
+    "Escape",
+    "Back",
+    "BrowserBack",
+    "XF86Back",
+    "Backspace",
+    "10009",
+    "461",
+    "SoftLeft",
+  ],
+};
+
+function isBackKey(e) {
+  if (!e) return false;
+  const keyCode = e.keyCode || e.which;
+  const keyName = e.key;
+  return BACK_KEYS.codes.includes(keyCode) || BACK_KEYS.names.includes(keyName);
+}
+
 // blocking keys when loading is shown
 let loginCancelled = false;
 let keyBlockHandler = null;
@@ -604,7 +626,7 @@ function enableKeyBlock(onCancel) {
   loginCancelled = false;
 
   keyBlockHandler = (e) => {
-    if (e.key === "Escape" || e.keyCode === 10009) {
+    if (isBackKey(e)) {
       // Allow "back" → cancel
       e.preventDefault();
       e.stopPropagation();
@@ -706,3 +728,5 @@ window.clearMoviesAndSeriesLocalStorage = clearMoviesAndSeriesLocalStorage;
 window.decodeBase64 = decodeBase64;
 window.adultsCategories = adultsCategories;
 window.getCurrentPlaylist = getCurrentPlaylist;
+window.BACK_KEYS = BACK_KEYS;
+window.isBackKey = isBackKey;

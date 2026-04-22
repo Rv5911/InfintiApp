@@ -117,14 +117,6 @@ function DashboardPage() {
 
     // Cache constants
     var FOCUSED_CLASS = "menu-box-focused";
-    var BACK_KEYS = [
-      10009,
-      "Escape",
-      "Back",
-      "BrowserBack",
-      "XF86Back",
-      "Escape",
-    ];
     var IS_TIZEN = typeof tizen !== "undefined";
 
     // Optimized focus update using requestAnimationFrame
@@ -169,8 +161,7 @@ function DashboardPage() {
           e.key === "XF86Exit" ||
           e.key === "XF86Home" ||
           e.keyCode === 10071 ||
-          BACK_KEYS.includes(e.keyCode) ||
-          BACK_KEYS.includes(e.key)
+          (typeof isBackKey === "function" && isBackKey(e))
         ) {
           e.preventDefault();
           localStorage.setItem("currentPage", "exitPage");

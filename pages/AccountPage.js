@@ -46,6 +46,12 @@ function AccountPage() {
     function accountPageKeydownHandler(e) {
       if (localStorage.getItem("currentPage") !== "accountPage") return;
 
+      if (typeof isBackKey === "function" && isBackKey(e)) {
+        localStorage.setItem("currentPage", "dashboard");
+        Router.showPage("dashboard");
+        return;
+      }
+
       switch (e.key) {
         case "ArrowRight":
         case "ArrowDown":
@@ -68,18 +74,6 @@ function AccountPage() {
         case "Enter":
         case "13":
           accountPageClick(buttons[focusIndex]);
-          break;
-
-        case "Escape":
-        case "Back":
-        case "BrowserBack":
-        case "XF86Back":
-        case "SoftLeft":
-          case "10009":
-                  localStorage.setItem("currentPage", "dashboard");
-        Router.showPage("dashboard");
-          // return;
-          // closeModal();
           break;
       }
     }

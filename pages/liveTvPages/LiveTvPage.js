@@ -1050,8 +1050,7 @@ function LiveTvPage() {
     };
 
     const keyHandler = (e) => {
-      const backKeys = [10009, "Escape", "Back", "BrowserBack", "XF86Back"];
-      if (backKeys.includes(e.key) || backKeys.includes(e.keyCode)) {
+      if (typeof isBackKey === "function" && isBackKey(e)) {
         closeDialog();
       } else if (e.key === "Enter") {
         const focusedOption = dialog.querySelector(".dialog-option.focused");
@@ -1941,13 +1940,12 @@ function LiveTvPage() {
           e.preventDefault();
           return;
         }
-        const backKeys = [10009, "Escape", "Back", "BrowserBack", "XF86Back"];
         const isEnter = e.key === "Enter" || e.keyCode === 13;
         const isUp = e.key === "ArrowUp" || e.keyCode === 38;
         const isDown = e.key === "ArrowDown" || e.keyCode === 40;
 
         // Handle back/escape keys for exiting fullscreen
-        if (backKeys.includes(e.key) || backKeys.includes(e.keyCode)) {
+        if (typeof isBackKey === "function" && isBackKey(e)) {
           setPageOpen(false);
 
           // Enhanced fullscreen detection for Flowplayer
@@ -2258,8 +2256,7 @@ function LiveTvPage() {
         ];
         if (
           !allowedKeys.includes(e.key) &&
-          !backKeys.includes(e.key) &&
-          !backKeys.includes(e.keyCode)
+          !(typeof isBackKey === "function" && isBackKey(e))
         ) {
           e.preventDefault();
         }
@@ -2273,9 +2270,7 @@ function LiveTvPage() {
         cardList = qsa(".channel-card"),
         searchInput = qs("#livetv-header-search");
 
-      const backKeys = [10009, "Escape", "Back", "BrowserBack", "XF86Back"];
-
-      if (backKeys.includes(e.key) || backKeys.includes(e.keyCode)) {
+      if (typeof isBackKey === "function" && isBackKey(e)) {
         setPageOpen(false);
         // First check if player is in fullscreen mode - check both document and player
         const isDocumentFullscreen =

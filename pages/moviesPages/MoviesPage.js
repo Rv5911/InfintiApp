@@ -739,10 +739,12 @@ function MoviesPage() {
       const isDown = e.key === "ArrowDown" || e.keyCode === 40;
       const isEnter = e.key === "Enter" || e.keyCode === 13;
       const isBack =
-        e.key === "Backspace" ||
-        e.keyCode === 8 ||
-        e.key === "Escape" ||
-        e.keyCode === 27;
+        typeof isBackKey === "function"
+          ? isBackKey(e)
+          : e.key === "Backspace" ||
+            e.keyCode === 8 ||
+            e.key === "Escape" ||
+            e.keyCode === 27;
 
       if (isUp || isDown) {
         e.preventDefault();
@@ -1974,12 +1976,11 @@ function MoviesPage() {
 
       // Handle dropdown open state
       if (isDropdownOpen) {
-        const backKeys = [10009, "Escape", "Back", "BrowserBack", "XF86Back"];
         const isUp = e.key === "ArrowUp" || e.keyCode === 38;
         const isDown = e.key === "ArrowDown" || e.keyCode === 40;
         const isEnter = e.key === "Enter" || e.keyCode === 13;
 
-        if (backKeys.includes(e.keyCode) || backKeys.includes(e.key)) {
+        if (typeof isBackKey === "function" && isBackKey(e)) {
           e.preventDefault();
           closeDropdown();
           return;
@@ -2037,8 +2038,7 @@ function MoviesPage() {
       }
 
       // Back keys
-      const backKeys = [10009, "Escape", "Back", "BrowserBack", "XF86Back"];
-      if (backKeys.includes(e.keyCode) || backKeys.includes(e.key)) {
+      if (typeof isBackKey === "function" && isBackKey(e)) {
         if (
           !inChannelList &&
           !inSearch &&

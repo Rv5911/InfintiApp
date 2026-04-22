@@ -141,6 +141,14 @@ if (target.id === "removeBtnPassword") {
 function parentalKeydownHandler(e) {
   if (localStorage.getItem("currentPage") !== "parentalModal") return;
 
+  if (typeof isBackKey === "function" && isBackKey(e)) {
+    localStorage.setItem("currentPage", "settingsPage");
+    Router.showPage("settings");
+    document.body.style.backgroundImage = "none";
+    document.body.style.backgroundColor = "black";
+    return;
+  }
+
   const clearBtn = document.querySelector(".clear-btn");
   const parentInputs = Array.from(document.querySelectorAll(".parent-option"));
   const eyeIcons = Array.from(document.querySelectorAll(".eye-icon"));
@@ -343,16 +351,6 @@ case "Enter":
     focused.focus();
   }
   break;
-
-    case "Escape":
-    case "Back":
-    case "BrowserBack":
-    case "XF86Back":
-      localStorage.setItem("currentPage", "settingsPage");
-      Router.showPage("settings");
-      document.body.style.backgroundImage = "none";
-      document.body.style.backgroundColor = "black";
-      break;
 
     default:
       break;

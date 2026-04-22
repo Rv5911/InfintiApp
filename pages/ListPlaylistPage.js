@@ -16,15 +16,6 @@ function ListPlaylistPage() {
   setTimeout(() => {
     if (ListPlaylistPage.cleanup) ListPlaylistPage.cleanup();
 
-    const BACK_KEYS = [
-      10009,
-      "Escape",
-      "Back",
-      "BrowserBack",
-      "XF86Back",
-      "Escape",
-    ];
-
     const cardElements = Array.from(
       document.querySelectorAll(".playlist-card"),
     );
@@ -187,6 +178,11 @@ function ListPlaylistPage() {
       if (localStorage.getItem("currentPage") !== "playlistPage") return;
 
       if (modalOpen) {
+        if (typeof isBackKey === "function" && isBackKey(e)) {
+          closeModal();
+          e.preventDefault();
+          return;
+        }
         switch (e.key) {
           case "ArrowRight":
             if (modalFocusIndex === -1) {
@@ -214,15 +210,15 @@ function ListPlaylistPage() {
             // Do nothing if modalFocusIndex === -1
             e.preventDefault();
             break;
-
-          case "Escape":
-          case "Back":
-          case "BrowserBack":
-          case "XF86Back":
-            closeModal();
-            e.preventDefault();
-            break;
         }
+        return;
+      }
+
+      if (typeof isBackKey === "function" && isBackKey(e)) {
+        e.preventDefault();
+        localStorage.setItem("currentPage", "exitPage");
+        localStorage.setItem("exitFrom", "playlistPage");
+        Router.showPage("exitModal");
         return;
       }
 
@@ -312,21 +308,6 @@ function ListPlaylistPage() {
                 enterPressTimer = null;
               }, LONG_PRESS_DURATION);
             }
-          }
-          break;
-
-        case "Escape":
-        case "Back":
-        case "BrowserBack":
-        case "XF86Back":
-        case "10009":
-          if (BACK_KEYS.includes(e.keyCode) || BACK_KEYS.includes(e.key)) {
-            e.preventDefault();
-            localStorage.setItem("currentPage", "exitPage");
-            localStorage.setItem("exitFrom", "playlistPage");
-
-            Router.showPage("exitModal");
-            return;
           }
           break;
       }

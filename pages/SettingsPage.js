@@ -42,6 +42,13 @@ function SettingsPage() {
       )
         return;
 
+      if (typeof isBackKey === "function" && isBackKey(e)) {
+        SettingsPage.cleanup();
+        localStorage.setItem("currentPage", "dashboard");
+        Router.showPage("dashboard");
+        return;
+      }
+
       const key = e.key;
       const selectedItem = items[activeIndex];
       console.log(selectedItem, "selectedItem");
@@ -72,17 +79,6 @@ function SettingsPage() {
 
         case "Enter":
           handleSelection(selectedItem);
-          break;
-
-        case "Backspace":
-        case "Escape":
-        case "Back":
-        case "BrowserBack":
-        case "XF86Back":
-        case "10009":
-          SettingsPage.cleanup();
-          localStorage.setItem("currentPage", "dashboard");
-          Router.showPage("dashboard");
           break;
 
         default:

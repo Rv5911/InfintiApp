@@ -110,6 +110,28 @@ inputs.forEach(function (inp) {
 
     function parentalControlKeydownEvents(e) {
       if (document.querySelector(".parental-pin-dialog-container")) return;
+      if (typeof isBackKey === "function" && isBackKey(e)) {
+        // Remove all focus styles before exiting
+        removeAllFocusStyles();
+
+        if (
+          document.activeElement &&
+          typeof document.activeElement.blur === "function"
+        ) {
+          document.activeElement.blur();
+        }
+        buttons.forEach(function (btn) {
+          if (btn && typeof btn.blur === "function") {
+            btn.blur();
+          }
+        });
+
+        document.removeEventListener("keydown", parentalControlKeydownEvents);
+        localStorage.setItem("currentPage", "dashboard");
+        Router.showPage("dashboard");
+        return;
+      }
+
       switch (e.key) {
         case "ArrowDown":
           if (
@@ -194,30 +216,6 @@ inputs.forEach(function (inp) {
             }
           }
           e.preventDefault();
-          break;
-
-        case "Escape":
-        case "Back":
-        case "XF86Back":
-        case "10009":
-          // Remove all focus styles before exiting
-          removeAllFocusStyles();
-
-          if (
-            document.activeElement &&
-            typeof document.activeElement.blur === "function"
-          ) {
-            document.activeElement.blur();
-          }
-          buttons.forEach(function (btn) {
-            if (btn && typeof btn.blur === "function") {
-              btn.blur();
-            }
-          });
-
-          document.removeEventListener("keydown", parentalControlKeydownEvents);
-          localStorage.setItem("currentPage", "dashboard");
-          Router.showPage("dashboard");
           break;
 
         default:

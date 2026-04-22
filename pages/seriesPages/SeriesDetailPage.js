@@ -29,11 +29,8 @@ function SeriesDetailPage() {
 
     function handleBackNavigationDuringLoading(e) {
       if (
-        (e.keyCode === 10009 ||
-          e.key === "Escape" ||
-          e.key === "Back" ||
-          e.key === "BrowserBack" ||
-          e.key === "XF86Back") &&
+        typeof isBackKey === "function" &&
+        isBackKey(e) &&
         localStorage.getItem("currentPage") === "seriesDetailPage"
       ) {
         e.preventDefault();
@@ -858,8 +855,7 @@ function SeriesDetailPage() {
             updatePlayButton();
             return;
           } else if (
-            ["Escape", "Back", "BrowserBack", "XF86Back"].includes(e.key) ||
-            e.keyCode === 10009
+            typeof isBackKey === "function" && isBackKey(e)
           ) {
             hideDropdown();
             return;
@@ -1337,8 +1333,7 @@ function SeriesDetailPage() {
         }
         // Back/Escape
         if (
-          ["Escape", "Back", "BrowserBack", "XF86Back"].includes(e.key) ||
-          e.keyCode === 10009
+          typeof isBackKey === "function" && isBackKey(e)
         ) {
           e.preventDefault();
 

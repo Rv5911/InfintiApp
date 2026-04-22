@@ -296,6 +296,13 @@ function sidebarKeyHandler(event) {
     });
   }
 
+  if (typeof isBackKey === "function" && isBackKey(event)) {
+    const from = localStorage.getItem("sidebarPage");
+    closeSidebar(from);
+    event.preventDefault();
+    return;
+  }
+
   switch (event.key) {
     case "ArrowUp":
       if (selectedIndex > 0) {
@@ -398,16 +405,6 @@ function sidebarKeyHandler(event) {
         }
       }
       break;
-
-    case "Escape":
-    case "Back":
-    case "BrowserBack":
-    case "XF86Back":
-    case "10009":
-      const from = localStorage.getItem("sidebarPage");
-      closeSidebar(from);
-      event.preventDefault();
-      break;
   }
 }
 
@@ -481,11 +478,13 @@ function sortingKeyHandler(e) {
       document.activeElement.checked = true;
     }
   } else if (
-    e.key === "Escape" ||
-    e.key === "Back" ||
-    e.key === "BrowserBack" ||
-    e.key === "XF86Back" ||
-    e.key === "10009"
+    typeof isBackKey === "function"
+      ? isBackKey(e)
+      : e.key === "Escape" ||
+        e.key === "Back" ||
+        e.key === "BrowserBack" ||
+        e.key === "XF86Back" ||
+        e.key === "10009"
   ) {
     closeSortingDialog();
     e.preventDefault();

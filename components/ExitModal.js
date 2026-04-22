@@ -72,6 +72,11 @@ function ExitModal() {
     function exitKeydownHandler(e) {
       if (localStorage.getItem("currentPage") !== "exitPage") return;
 
+      if (typeof isBackKey === "function" && isBackKey(e)) {
+        closeModal();
+        return;
+      }
+
       switch (e.key) {
         case "ArrowRight":
         case "39":
@@ -92,14 +97,6 @@ function ExitModal() {
         case "Enter":
         case "13":
           handleExitClick(buttons[focusIndex]);
-          break;
-
-        case "Escape":
-        case "Back":
-        case "BrowserBack":
-        case "XF86Back":
-        case "SoftLeft":
-          closeModal();
           break;
       }
     }
