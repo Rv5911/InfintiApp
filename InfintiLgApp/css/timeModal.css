@@ -1,0 +1,197 @@
+.time-main-container{
+    background-size: cover;
+  background-repeat: no-repeat;
+  overflow: hidden;
+  background-position: center;
+  padding-right: 40px;
+  color: white;
+  padding-left: 40px;
+  background-image: url("../assets/bg-gradient.png");
+  height: 100vh;
+  animation: fadeInOut 1s ease-in-out;
+}
+  .part-bar{
+    position:relative;
+    z-index:2;
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    padding:28px 48px;
+  }
+  .logo{
+    display:flex;
+    gap:14px;
+    align-items:center;
+  }
+  .logo .k{
+    font-weight:800;
+    color:var(--gold);
+    font-size:36px;
+    letter-spacing:2px;
+  }
+  .logo img{
+    height:46px;
+  }
+
+  .part-wrap{
+     zoom: 1.2;
+    height: 60vh;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    z-index:2;
+    position:relative;
+    padding:20px;
+  }
+  .part-panel {
+    width: 65%;
+        border-radius: 10px;
+    padding: 48px 56px 40px;
+    border: 1px solid rgba(255, 255, 255, 0.02);
+    position: relative;
+    background-color: #071212;
+}
+  .part-panel::after{
+    content:"";
+    position:absolute;
+    inset:0;
+    border-radius:10px;
+    pointer-events:none;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.02);
+  }
+  h1.part-title {
+    text-align: center;
+    margin: 0 0 30px 0;
+    font-weight: 500;
+    font-size: 40px;
+    letter-spacing: 0.4px;
+}
+  .part-options{
+    display:flex;
+    flex-direction:column;
+    gap:18px;
+    margin-bottom:28px;
+  }
+  .part-option {
+    display: flex;
+    margin-bottom: 18px;
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    align-items: center;
+        padding: 18px 22px;
+        background-color: black;
+    border-radius: 10px;
+}
+
+.part-option .checkbox{
+  margin-right: 18px;
+}
+.option:hover{
+  border: 1px solid #d18d15;
+}
+  .option:focus-within,
+  .option.focused{
+    outline: none;
+    box-shadow: 0 0 0 4px rgba(229,165,31,0.08), 0 0 0 2px var(--gold) inset;
+    transform: translateY(-1px);
+  }
+  .checkbox {
+    width: 46px;
+    height: 46px;
+    min-width: 46px;
+    border-radius: 8px;
+    display: flex;
+    cursor: pointer;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid white;
+    position: relative;
+}
+
+  .checkbox input{
+    appearance:none;
+    -webkit-appearance:none;
+    width:100%;
+    height:100%;
+    margin:0;
+    cursor:pointer;
+    background:transparent;
+    display: none;
+  }
+.checkbox::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 6px;
+  height: 12px;
+  border: solid white;
+  border-width: 0 2px 2px 0;
+  transform: translate(-50%, -50%) rotate(45deg);
+  opacity: 0;
+  transition: opacity 0.2s ease-in-out;
+}
+.checkbox.checked::after {
+  opacity: 1;
+}
+  .part-option label {
+    font-size: 24px;
+    font-weight: 600;
+    user-select: none;
+}
+  .date {
+    font-size: 30px;
+    font-weight: 500;
+}
+  .actions{
+    display:flex;
+    justify-content:center;
+    margin-top:12px;
+  }
+  .btn{
+    border:none;
+    padding:16px 36px;
+    font-weight:700;
+    font-size:18px;
+    border-radius:40px;
+    cursor:pointer;
+    min-width:160px;
+    box-shadow: 0 8px 20px rgba(0,0,0,0.45);
+  }
+  .btn.back{
+    background: #ffffff;
+    color:#0b0b0b;
+  }
+  .btn:hover{
+    background-color: #d18d15;
+    color: white;
+  }
+  @media (max-width:720px){
+    .panel{ padding:28px 20px; width:92% }
+    .checkbox{ width:40px; height:40px; min-width:40px }
+    .option label{ font-size:18px }
+    .btn{ padding:12px 22px; font-size:16px; min-width:140px }
+    h1.title{ font-size:22px }
+    .topbar{ padding:18px }
+  }
+  @media (max-width:420px){
+    .actions{ flex-direction:column; gap:12px; align-items:center }
+  }
+  .btn:focus, .option input:focus{
+    outline: 3px solid rgba(229,165,31,0.12);
+  }
+
+  .time-focused {
+  border: 3px solid var(--gold);
+  outline: none;
+  scale: 1.1;
+}
+
+/* For buttons */
+.time-btn-focused {
+  background: var(--gold) !important;
+  color: black !important;
+}
+
+#saveBtnTime{
+  margin-right: 28px;
+}
