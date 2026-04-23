@@ -72,8 +72,8 @@ async function MovieDetailPage() {
     movieDetailData.info && movieDetailData.info.tmdb_id
       ? movieDetailData.info.tmdb_id
       : 0;
-  // var getMovieCastData = await getMovieCast(tmdbId);
-  var getMovieCastData = [];
+  var getMovieCastData = await getMovieCast(tmdbId);
+  // var getMovieCastData = [];
 
   // Check again if navigation was interrupted during second await
   if (navigationInterrupted) {

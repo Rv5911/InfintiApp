@@ -1,13 +1,141 @@
 function LiveVideoJsComponent(
   streamId = "",
   srcUrl = "",
-  poster = "./assets/placeholder.png",
+  poster = "/assets/placeholder.png",
   height = "100%",
-  channelName = ""
+  channelName = "",
 ) {
   const id = "live-videojs-player";
-  const isTizen = typeof tizen !== "undefined" && tizen.tvinputdevice;
   let epgData = [];
+  let aspectRatioChangeHandler = null;
+  let fullscreenChangeHandler = null;
+  let playPauseClickHandler = null;
+  let fullscreenClickHandler = null;
+  let retryClickHandler = null;
+  let playerContainerClickHandler = null;
+  let nativeVideoEventCleanup = [];
+  let playbackErrorActive = false;
+  const manualAspectRatios = [
+    { label: "16:9", className: "video-aspect-169" },
+    { label: "4:3", className: "video-aspect-43" },
+  ];
+  let currentAspectRatioIndex = 0;
+
+  function getVideoElement() {
+    return document.getElementById(id);
+  }
+
+  function getLivePlayerContainer() {
+    return document.querySelector(".live-video-player-div");
+  }
+
+  function clearAspectRatioClasses(target) {
+    if (!target) return;
+    manualAspectRatios.forEach((ratio) => {
+      target.classList.remove(ratio.className);
+    });
+  }
+
+  function applyManualAspectRatio(index) {
+    const videoEl = getVideoElement();
+    if (!videoEl || index < 0 || index >= manualAspectRatios.length) {
+      return null;
+    }
+
+    const selectedRatio = manualAspectRatios[index];
+    clearAspectRatioClasses(videoEl);
+    videoEl.classList.add(selectedRatio.className);
+
+    videoEl.style.background = "black";
+    videoEl.style.objectFit = "contain";
+    videoEl.style.display = "block";
+    videoEl.style.margin = "0 auto";
+
+    if (selectedRatio.className === "video-aspect-169") {
+      videoEl.style.width = "100%";
+      videoEl.style.height = "100%";
+      videoEl.style.maxWidth = "";
+      videoEl.style.maxHeight = "";
+    } else if (selectedRatio.className === "video-aspect-43") {
+      videoEl.style.width = "auto";
+      videoEl.style.height = "100%";
+      videoEl.style.aspectRatio = "4 / 3";
+      videoEl.style.maxWidth = "100%";
+      videoEl.style.maxHeight = "";
+    } else  {
+ return null;
+    }
+
+    currentAspectRatioIndex = index;
+    return selectedRatio.label;
+  }
+
+  function cycleManualAspectRatio() {
+    const nextIndex = (currentAspectRatioIndex + 1) % manualAspectRatios.length;
+    return applyManualAspectRatio(nextIndex);
+  }
+
+  function resetManualAspectRatio() {
+    applyManualAspectRatio(0);
+  }
+
+  function isPlayerOverlayBlockingControls() {
+    const loadingEl = document.querySelector(".live-video-loader");
+    const errorEl = document.querySelector(".live-video-error");
+    return (
+      (loadingEl && !loadingEl.classList.contains("hidden")) ||
+      (errorEl && !errorEl.classList.contains("hidden"))
+    );
+  }
+
+  function setOverlayState({ loading = false, error = false } = {}) {
+    const loadingEl = document.querySelector(".live-video-loader");
+    const errorEl = document.querySelector(".live-video-error");
+
+    if (loadingEl) {
+      loadingEl.classList.toggle("hidden", !loading);
+    }
+    if (errorEl) {
+      errorEl.classList.toggle("hidden", !error);
+    }
+
+    if (loading || error) {
+      setFullscreenControlsVisible(false);
+    }
+    updateAspectRatioButtonVisibility();
+  }
+
+  function syncLoaderFromMedia(videoEl) {
+    if (!videoEl) return;
+
+    const haveCurrentData =
+      typeof HTMLMediaElement !== "undefined" &&
+      typeof HTMLMediaElement.HAVE_CURRENT_DATA === "number"
+        ? HTMLMediaElement.HAVE_CURRENT_DATA
+        : 2;
+
+    const isError = playbackErrorActive || !!videoEl.error;
+    const isPaused = videoEl.paused;
+    const isBuffering =
+      !isPaused && (videoEl.seeking || videoEl.readyState < haveCurrentData);
+
+    if (isError) {
+      setOverlayState({ loading: false, error: true });
+    } else if (isBuffering) {
+      setOverlayState({ loading: true, error: false });
+    } else {
+      setOverlayState({ loading: false, error: false });
+    }
+  }
+
+  function clearPlaybackError() {
+    playbackErrorActive = false;
+  }
+
+  function showPlaybackError() {
+    playbackErrorActive = true;
+    setOverlayState({ loading: false, error: true });
+  }
 
   // Store reference to previous cleanup to avoid race conditions
   const previousCleanup = LiveVideoJsComponent.cleanup;
@@ -22,20 +150,16 @@ function LiveVideoJsComponent(
     }, 0);
   }
 
-  console.log(srcUrl, "srcUrlsrcUrlsrcUrl");
-
   const currentPlaylistName = JSON.parse(
-    localStorage.getItem("selectedPlaylist")
+    localStorage.getItem("selectedPlaylist"),
   ).playlistName;
   const currentPlaylist = JSON.parse(
-    localStorage.getItem("playlistsData")
+    localStorage.getItem("playlistsData"),
   ).filter((pl) => pl.playlistName === currentPlaylistName)[0];
 
-  const streamFormat = currentPlaylist.streamFormat;
   const timeFormat = currentPlaylist.timeFormat
     ? currentPlaylist.timeFormat
     : "12hrs";
-  const isTsStream = (streamFormat || "").toLowerCase() === "ts";
 
   //API call to fetch EPG data
   if (streamId) {
@@ -61,16 +185,8 @@ function LiveVideoJsComponent(
     // Use Intl.DateTimeFormat for proper local timezone formatting
     const options =
       format === "12hrs"
-        ? {
-            hour: "numeric",
-            minute: "2-digit",
-            hour12: true,
-          }
-        : {
-            hour: "2-digit",
-            minute: "2-digit",
-            hour12: false,
-          };
+        ? { hour: "numeric", minute: "2-digit", hour12: true }
+        : { hour: "2-digit", minute: "2-digit", hour12: false };
 
     return new Intl.DateTimeFormat(undefined, options).format(date);
   }
@@ -176,32 +292,29 @@ function LiveVideoJsComponent(
   }
 
   function togglePlayPause() {
-    if (!window.livePlayer) return;
+    const videoEl = document.getElementById(id);
+    if (!videoEl) return;
 
     try {
-      if (window.livePlayer._fp) {
-        // Flowplayer implementation
-        const fp = window.livePlayer._fp;
-        if (fp.playing) {
-          fp.pause();
-          updatePlayPauseIcon(false);
-        } else {
-          fp.resume();
-          updatePlayPauseIcon(true);
-        }
+      // Native HTML5 video
+      if (videoEl.paused) {
+        videoEl.play();
+        updatePlayPauseIcon(true);
       } else {
-        // Video.js implementation
-        if (window.livePlayer.paused()) {
-          window.livePlayer.play();
-          updatePlayPauseIcon(true);
-        } else {
-          window.livePlayer.pause();
-          updatePlayPauseIcon(false);
-        }
+        videoEl.pause();
+        updatePlayPauseIcon(false);
       }
     } catch (err) {
       console.warn("Play/Pause toggle failed:", err);
     }
+  }
+
+  function handlePlayPauseClick(event) {
+    if (!event) return;
+    event.preventDefault();
+    event.stopPropagation();
+    wakeClickControls();
+    togglePlayPause();
   }
 
   function updatePlayPauseIcon(isPlaying) {
@@ -215,19 +328,12 @@ function LiveVideoJsComponent(
     }
   }
 
-  const handleAspectRatioChange = () => {
-    const videoEl =
-      document.querySelector("#live-videojs-player_html5_api") ||
-      document.querySelector("#flowplayer-live video");
-    if (videoEl && window.VideoAspectRatio) {
-      const newLabel = window.VideoAspectRatio.cycle(videoEl);
-      window.VideoAspectRatio.showOverlay(newLabel);
-    } else {
-      console.warn(
-        "Aspect ratio handler: No video element or VideoAspectRatio module found"
-      );
-    }
-  };
+  function syncPlayPauseIconFromMedia(videoEl) {
+    if (!videoEl) return;
+
+    const isPlaying = !videoEl.paused && !videoEl.ended && !videoEl.error;
+    updatePlayPauseIcon(isPlaying);
+  }
 
   // Function to update aspect ratio button visibility
   function updateAspectRatioButtonVisibility() {
@@ -237,16 +343,80 @@ function LiveVideoJsComponent(
 
     if (aspectRatioBtn) {
       // Hide aspect ratio button when loader is visible or error is visible
-      if (
+      const shouldHide =
         (loadingEl && !loadingEl.classList.contains("hidden")) ||
-        (errorEl && !errorEl.classList.contains("hidden"))
-      ) {
-        aspectRatioBtn.style.display = "none";
-      }
+        (errorEl && !errorEl.classList.contains("hidden"));
+      aspectRatioBtn.style.display = shouldHide ? "none" : "block";
     }
   }
 
-  console.log(srcUrl, "srcUrl");
+  function isFullscreenActive() {
+    return !!(
+      document.fullscreenElement ||
+      document.webkitFullscreenElement ||
+      document.mozFullScreenElement ||
+      document.msFullscreenElement
+    );
+  }
+
+  function setFullscreenControlsVisible(visible) {
+    const playPauseIcon = document.querySelector(".play-pause-icon");
+    const aspectRatioWrap = document.querySelector(".videojs-aspect-ratio-div");
+    const aspectRatioBtn = document.getElementById("videojs-aspect-ratio");
+    const fullscreenBtn = document.getElementById("lp-fullscreen-btn");
+    const shouldShow = visible && !isPlayerOverlayBlockingControls();
+    const isFs = isFullscreenActive();
+
+    if (playPauseIcon) {
+      playPauseIcon.style.display = shouldShow ? "flex" : "none";
+    }
+
+    if (aspectRatioWrap) {
+      // Aspect ratio should be visible only in fullscreen mode.
+      aspectRatioWrap.style.display = shouldShow && isFs ? "block" : "none";
+    }
+
+    if (aspectRatioBtn) {
+      aspectRatioBtn.style.display = shouldShow && isFs ? "inline-flex" : "none";
+    }
+
+    if (fullscreenBtn) {
+      fullscreenBtn.style.display = shouldShow && !isFs ? "flex" : "none";
+    }
+
+    if (shouldShow) {
+      updateAspectRatioButtonVisibility();
+    }
+  }
+
+  function wakeFullscreenControls() {
+    if (!isFullscreenActive()) return;
+
+    setFullscreenControlsVisible(true);
+
+    clearTimeout(window._liveFullscreenControlsTimer);
+    window._liveFullscreenControlsTimer = setTimeout(() => {
+      if (isFullscreenActive()) {
+        setFullscreenControlsVisible(false);
+      }
+    }, 5000);
+  }
+
+  function wakeClickControls() {
+    const inFullscreen = isFullscreenActive();
+    setFullscreenControlsVisible(true);
+
+    clearTimeout(window._liveFullscreenControlsTimer);
+    window._liveFullscreenControlsTimer = null;
+
+    if (inFullscreen) {
+      window._liveFullscreenControlsTimer = setTimeout(() => {
+        if (isFullscreenActive()) {
+          setFullscreenControlsVisible(false);
+        }
+      }, 5000);
+    }
+  }
 
   // If no URL is provided
   if (!srcUrl || srcUrl.trim() === "") {
@@ -256,7 +426,7 @@ function LiveVideoJsComponent(
           <div class="no-url-icon">📺</div>
           <p class="no-url-text">Please select any channel to play</p>
         </div>
-        <video id="${id}" class="video-js vjs-big-play-centered" playsinline webkit-playsinline style="height:100%; width:100%; display:none;"></video>
+        <video id="${id}" playsinline webkit-playsinline style="height:100%; width:100%; display:none;"></video>
       </div>
       <div class="livetv-player-epg"  style="display: none;">
         <div class="livetv-player-epg-item">
@@ -268,408 +438,361 @@ function LiveVideoJsComponent(
   }
 
   setTimeout(() => {
+    const existingVideo = document.getElementById(id);
+    if (existingVideo) {
+      try {
+        existingVideo.pause();
+        existingVideo.removeAttribute("src");
+        existingVideo.load();
+      } catch {}
+    }
+
     if (window.livePlayer) {
       try {
-        window.livePlayer.dispose();
+        if (typeof window.livePlayer.pause === "function") {
+          window.livePlayer.pause();
+        }
       } catch {}
       window.livePlayer = null;
     }
 
     const loadingEl = document.querySelector(".live-video-loader");
     const errorEl = document.querySelector(".live-video-error");
-    const aspectRatioBtn = document.querySelector(".videojs-aspect-ratio-div");
 
-    if (loadingEl) loadingEl.classList.remove("hidden");
+    if (loadingEl) loadingEl.classList.add("hidden");
     if (errorEl) errorEl.classList.add("hidden");
-
-    // Initial aspect ratio button visibility
+    playbackErrorActive = false;
     updateAspectRatioButtonVisibility();
 
-    if (!isTizen) {
-      const videoEl = document.getElementById(id);
-      if (videoEl) {
-        window.livePlayer = videoEl;
-        // Shim for API parity
-        if (!window.livePlayer.paused) {
-          window.livePlayer.paused = () => videoEl.paused;
-        }
-        if (!window.livePlayer.play) {
-          window.livePlayer.play = () => videoEl.play();
-        }
-        if (!window.livePlayer.pause) {
-          window.livePlayer.pause = () => videoEl.pause();
-        }
-        if (loadingEl) loadingEl.classList.add("hidden");
+    const videoEl = document.getElementById(id);
+    if (!videoEl) return;
+
+    videoEl.src = srcUrl;
+    videoEl.autoplay = true;
+    videoEl.preload = "auto";
+    videoEl.playsInline = true;
+    videoEl.setAttribute("playsinline", "");
+    videoEl.setAttribute("webkit-playsinline", "");
+    videoEl.removeAttribute("poster");
+    videoEl.style.backgroundColor = "black";
+    videoEl.style.objectFit = "contain";
+    videoEl.load();
+
+    window.livePlayer = videoEl;
+    resetManualAspectRatio();
+
+    const startPlayback = () => {
+      const playPromise = videoEl.play();
+      if (playPromise && typeof playPromise.catch === "function") {
+        playPromise.catch((err) => {
+          console.warn("Initial play() failed:", err);
+          syncLoaderFromMedia(videoEl);
+        });
       }
-      return;
+    };
+
+    const handleNativePlaying = () => {
+      clearPlaybackError();
+      syncLoaderFromMedia(videoEl);
+      syncPlayPauseIconFromMedia(videoEl);
+
+      setTimeout(() => {
+        const topOverlays = document.querySelector(".live-top-overlays");
+        if (topOverlays) {
+          topOverlays.style.opacity = "0";
+          topOverlays.style.transition = "opacity 0.5s ease";
+        }
+      }, 5000);
+    };
+
+    const handleNativePause = () => {
+      clearPlaybackError();
+      syncLoaderFromMedia(videoEl);
+      syncPlayPauseIconFromMedia(videoEl);
+    };
+
+    const handleNativePlay = () => {
+      clearPlaybackError();
+      syncLoaderFromMedia(videoEl);
+      syncPlayPauseIconFromMedia(videoEl);
+    };
+
+    const handleNativeError = () => {
+      showPlaybackError();
+    };
+
+    const nativeMediaEventHandlers = [
+      ["loadstart", () => {
+        clearPlaybackError();
+        setOverlayState({ loading: true, error: false });
+        syncPlayPauseIconFromMedia(videoEl);
+      }],
+      ["waiting", () => {
+        clearPlaybackError();
+        setOverlayState({ loading: true, error: false });
+      }],
+      ["stalled", () => {
+        clearPlaybackError();
+        setOverlayState({ loading: true, error: false });
+      }],
+      ["seeking", () => {
+        clearPlaybackError();
+        setOverlayState({ loading: true, error: false });
+      }],
+      ["loadedmetadata", () => {
+        clearPlaybackError();
+        syncLoaderFromMedia(videoEl);
+      }],
+      ["loadeddata", () => {
+        clearPlaybackError();
+        syncLoaderFromMedia(videoEl);
+      }],
+      ["canplay", () => {
+        clearPlaybackError();
+        syncLoaderFromMedia(videoEl);
+      }],
+      ["canplaythrough", () => {
+        clearPlaybackError();
+        syncLoaderFromMedia(videoEl);
+      }],
+      ["seeked", () => {
+        clearPlaybackError();
+        syncLoaderFromMedia(videoEl);
+      }],
+      ["timeupdate", () => {
+        clearPlaybackError();
+        syncLoaderFromMedia(videoEl);
+      }],
+      ["playing", handleNativePlaying],
+      ["play", handleNativePlay],
+      ["pause", handleNativePause],
+      ["error", handleNativeError],
+    ];
+
+    nativeMediaEventHandlers.forEach(([eventName, handler]) => {
+      videoEl.addEventListener(eventName, handler);
+      nativeVideoEventCleanup.push(() => {
+        videoEl.removeEventListener(eventName, handler);
+      });
+    });
+
+    syncLoaderFromMedia(videoEl);
+    startPlayback();
+    syncPlayPauseIconFromMedia(videoEl);
+
+    const retryBtn = document.querySelector(".retry-btn");
+    if (retryBtn) {
+      retryClickHandler = () => {
+        clearPlaybackError();
+        setOverlayState({ loading: true, error: false });
+        videoEl.src = srcUrl;
+        videoEl.load();
+        videoEl.play().catch((err) => {
+          console.warn("Retry play() failed:", err);
+          syncLoaderFromMedia(videoEl);
+        });
+      };
+      retryBtn.addEventListener("click", retryClickHandler);
     }
 
-    if (isTsStream && typeof flowplayer !== "undefined") {
-      const hlsUrl = srcUrl.replace(
-        /\.ts(\?.*)?$/i,
-        (m, q) => `.m3u8${q || ""}`
-      );
-      const fpContainer = document.getElementById("flowplayer-live");
-      if (fpContainer) {
-        const wrapperEl = fpContainer.closest(".live-video-player-div");
-        const fp = flowplayer(fpContainer, {
-          autoplay: true,
-          controls: false,
-          ratio: 0,
-          clip: {
-            sources: [
-              {
-                type: "application/x-mpegURL",
-                src: hlsUrl,
-              },
-            ],
-          },
-        });
+    const fullscreenBtn = document.getElementById("lp-fullscreen-btn");
+    if (fullscreenBtn) {
+      fullscreenClickHandler = () => {
+        const playerContainer = document.querySelector(
+          ".live-video-player-div",
+        );
 
-        // Shim to maintain API parity used elsewhere
-        window.livePlayer = {
-          _fp: fp,
-          isFullscreen() {
-            try {
-              return document.fullscreenElement === wrapperEl;
-            } catch {
-              return false;
-            }
-          },
-          requestFullscreen() {
-            try {
-              if (wrapperEl && wrapperEl.requestFullscreen)
-                wrapperEl.requestFullscreen();
-              else if (wrapperEl && wrapperEl.webkitRequestFullscreen)
-                wrapperEl.webkitRequestFullscreen();
-            } catch {}
-          },
-          exitFullscreen() {
-            try {
-              if (document.exitFullscreen) document.exitFullscreen();
-              else if (document.webkitExitFullscreen)
-                document.webkitExitFullscreen();
-            } catch {}
-          },
-          on(ev, handler) {
-            try {
-              fp.on(ev, handler);
-            } catch {}
-          },
-          src({ src }) {
-            try {
-              fp.load(src);
-            } catch {}
-          },
-          load() {},
-          dispose() {
-            try {
-              fp.unload();
-            } catch {}
-          },
-        };
+        const isFs =
+          document.fullscreenElement ||
+          document.webkitFullscreenElement ||
+          document.mozFullScreenElement ||
+          document.msFullscreenElement;
 
-        // Loader / error wiring
-        fp.on("ready", () => {
-          if (loadingEl) loadingEl.classList.remove("hidden");
-          if (errorEl) errorEl.classList.add("hidden");
-          updateAspectRatioButtonVisibility();
-        });
-        fp.on("buffer", () => {
-          if (loadingEl) loadingEl.classList.remove("hidden");
-          if (errorEl) errorEl.classList.add("hidden");
-          updateAspectRatioButtonVisibility();
-        });
-        fp.on("resume", () => {
-          if (loadingEl) loadingEl.classList.add("hidden");
-          if (errorEl) errorEl.classList.add("hidden");
-          updateAspectRatioButtonVisibility();
-
-          // Remove/Hide any internal waiting overlays just in case
-          const fpWaiting = fpContainer.querySelector(".fp-waiting");
-          if (fpWaiting) fpWaiting.style.display = "none";
-          const vLoader = document.querySelector(".live-video-loader");
-          if (vLoader) vLoader.classList.add("hidden");
-          updatePlayPauseIcon(true);
-
-          // Auto-hide top overlays after 5 seconds
-          setTimeout(() => {
-            const topOverlays = document.querySelector(".live-top-overlays");
-            if (topOverlays) {
-              topOverlays.style.opacity = "0";
-              topOverlays.style.transition = "opacity 0.5s ease";
-            }
-          }, 5000);
-        });
-        fp.on("pause", () => {
-          if (loadingEl) loadingEl.classList.add("hidden");
-          updatePlayPauseIcon(false);
-          updateAspectRatioButtonVisibility();
-        });
-        fp.on("error", () => {
-          if (loadingEl) loadingEl.classList.add("hidden");
-          if (errorEl) errorEl.classList.remove("hidden");
-          updateAspectRatioButtonVisibility();
-
-          console.log("Flowplayer error event");
-        });
-
-        // Add play/pause event listeners for Flowplayer
-        fp.on("play", () => {
-          updatePlayPauseIcon(true);
-        });
-        fp.on("pause", () => {
-          updatePlayPauseIcon(false);
-        });
-
-        const fullscreenBtn = document.getElementById("live-fullscreen-btn");
-        if (fullscreenBtn) {
-          fullscreenBtn.addEventListener("click", () => {
-            if (window.livePlayer.isFullscreen()) {
-              window.livePlayer.exitFullscreen();
-            } else {
-              window.livePlayer.requestFullscreen();
-            }
-          });
-        }
-
-        const handleFullscreenChange = () => {
-          const channelNameEl = document.querySelector(".live-channel-name");
-          const liveBadgeEl = document.querySelector(".live-badge");
-          const isFs = window.livePlayer.isFullscreen();
-          if (channelNameEl)
-            channelNameEl.style.display = isFs ? "none" : "flex";
-          if (liveBadgeEl) liveBadgeEl.style.display = "flex";
-        };
-        fp.on("fullscreen", handleFullscreenChange);
-        document.addEventListener("fullscreenchange", handleFullscreenChange);
-        handleFullscreenChange();
-
-        const retryBtn = document.querySelector(".retry-btn");
-        if (retryBtn) {
-          retryBtn.addEventListener("click", () => {
-            if (loadingEl) loadingEl.classList.remove("hidden");
-            if (errorEl) errorEl.classList.add("hidden");
-            updateAspectRatioButtonVisibility();
-            window.livePlayer.src({
-              src: hlsUrl,
-            });
-          });
-        }
-
-        // Mirror Video.js loader behavior using underlying HTML5 video events
-        const html5Video = fpContainer.querySelector("video");
-        if (html5Video) {
-          const showLoader = () => {
-            if (loadingEl) loadingEl.classList.remove("hidden");
-            if (errorEl) errorEl.classList.add("hidden");
-            updateAspectRatioButtonVisibility();
-          };
-          const hideLoader = () => {
-            if (loadingEl) loadingEl.classList.add("hidden");
-            if (errorEl) errorEl.classList.add("hidden");
-            updateAspectRatioButtonVisibility();
-          };
-          html5Video.addEventListener("waiting", showLoader);
-          html5Video.addEventListener("stalled", showLoader);
-          html5Video.addEventListener("seeking", showLoader);
-          html5Video.addEventListener("playing", hideLoader);
-          html5Video.addEventListener("canplay", hideLoader);
-          html5Video.addEventListener("seeked", hideLoader);
-        }
-      }
-    } else {
-      const videoEl = document.getElementById(id);
-      if (videoEl) {
-        window.livePlayer = videojs(videoEl, {
-          autoplay: true,
-          controls: true,
-          preload: "auto",
-          liveui: true,
-          fill: true,
-          fluid: false,
-          sources: [
-            {
-              src: srcUrl,
-              type: "application/x-mpegURL",
-            },
-          ],
-        });
-
-        window.livePlayer.on("waiting", () => {
-          if (loadingEl) loadingEl.classList.remove("hidden");
-          if (errorEl) errorEl.classList.add("hidden");
-          updateAspectRatioButtonVisibility();
-        });
-
-        window.livePlayer.on("stalled", () => {
-          if (loadingEl) loadingEl.classList.remove("hidden");
-          if (errorEl) errorEl.classList.add("hidden");
-          updateAspectRatioButtonVisibility();
-        });
-
-        window.livePlayer.on("loadstart", () => {
-          if (loadingEl) loadingEl.classList.remove("hidden");
-          if (errorEl) errorEl.classList.add("hidden");
-          updateAspectRatioButtonVisibility();
-        });
-
-        window.livePlayer.on("playing", () => {
-          if (loadingEl) loadingEl.classList.add("hidden");
-          if (errorEl) errorEl.classList.add("hidden");
-          updateAspectRatioButtonVisibility();
-          updatePlayPauseIcon(true);
-
-          setTimeout(() => {
-            const topOverlays = document.querySelector(".live-top-overlays");
-            if (topOverlays) {
-              topOverlays.style.opacity = "0";
-              topOverlays.style.transition = "opacity 0.5s ease";
-            }
-          }, 5000);
-        });
-
-        window.livePlayer.on("pause", () => {
-          updatePlayPauseIcon(false);
-        });
-
-        window.livePlayer.on("play", () => {
-          updatePlayPauseIcon(true);
-        });
-
-        window.livePlayer.on("error", () => {
-          if (loadingEl) loadingEl.classList.add("hidden");
-          if (errorEl) errorEl.classList.remove("hidden");
-          updateAspectRatioButtonVisibility();
-        });
-
-        const retryBtn = document.querySelector(".retry-btn");
-        if (retryBtn) {
-          retryBtn.addEventListener("click", () => {
-            if (window.livePlayer) {
-              if (loadingEl) loadingEl.classList.remove("hidden");
-              if (errorEl) errorEl.classList.add("hidden");
-              updateAspectRatioButtonVisibility();
-
-              window.livePlayer.src({
-                src: srcUrl,
-                type: "application/x-mpegURL",
-              });
-              window.livePlayer.load();
-            }
-          });
-        }
-
-        const fullscreenBtn = document.getElementById("lp-fullscreen-btn");
-        if (fullscreenBtn) {
-          fullscreenBtn.addEventListener("click", () => {
-            const playerContainer = document.querySelector(
-              ".live-video-player-div"
-            );
-
-            if (!document.fullscreenElement) {
-              // Enter fullscreen - request on the container, not the player
-              if (playerContainer.requestFullscreen) {
-                playerContainer.requestFullscreen();
-              } else if (playerContainer.webkitRequestFullscreen) {
-                playerContainer.webkitRequestFullscreen();
-              } else if (playerContainer.msRequestFullscreen) {
-                playerContainer.msRequestFullscreen();
-              }
-            } else {
-              // Exit fullscreen
-              if (document.exitFullscreen) {
-                document.exitFullscreen();
-              } else if (document.webkitExitFullscreen) {
-                document.webkitExitFullscreen();
-              } else if (document.msExitFullscreen) {
-                document.msExitFullscreen();
-              }
-            }
-          });
-        }
-
-        const handleFullscreenChange = () => {
-          const techEl = document.querySelector(".vjs-tech");
-          const channelNameEl = document.querySelector(".live-channel-name");
-          const liveBadgeEl = document.querySelector(".live-badge");
-          const isFs = window.livePlayer.isFullscreen();
-          // Do not force tech element height; let Video.js/Tizen handle it
-          if (channelNameEl)
-            channelNameEl.style.display = isFs ? "none" : "flex";
-          if (liveBadgeEl) liveBadgeEl.style.display = "flex";
-        };
-
-        window.livePlayer.on("fullscreenchange", handleFullscreenChange);
-        handleFullscreenChange();
-
-        const prevBtn = document.getElementById("live-prev-btn");
-        const nextBtn = document.getElementById("live-next-btn");
-
-        if (prevBtn) {
-          prevBtn.addEventListener("click", () => {
-            const event = new CustomEvent("liveChannelChange", {
-              detail: {
-                direction: "prev",
-              },
-            });
-            document.dispatchEvent(event);
-          });
-        }
-
-        if (nextBtn) {
-          nextBtn.addEventListener("click", () => {
-            const event = new CustomEvent("liveChannelChange", {
-              detail: {
-                direction: "next",
-              },
-            });
-            document.dispatchEvent(event);
-          });
-        }
-
-        // Remove existing listener if any
-        if (window._liveTvVolumeHandler) {
-          document.removeEventListener("keydown", window._liveTvVolumeHandler);
-        }
-
-        // Create new handler function
-        window._liveTvVolumeHandler = (e) => {
-          if (localStorage.getItem("currentPage") !== "liveTvPage") return;
-
-          switch (e.keyCode) {
-            case 447:
-              updateVolume("up");
-              e.preventDefault();
-              break;
-            case 448:
-              updateVolume("down");
-              e.preventDefault();
-              break;
-            case 449:
-              toggleMute();
-              e.preventDefault();
-              break;
-            case 10252: // Play/Pause key
-              togglePlayPause();
-              e.preventDefault();
-              break;
+        if (!isFs) {
+          if (playerContainer.requestFullscreen) {
+            playerContainer.requestFullscreen();
+          } else if (playerContainer.webkitRequestFullscreen) {
+            playerContainer.webkitRequestFullscreen();
+          } else if (playerContainer.msRequestFullscreen) {
+            playerContainer.msRequestFullscreen();
           }
-        };
+        } else {
+          if (document.exitFullscreen) {
+            document.exitFullscreen();
+          } else if (document.webkitExitFullscreen) {
+            document.webkitExitFullscreen();
+          } else if (document.webkitCancelFullScreen) {
+            document.webkitCancelFullScreen();
+          } else if (document.msExitFullscreen) {
+            document.msExitFullscreen();
+          }
+        }
+      };
+      fullscreenBtn.addEventListener("click", fullscreenClickHandler);
+    }
 
-        // Add the event listener
-        document.addEventListener("keydown", window._liveTvVolumeHandler);
+    const handleFullscreenChange = () => {
+      const channelNameEl = document.querySelector(".live-channel-name");
+      const liveBadgeEl = document.querySelector(".live-badge");
+      const isFs = isFullscreenActive();
+      if (channelNameEl) channelNameEl.style.display = isFs ? "none" : "flex";
+      if (liveBadgeEl) liveBadgeEl.style.display = "flex";
+
+      if (isFs) {
+        wakeFullscreenControls();
+      } else {
+        clearTimeout(window._liveFullscreenControlsTimer);
+        window._liveFullscreenControlsTimer = null;
+        setFullscreenControlsVisible(true);
       }
+    };
+
+    fullscreenChangeHandler = handleFullscreenChange;
+    document.addEventListener("fullscreenchange", fullscreenChangeHandler);
+    document.addEventListener("webkitfullscreenchange", fullscreenChangeHandler);
+    document.addEventListener("mozfullscreenchange", fullscreenChangeHandler);
+    document.addEventListener("MSFullscreenChange", fullscreenChangeHandler);
+    handleFullscreenChange();
+
+    const backKeyExitFullscreen = (e) => {
+      let isBack = false;
+      if (typeof window !== "undefined" && window.isBackKey) {
+        isBack = window.isBackKey(e);
+      } else if (typeof isBackKey === "function") {
+        isBack = isBackKey(e);
+      } else {
+        const k = e.keyCode || e.which;
+        isBack = k === 10009 || k === 461 || k === 8 || k === 27;
+      }
+
+      if (isBack) {
+        const isFs =
+          document.fullscreenElement ||
+          document.webkitFullscreenElement ||
+          document.mozFullScreenElement ||
+          document.msFullscreenElement;
+
+        if (isFs) {
+          e.preventDefault();
+          e.stopImmediatePropagation();
+
+          if (document.exitFullscreen) {
+            document.exitFullscreen();
+          } else if (document.webkitExitFullscreen) {
+            document.webkitExitFullscreen();
+          } else if (document.webkitCancelFullScreen) {
+            document.webkitCancelFullScreen();
+          } else if (document.mozCancelFullScreen) {
+            document.mozCancelFullScreen();
+          } else if (document.msExitFullscreen) {
+            document.msExitFullscreen();
+          }
+        }
+      }
+    };
+
+    videoEl.addEventListener("keydown", backKeyExitFullscreen);
+    const playerDiv = document.querySelector(".live-video-player-div");
+    if (playerDiv) {
+      playerDiv.addEventListener("keydown", backKeyExitFullscreen);
+    }
+
+    const prevBtn = document.getElementById("live-prev-btn");
+    const nextBtn = document.getElementById("live-next-btn");
+
+    if (prevBtn) {
+      prevBtn.addEventListener("click", () => {
+        const event = new CustomEvent("liveChannelChange", {
+          detail: { direction: "prev" },
+        });
+        document.dispatchEvent(event);
+      });
+    }
+
+    if (nextBtn) {
+      nextBtn.addEventListener("click", () => {
+        const event = new CustomEvent("liveChannelChange", {
+          detail: { direction: "next" },
+        });
+        document.dispatchEvent(event);
+      });
+    }
+
+    if (window._liveTvVolumeHandler) {
+      document.removeEventListener("keydown", window._liveTvVolumeHandler);
+    }
+
+    window._liveTvVolumeHandler = (e) => {
+      if (localStorage.getItem("currentPage") !== "liveTvPage") return;
+
+      if (isFullscreenActive()) {
+        wakeFullscreenControls();
+      }
+
+      switch (e.keyCode) {
+        case 447:
+          updateVolume("up");
+          e.preventDefault();
+          break;
+        case 448:
+          updateVolume("down");
+          e.preventDefault();
+          break;
+        case 449:
+          toggleMute();
+          e.preventDefault();
+          break;
+        case 10252:
+          togglePlayPause();
+          e.preventDefault();
+          break;
+      }
+    };
+
+    document.addEventListener("keydown", window._liveTvVolumeHandler);
+
+    const livePlayerDiv = document.querySelector(".live-video-player-div");
+    if (livePlayerDiv) {
+      playerContainerClickHandler = (event) => {
+        if (localStorage.getItem("currentPage") !== "liveTvPage") return;
+        wakeClickControls();
+
+        const clickedPlayPause = event.target.closest(".play-pause-icon");
+        const clickedControl = event.target.closest(
+          ".play-pause-icon, #lp-fullscreen-btn, #videojs-aspect-ratio, .retry-btn",
+        );
+        if (clickedPlayPause || clickedControl || isPlayerOverlayBlockingControls()) {
+          return;
+        }
+
+        togglePlayPause();
+
+      };
+      livePlayerDiv.addEventListener("click", playerContainerClickHandler);
     }
 
     // Add click event listener for play/pause icon
     const playPauseIcon = document.querySelector(".play-pause-icon");
     if (playPauseIcon) {
-      playPauseIcon.addEventListener("click", togglePlayPause);
+      playPauseClickHandler = handlePlayPauseClick;
+      playPauseIcon.addEventListener("click", playPauseClickHandler);
     }
+
+    const handleAspectRatioChange = () => {
+      const newLabel = cycleManualAspectRatio();
+      if (newLabel && window.VideoAspectRatio && window.VideoAspectRatio.showOverlay) {
+        window.VideoAspectRatio.showOverlay(newLabel);
+      } else {
+        console.warn(
+          "Aspect ratio handler: No video element or VideoAspectRatio module found",
+        );
+      }
+    };
+
     const aspectRatioButton = document.getElementById("videojs-aspect-ratio");
     if (aspectRatioButton) {
-      aspectRatioButton.addEventListener("click", handleAspectRatioChange);
+      aspectRatioChangeHandler = handleAspectRatioChange;
+      aspectRatioButton.addEventListener("click", aspectRatioChangeHandler);
       console.log("Aspect ratio button event listener attached");
     }
   }, 50);
@@ -682,34 +805,60 @@ function LiveVideoJsComponent(
       window._liveTvVolumeHandler = null;
     }
     const aspectRatioButton = document.getElementById("videojs-aspect-ratio");
-    if (aspectRatioButton) {
-      aspectRatioButton.removeEventListener("click", handleAspectRatioChange);
+    if (aspectRatioButton && aspectRatioChangeHandler) {
+      aspectRatioButton.removeEventListener("click", aspectRatioChangeHandler);
     }
-    // Store player reference to avoid race conditions
-    const currentPlayer = window.livePlayer;
-    if (currentPlayer) {
-      // Set player to null first to prevent further access
-      window.livePlayer = null;
 
-      // Then safely dispose
+    nativeVideoEventCleanup.forEach((cleanupFn) => {
       try {
-        if (typeof currentPlayer.dispose === "function") {
-          currentPlayer.dispose();
-        }
+        cleanupFn();
       } catch (err) {
-        console.warn("LiveVideoJsComponent player dispose error:", err);
+        console.warn("Native video listener cleanup error:", err);
+      }
+    });
+    nativeVideoEventCleanup = [];
+
+    // Clean up the native video element
+    const videoEl = document.getElementById(id);
+    if (videoEl) {
+      try {
+        videoEl.pause();
+        videoEl.removeAttribute("src");
+        videoEl.load();
+      } catch (err) {
+        console.warn("LiveVideoJsComponent video cleanup error:", err);
       }
     }
 
+    window.livePlayer = null;
+
     // Clean up event listeners
     try {
-      // Remove fullscreen change listener
-      document.removeEventListener("fullscreenchange", () => {});
+      if (fullscreenChangeHandler) {
+        document.removeEventListener("fullscreenchange", fullscreenChangeHandler);
+        document.removeEventListener("webkitfullscreenchange", fullscreenChangeHandler);
+        document.removeEventListener("mozfullscreenchange", fullscreenChangeHandler);
+        document.removeEventListener("MSFullscreenChange", fullscreenChangeHandler);
+      }
 
-      // Remove play/pause icon click listener
       const playPauseIcon = document.querySelector(".play-pause-icon");
-      if (playPauseIcon) {
-        playPauseIcon.removeEventListener("click", togglePlayPause);
+      if (playPauseIcon && playPauseClickHandler) {
+        playPauseIcon.removeEventListener("click", playPauseClickHandler);
+      }
+
+      const fullscreenBtn = document.getElementById("lp-fullscreen-btn");
+      if (fullscreenBtn && fullscreenClickHandler) {
+        fullscreenBtn.removeEventListener("click", fullscreenClickHandler);
+      }
+
+      const retryBtn = document.querySelector(".retry-btn");
+      if (retryBtn && retryClickHandler) {
+        retryBtn.removeEventListener("click", retryClickHandler);
+      }
+
+      const livePlayerDiv = document.querySelector(".live-video-player-div");
+      if (livePlayerDiv && playerContainerClickHandler) {
+        livePlayerDiv.removeEventListener("click", playerContainerClickHandler);
       }
     } catch (err) {
       console.warn("Event listener cleanup error:", err);
@@ -717,6 +866,8 @@ function LiveVideoJsComponent(
 
     // Reset volume handler flag
     window._liveTvVolumeHandlerAttached = false;
+    clearTimeout(window._liveFullscreenControlsTimer);
+    window._liveFullscreenControlsTimer = null;
   };
 
   return `
@@ -733,31 +884,26 @@ function LiveVideoJsComponent(
         <div class="live-channel-name">${channelName || ""}</div>
         <div class="live-badge">LIVE</div>
       </div>
-      <div class="live-video-loader"><div class="live-spinner"></div></div>
+      <div class="live-video-loader hidden"><div class="live-spinner"></div></div>
       <div class="live-video-error hidden">
         <div class="error-icon">⚠️</div>
         <p>Failed to load video</p>
         <!-- <button class="retry-btn">Retry</button> -->
       </div>
       <div class="live-video-controls">
-        <div id="lp-fullscreen-btn" class="lp-fullscreen-btn">
-          <i class="fa-sharp fa-solid fa-expand lp-fullscreen-icon"></i>
+        <div id="lp-fullscreen-btn" class="lp-fullscreen-btn" style="display:none;">
+          <i class="fa-sharp fa-solid fa-expand lp-fullscreen-icon" style="color:var(--app-text-color)"></i>
         </div>
       </div>
-      ${
-        !isTizen
-          ? `<video id="${id}" src="${srcUrl}" controls autoplay playsinline webkit-playsinline style="height:100%; width:100%; background: black;"></video>`
-          : isTsStream
-          ? `<div id="flowplayer-live" class="flowplayer " style="height:100%; width:100%;">
-             <video>
-               <source type="application/x-mpegURL" src="${srcUrl.replace(
-                 /\.ts(\?.*)?$/i,
-                 (m, q) => `.m3u8${q || ""}`
-               )}">
-             </video>
-           </div>`
-          : `<video id="${id}" class="video-js vjs-big-play-centered vjs-fullscreen " playsinline webkit-playsinline style="height:100%; width:100%;"></video>`
-      }
+      <video
+        id="${id}"
+        playsinline
+        webkit-playsinline
+        preload="auto"
+        autoplay
+        src="${srcUrl}"
+        style="height:100%; width:100%; background:black; object-fit:contain;"
+      ></video>
 
           <div id="aspectRatioOverlay" class="aspect-ratio-overlay "></div>
 

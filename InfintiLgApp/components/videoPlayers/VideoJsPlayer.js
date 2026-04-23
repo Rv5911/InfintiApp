@@ -4,9 +4,10 @@ function VideoJsPlayer(poster = "") {
     localStorage.getItem("selectedVideoItemUrl") ||
     "";
 
-  const isTizen = typeof tizen !== "undefined" && tizen.tvinputdevice;
-
   let isYouTube = srcUrl.includes("youtube.com") || srcUrl.includes("youtu.be");
+  const isWebOS = typeof webOS !== "undefined";
+  const useWebOSVideoTag = isWebOS;
+  const useWebOSNativePlayer = useWebOSVideoTag && !isYouTube;
 
   const previousCleanup = VideoJsPlayer.cleanup;
   if (previousCleanup) {
@@ -42,11 +43,14 @@ function VideoJsPlayer(poster = "") {
   const isLive = localStorage.getItem("isLive") === "true";
 
   let player = null;
+  let playbackVideoElement = null;
   let overlayTimeout;
-  let controlsTimeout;
   let errorActive = false;
   let currentTimeEl = null;
   let durationEl = null;
+  let lastKnownPlaybackTime = 0;
+  let lastKnownPlaybackDuration = 0;
+  let shouldAutoPlayAfterBuffering = false;
 
   // 🔴 Track focus states
   let isSeekBarFocused = false;
@@ -62,20 +66,20 @@ function VideoJsPlayer(poster = "") {
   // 🔴 Track if user manually paused
   let userManuallyPaused = false;
 
-  // 🔴 When we pause only to perform a seek, don't treat it as a user pause
-  let isProgrammaticPauseForSeek = false;
-
   // 🔴 Debouncing variables for seek operations
   let pendingSeekTimeout = null;
   let accumulatedSeekOffset = 0;
   let lastSeekTime = 0;
   let pendingResumeTimeout = null;
-
-  // 🔴 Track last stable playback time (for recovery after seek errors)
-  let lastStableTime = 0;
+  let pendingResumeTime = 0;
+  let resumeTimeApplied = false;
+  let resumeSeekRetryTimeout = null;
 
   // 🔴 Track if video has started playing for the first time
   let hasStartedPlayingOnce = false;
+
+  // 🔴 Timeout for hiding controls
+  let controlsHideTimeout = null;
 
   // Format time function
   function formatTime(seconds) {
@@ -94,8 +98,285 @@ function VideoJsPlayer(poster = "") {
     }
   }
 
+  function getPlaybackVideoElement() {
+    return useWebOSNativePlayer
+      ? document.getElementById("videojs-player-tag")
+      : document.querySelector("#videojs-player-tag_html5_api") ||
+          document.getElementById("videojs-player-tag");
+  }
+
+  function createWebOSNativePlayer(videoElement) {
+    const listeners = [];
+
+    const nativePlayer = {
+      on(eventName, handler) {
+        videoElement.addEventListener(eventName, handler);
+        listeners.push({ eventName, handler });
+        return nativePlayer;
+      },
+      off(eventName, handler) {
+        videoElement.removeEventListener(eventName, handler);
+      },
+      paused() {
+        return !!videoElement.paused;
+      },
+      play() {
+        return videoElement.play();
+      },
+      pause() {
+        return videoElement.pause();
+      },
+      currentTime(value) {
+        if (typeof value === "number") {
+          videoElement.currentTime = value;
+        }
+        return videoElement.currentTime || 0;
+      },
+      duration() {
+        return Number.isFinite(videoElement.duration) ? videoElement.duration : 0;
+      },
+      buffered() {
+        return videoElement.buffered || { length: 0 };
+      },
+      seeking() {
+        return !!videoElement.seeking;
+      },
+      error() {
+        return videoElement.error || null;
+      },
+      dispose() {
+        listeners.splice(0).forEach(({ eventName, handler }) => {
+          videoElement.removeEventListener(eventName, handler);
+        });
+        try {
+          videoElement.pause();
+        } catch (err) {
+          console.warn("Native player pause error during dispose:", err);
+        }
+      },
+    };
+
+    return nativePlayer;
+  }
+
+  function getMediaErrorMessage(mediaError) {
+    if (!mediaError) return "Something went wrong";
+
+    switch (mediaError.code) {
+      case 1:
+        return "Playback was interrupted";
+      case 2:
+        return "A network error occurred while loading the video";
+      case 3:
+        return "The video could not be decoded";
+      case 4:
+        return "The video format is not supported";
+      default:
+        return mediaError.message || `Error Code: ${mediaError.code}`;
+    }
+  }
+
+  function isGenuineNativeMediaError(mediaError) {
+    return !!mediaError && typeof mediaError.code === "number" && mediaError.code !== 1;
+  }
+
+  function hasAnyControlFocused() {
+    return isSeekBarFocused || isAspectRatioFocused;
+  }
+
+  function updateLastKnownPlaybackProgress() {
+    const videoEl = playbackVideoElement || getPlaybackVideoElement();
+    if (!videoEl) return;
+
+    const currentTime = Number(videoEl.currentTime);
+    const duration = Number(videoEl.duration);
+
+    if (Number.isFinite(currentTime) && currentTime >= 0) {
+      lastKnownPlaybackTime = currentTime;
+    }
+
+    if (Number.isFinite(duration) && duration > 0) {
+      lastKnownPlaybackDuration = duration;
+    }
+  }
+
+  function getPlaybackProgress() {
+    let currentTime = lastKnownPlaybackTime;
+    let duration = lastKnownPlaybackDuration;
+
+    try {
+      if (player && typeof player.currentTime === "function") {
+        const playerCurrentTime = Number(player.currentTime());
+        if (Number.isFinite(playerCurrentTime) && playerCurrentTime >= 0) {
+          currentTime = playerCurrentTime;
+        }
+      }
+      if (player && typeof player.duration === "function") {
+        const playerDuration = Number(player.duration());
+        if (Number.isFinite(playerDuration) && playerDuration > 0) {
+          duration = playerDuration;
+        }
+      }
+    } catch (err) {
+      // Fall back to the cached/native element values below.
+    }
+
+    const videoEl = playbackVideoElement || getPlaybackVideoElement();
+    if (videoEl) {
+      const elementCurrentTime = Number(videoEl.currentTime);
+      const elementDuration = Number(videoEl.duration);
+
+      if (Number.isFinite(elementCurrentTime) && elementCurrentTime >= 0) {
+        currentTime = elementCurrentTime;
+      }
+
+      if (Number.isFinite(elementDuration) && elementDuration > 0) {
+        duration = elementDuration;
+      }
+    }
+
+    return { currentTime, duration };
+  }
+
+  function hidePlaybackOverlays() {
+    const playOverlay = document.querySelector(".video-action-overlay.center");
+    const forwardOverlay = document.querySelector(".video-action-overlay.right");
+    const backwardOverlay = document.querySelector(".video-action-overlay.left");
+
+    [playOverlay, forwardOverlay, backwardOverlay].forEach((overlay) => {
+      if (overlay) overlay.classList.add("hidden");
+    });
+  }
+
+  function showLoadingState() {
+    const loadingEl = document.querySelector(".video-buffer-loader");
+    
+    // Don't show loader if player is paused (user manually paused) AND not seeking
+    if (player && userManuallyPaused && !player.seeking()) {
+      if (loadingEl) loadingEl.classList.add("hidden");
+      return;
+    }
+
+    if (loadingEl) {
+      loadingEl.classList.remove("hidden");
+    }
+    hidePlaybackOverlays();
+  }
+
+  function clearResumeSeekRetry() {
+    if (resumeSeekRetryTimeout) {
+      clearTimeout(resumeSeekRetryTimeout);
+      resumeSeekRetryTimeout = null;
+    }
+  }
+
+  function applyResumeTimeToPlayback() {
+    if (!pendingResumeTime || resumeTimeApplied || errorActive) return false;
+
+    const playbackTarget =
+      useWebOSNativePlayer && playbackVideoElement ? playbackVideoElement : player;
+    if (!playbackTarget || typeof playbackTarget.currentTime !== "function") {
+      return false;
+    }
+
+    const targetDuration =
+      typeof playbackTarget.duration === "function"
+        ? Number(playbackTarget.duration())
+        : Number(playbackTarget.duration);
+    const targetReadyState =
+      playbackTarget.readyState != null ? playbackTarget.readyState : 0;
+
+    if (
+      useWebOSNativePlayer &&
+      (targetReadyState < 1 || !Number.isFinite(targetDuration) || targetDuration <= 0)
+    ) {
+      return false;
+    }
+
+    try {
+      if (pendingResumeTime < targetDuration || !Number.isFinite(targetDuration)) {
+        playbackTarget.currentTime(pendingResumeTime);
+        pendingResumeTime = 0;
+        resumeTimeApplied = true;
+        clearResumeSeekRetry();
+        updateLastKnownPlaybackProgress();
+        return true;
+      }
+    } catch (err) {
+      console.log("Resume seek application failed:", err);
+    }
+
+    return false;
+  }
+
+  function scheduleResumeSeekRetry() {
+    if (!pendingResumeTime || resumeTimeApplied || errorActive) return;
+    clearResumeSeekRetry();
+    resumeSeekRetryTimeout = setTimeout(() => {
+      const applied = applyResumeTimeToPlayback();
+      if (!applied) {
+        scheduleResumeSeekRetry();
+      }
+    }, 250);
+  }
+
+  function showControls() {
+    const controlsBar = document.querySelector(".custom-video-controls");
+    const titleBar = document.querySelector(".video-title-bar");
+    if (controlsBar) controlsBar.classList.remove("hidden");
+    if (titleBar) {
+      titleBar.style.display = "flex";
+      titleBar.classList.remove("hidden");
+    }
+    if (controlsHideTimeout) {
+      clearTimeout(controlsHideTimeout);
+      controlsHideTimeout = null;
+    }
+    hideControlsWithDelay(5000);
+  }
+
+  // Show controls on any arrow interaction and default focus to Play/Pause
+  function showControlsAndDefaultFocus() {
+    const controlsBar = document.querySelector(".custom-video-controls");
+    const wasHidden = !controlsBar || controlsBar.classList.contains("hidden");
+    showControls();
+
+    // Only snap to play/pause when controls were hidden or nothing is focused.
+    // This keeps seek/aspect ratio navigation from getting overridden.
+    if (wasHidden || !hasAnyControlFocused()) {
+      focusPlayPause();
+    }
+  }
+
+  function hideControlsWithDelay(delay = 5000) {
+    if (controlsHideTimeout) clearTimeout(controlsHideTimeout);
+    controlsHideTimeout = setTimeout(() => {
+      // Hide controls after inactivity unless we're in an error state
+      if (player && !errorActive) {
+        const controlsBar = document.querySelector(".custom-video-controls");
+        const titleBar = document.querySelector(".video-title-bar");
+        const overlays = document.querySelectorAll(".video-action-overlay");
+
+        if (controlsBar) controlsBar.classList.add("hidden");
+        if (titleBar) {
+          titleBar.style.display = "none";
+          titleBar.classList.add("hidden");
+        }
+
+        // Hide all action overlays
+        overlays.forEach((overlay) => overlay.classList.add("hidden"));
+
+        // Clear all focus states and visual focus borders
+        unfocusAll();
+      }
+    }, delay);
+  }
+
   // 🔴 Debounced seek function to prevent buffer overload on low-RAM devices
   function debouncedSeek(offset) {
+    showControls(); // Show controls immediately when seeking requested
+    const shouldPauseDuringSeek = !useWebOSNativePlayer;
+
     // Clear any pending seek operation
     if (pendingSeekTimeout) {
       clearTimeout(pendingSeekTimeout);
@@ -115,22 +396,29 @@ function VideoJsPlayer(poster = "") {
     const isFirstSeek = pendingSeekTimeout === null;
     if (isFirstSeek) {
       wasPlayingBeforeSeek = !player.paused();
-      if (wasPlayingBeforeSeek && !userManuallyPaused) {
-        isProgrammaticPauseForSeek = true;
+      if (shouldPauseDuringSeek && wasPlayingBeforeSeek && !userManuallyPaused) {
         player.pause();
       }
     }
-
-    // Show controls during seeking
-    showControls();
 
     // 🔴 IMMEDIATELY update seek bar for smooth visual feedback
     const seekBar = document.getElementById("customSeek");
 
     // Show loading indicator immediately when seeking starts
-    const loadingEl = document.querySelector(".video-buffer-loader");
-    if (loadingEl && !errorActive) {
-      loadingEl.classList.remove("hidden");
+    showLoadingState();
+
+    // Hide center play/pause overlay during seeking
+    const playOverlay = document.querySelector(".video-action-overlay.center");
+    if (playOverlay) {
+      playOverlay.classList.add("hidden");
+    }
+
+    if (useWebOSNativePlayer) {
+      const forwardOverlay = document.querySelector(".video-action-overlay.right");
+      const backwardOverlay = document.querySelector(".video-action-overlay.left");
+      [forwardOverlay, backwardOverlay].forEach((el) => {
+        if (el) el.classList.add("hidden");
+      });
     }
 
     if (seekBar && player && player.currentTime) {
@@ -157,7 +445,7 @@ function VideoJsPlayer(poster = "") {
             100;
         }
         seekBar.style.background = `linear-gradient(to right,
-          var(--gold) 0%, var(--gold) ${percent}%,
+          var(--app-text-color) 0%, var(--app-text-color) ${percent}%,
           #aaa ${percent}%, #aaa ${bufferedPercent}%,
           #888 ${bufferedPercent}%, #888 100%)`;
       } catch (err) {
@@ -173,13 +461,6 @@ function VideoJsPlayer(poster = "") {
       }
 
       try {
-        // Seeking is now happening; clear flag shortly after pause event fires
-        if (isProgrammaticPauseForSeek) {
-          setTimeout(() => {
-            isProgrammaticPauseForSeek = false;
-          }, 0);
-        }
-
         const currentTime = player.currentTime();
         const duration = player.duration();
         const newTime = Math.max(
@@ -197,28 +478,27 @@ function VideoJsPlayer(poster = "") {
         }
 
         // Show appropriate overlay
-        if (accumulatedSeekOffset > 0) {
-          showOverlay("forward");
-        } else if (accumulatedSeekOffset < 0) {
-          showOverlay("backward");
+        if (!useWebOSNativePlayer) {
+          if (accumulatedSeekOffset > 0) {
+            showOverlay("forward");
+          } else if (accumulatedSeekOffset < 0) {
+            showOverlay("backward");
+          }
         }
 
         // Reset accumulated offset
         accumulatedSeekOffset = 0;
 
         // Resume playback if it was playing before
-        if (wasPlayingBeforeSeek && !userManuallyPaused) {
+        if (
+          shouldPauseDuringSeek &&
+          wasPlayingBeforeSeek &&
+          !userManuallyPaused
+        ) {
           pendingResumeTimeout = setTimeout(() => {
-            player
-              .play()
-              .then(() => {
-                // Keep overlays in sync after auto-resume
-                showOverlay("play");
-              })
-              .catch((err) => {
-                console.log("Resume after debounced seek failed:", err);
-                showOverlay("pause");
-              });
+            player.play().catch((err) => {
+              console.log("Resume after debounced seek failed:", err);
+            });
           }, 200);
         }
       } catch (err) {
@@ -297,9 +577,21 @@ function VideoJsPlayer(poster = "") {
       ".video-action-overlay.left",
     );
 
-    [playOverlay, forwardOverlay, backwardOverlay].forEach((el) => {
-      if (el) el.classList.add("hidden");
-    });
+    // If showing seek overlay, DON'T hide center play/pause ONLY if it's currently focused
+    // This allows the focus border to remain visible while seeking
+    if (type === "forward" || type === "backward") {
+      if (forwardOverlay) forwardOverlay.classList.add("hidden");
+      if (backwardOverlay) backwardOverlay.classList.add("hidden");
+
+      if (playOverlay && !isPlayPauseFocused) {
+        playOverlay.classList.add("hidden");
+      }
+    } else {
+      // If showing center overlay, hide everything first
+      [playOverlay, forwardOverlay, backwardOverlay].forEach((el) => {
+        if (el) el.classList.add("hidden");
+      });
+    }
 
     let targetOverlay = null;
 
@@ -338,8 +630,14 @@ function VideoJsPlayer(poster = "") {
       targetOverlay.classList.remove("hidden");
 
       clearTimeout(overlayTimeout);
-      // Don't auto-hide pause overlay
-      if (type !== "pause") {
+      // Don't auto-hide pause overlay OR if something is focused
+      // Only seek overlays and play overlay (when playing) should hide
+      const isPlayButPlaying = type === "play" && player && !player.paused();
+
+      if (
+        (type === "forward" || type === "backward" || isPlayButPlaying) &&
+        !targetOverlay.classList.contains("focused")
+      ) {
         overlayTimeout = setTimeout(() => {
           targetOverlay.classList.add("hidden");
         }, 1000);
@@ -358,12 +656,26 @@ function VideoJsPlayer(poster = "") {
       isSeekBarFocused = false;
       isAspectRatioFocused = false;
 
-      // Add focused class to play overlay
+      // Ensure it's visible and focused
+      playOverlay.classList.remove("hidden");
       playOverlay.classList.add("focused");
+
+      // Update icon based on player state
+      if (player) {
+        if (player.paused()) {
+          showOverlay("pause");
+        } else {
+          showOverlay("play");
+        }
+      }
 
       // Remove focused class from seek bar and aspect ratio button
       if (seekBar) seekBar.classList.remove("focused");
-      if (aspectRatioButton) aspectRatioButton.classList.remove("focused");
+      if (aspectRatioButton) {
+        aspectRatioButton.classList.remove("focused");
+        const icon = aspectRatioButton.querySelector("i");
+        if (icon) icon.style.color = "white";
+      }
     }
   }
 
@@ -378,12 +690,17 @@ function VideoJsPlayer(poster = "") {
       isPlayPauseFocused = false;
       isAspectRatioFocused = false;
 
-      // Add focused class to seek bar
+      // Add focused class to seek bar and ensure controls visible
+      showControls();
       seekBar.classList.add("focused");
 
       // Remove focused class from play overlay and aspect ratio button
       playOverlay.classList.remove("focused");
-      if (aspectRatioButton) aspectRatioButton.classList.remove("focused");
+      if (aspectRatioButton) {
+        aspectRatioButton.classList.remove("focused");
+        const icon = aspectRatioButton.querySelector("i");
+        if (icon) icon.style.color = "white";
+      }
     }
   }
 
@@ -398,8 +715,11 @@ function VideoJsPlayer(poster = "") {
       isPlayPauseFocused = false;
       isSeekBarFocused = false;
 
-      // Add focused class to aspect ratio button
+      // Add focused class to aspect ratio button and ensure controls visible
+      showControls();
       aspectRatioButton.classList.add("focused");
+      const icon = aspectRatioButton.querySelector("i");
+      if (icon) icon.style.color = "white";
 
       // Remove focused class from play overlay and seek bar
       if (playOverlay) playOverlay.classList.remove("focused");
@@ -418,45 +738,18 @@ function VideoJsPlayer(poster = "") {
     const aspectRatioButton = document.getElementById("aspectRatioButton");
 
     if (seekBar) seekBar.classList.remove("focused");
-    if (playOverlay) playOverlay.classList.remove("focused");
-    if (aspectRatioButton) aspectRatioButton.classList.remove("focused");
-  }
-
-  // 🔴 Function to show controls and reset hide timer
-  function showControls() {
-    if (errorActive) return;
-
-    const controlsBar = document.querySelector(".custom-video-controls");
-    const titleBar = document.querySelector(".video-title-bar");
-
-    if (controlsBar) controlsBar.classList.remove("hidden");
-    if (titleBar) titleBar.style.display = "flex";
-
-    clearTimeout(controlsTimeout);
-    controlsTimeout = setTimeout(() => {
-      hideControls();
-    }, 5000); // 5 seconds
-  }
-
-  // 🔴 Function to hide controls
-  function hideControls() {
-    // Don't hide if paused, if dragging or if error active
-    if (!player || player.paused() || isSeekBarDragging || errorActive) {
-      return;
+    if (playOverlay) {
+      playOverlay.classList.remove("focused");
+      // If we're unfocusing and video is playing, center overlay should hide
+      if (player && !player.paused()) {
+        playOverlay.classList.add("hidden");
+      }
     }
-
-    const controlsBar = document.querySelector(".custom-video-controls");
-    const titleBar = document.querySelector(".video-title-bar");
-
-    if (controlsBar) controlsBar.classList.add("hidden");
-    if (titleBar) titleBar.style.display = "none";
-
-    // Hide all overlays when hiding controls (if not paused)
-    const overlays = document.querySelectorAll(".video-action-overlay");
-    overlays.forEach((o) => o.classList.add("hidden"));
-
-    // Unfocus everything to ensure next time they show up, they can be focused fresh
-    unfocusAll();
+    if (aspectRatioButton) {
+      aspectRatioButton.classList.remove("focused");
+      const icon = aspectRatioButton.querySelector("i");
+      if (icon) icon.style.color = "white";
+    }
   }
 
   function initPlayer(attempt = 0) {
@@ -465,39 +758,6 @@ function VideoJsPlayer(poster = "") {
       if (attempt < 10) {
         setTimeout(() => initPlayer(attempt + 1), 100);
       }
-      return;
-    }
-
-    if (!isTizen) {
-      console.log("Not Tizen: Using native video element");
-      player = videoElement;
-
-      // Shim common Video.js methods to prevent errors in existing logic
-      if (!player.paused) player.paused = () => videoElement.paused;
-      if (!player.currentTime) {
-        player._currentTime = player.currentTime;
-        player.currentTime = function (val) {
-          if (val !== undefined) {
-            videoElement.currentTime = val;
-            return this;
-          }
-          return videoElement.currentTime;
-        };
-      }
-      if (!player.duration) {
-        player.duration = () => videoElement.duration;
-      }
-      if (!player.seeking) {
-        player.seeking = () => videoElement.seeking;
-      }
-      if (!player.buffered) {
-        player.buffered = () => videoElement.buffered;
-      }
-
-      // Add basic event listeners for custom UI elements that might still be visible
-      videoElement.addEventListener("play", () => showOverlay("play"));
-      videoElement.addEventListener("pause", () => showOverlay("pause"));
-
       return;
     }
 
@@ -553,46 +813,84 @@ function VideoJsPlayer(poster = "") {
       }
     }
 
-    player = videojs(videoElement, options);
+    if (useWebOSNativePlayer) {
+      const source = options.sources[0] || {};
+      playbackVideoElement = videoElement;
+      videoElement.autoplay = true;
+      videoElement.controls = false;
+      videoElement.preload = "auto";
+      videoElement.playsInline = true;
+      videoElement.setAttribute("playsinline", "playsinline");
+      videoElement.setAttribute("webkit-playsinline", "webkit-playsinline");
+
+      if (options.poster) {
+        videoElement.poster = options.poster;
+      }
+
+      if (source.src) {
+        videoElement.src = source.src;
+        setTimeout(() => {
+          if (typeof videoElement.load === "function") {
+            videoElement.load();
+          }
+        }, 0);
+      }
+
+      player = createWebOSNativePlayer(videoElement);
+    } else {
+      playbackVideoElement = videoElement;
+      player = videojs(videoElement, options);
+    }
+
+    pendingResumeTime = resumeTime > 0 ? resumeTime : 0;
+    resumeTimeApplied = false;
 
     player.on("seeking", () => {
       console.log("Seeking started...");
+      showLoadingState();
+      // Hide center play/pause overlay during seeking
+      const playOverlay = document.querySelector(".video-action-overlay.center");
+      if (playOverlay) {
+        playOverlay.classList.add("hidden");
+      }
     });
 
     player.on("seeked", () => {
       console.log("Seek completed");
+      updateLastKnownPlaybackProgress();
 
-      // Only auto-play if video wasn't manually paused AND not dragging
+      // Auto-play after seeking regardless of previous state (as requested)
       if (
         player.paused() &&
         !errorActive &&
-        !isSeekBarDragging &&
-        !userManuallyPaused
+        !isSeekBarDragging
       ) {
-        setTimeout(() => {
-          player
-            .play()
-            .then(() => {
-              showOverlay("play");
-            })
-            .catch((err) => {
+        if (useWebOSNativePlayer) {
+          resumePlaybackAfterSeek();
+        } else {
+          setTimeout(() => {
+            player.play().catch((err) => {
               console.log("Auto-play after seek failed:", err);
-              showOverlay("pause");
             });
-        }, 100);
+          }, 100);
+        }
       }
     });
 
     // Apply resume time after metadata is loaded
-    if (resumeTime > 0) {
+    if (pendingResumeTime > 0) {
       player.on("loadedmetadata", () => {
-        if (resumeTime < player.duration()) {
-          player.currentTime(resumeTime);
+        if (useWebOSNativePlayer) {
+          if (!applyResumeTimeToPlayback()) {
+            scheduleResumeSeekRetry();
+          }
+        } else if (pendingResumeTime < player.duration()) {
+          player.currentTime(pendingResumeTime);
+          resumeTimeApplied = true;
         }
       });
     }
 
-    const loadingEl = document.querySelector(".video-buffer-loader");
     const seekBar = document.getElementById("customSeek");
     const liveBadge = document.querySelector(".video-live-badge");
     const errorDialog = document.querySelector(".video-error-dialog");
@@ -604,6 +902,38 @@ function VideoJsPlayer(poster = "") {
     currentTimeEl = document.getElementById("currentTime");
     durationEl = document.getElementById("duration");
 
+    function resumePlaybackAfterSeek() {
+      if (errorActive || userManuallyPaused || !wasPlayingBeforeSeek) return;
+
+      if (pendingResumeTimeout) {
+        clearTimeout(pendingResumeTimeout);
+        pendingResumeTimeout = null;
+      }
+
+      const playbackTarget =
+        useWebOSNativePlayer && playbackVideoElement ? playbackVideoElement : player;
+      if (!playbackTarget || typeof playbackTarget.play !== "function") return;
+
+      if (useWebOSNativePlayer) {
+        try {
+          const result = playbackTarget.play();
+          if (result && typeof result.catch === "function") {
+            result.catch((err) => {
+              console.log("Native autoplay after seek failed:", err);
+            });
+          }
+        } catch (err) {
+          console.log("Native autoplay after seek failed:", err);
+        }
+      } else {
+        pendingResumeTimeout = setTimeout(() => {
+          playbackTarget.play().catch((err) => {
+            console.log("Auto-play after seek failed:", err);
+          });
+        }, 200);
+      }
+    }
+
     if (isLive && liveBadge) {
       liveBadge.classList.remove("hidden");
     }
@@ -614,12 +944,9 @@ function VideoJsPlayer(poster = "") {
     // Show title at start for 3 seconds, then hide if video is playing
     if (titleBar) {
       titleBar.classList.remove("hidden");
-      titleBar.style.display = "flex";
-      controlsBar.classList.remove("hidden");
-
-      controlsTimeout = setTimeout(() => {
+      setTimeout(() => {
         if (!player.paused()) {
-          hideControls();
+          titleBar.classList.add("hidden");
         }
       }, 3000);
     }
@@ -643,9 +970,7 @@ function VideoJsPlayer(poster = "") {
           isSeekBarDragging = true;
 
           // Show loading indicator when seeking
-          if (loadingEl) {
-            loadingEl.classList.remove("hidden");
-          }
+          showLoadingState();
 
           // Store play state before seeking
           wasPlayingBeforeSeek = !player.paused();
@@ -662,7 +987,9 @@ function VideoJsPlayer(poster = "") {
         isSeekBarDragging = false;
 
         // Only auto-resume if it was playing AND not manually paused
-        if (wasPlayingBeforeSeek && !userManuallyPaused && !errorActive) {
+        if (useWebOSNativePlayer) {
+          resumePlaybackAfterSeek();
+        } else if (wasPlayingBeforeSeek && !userManuallyPaused && !errorActive) {
           setTimeout(() => {
             player.play().catch((err) => {
               console.log("Auto-play after seek bar release failed:", err);
@@ -671,24 +998,17 @@ function VideoJsPlayer(poster = "") {
         }
       });
 
-      player.on("timeupdate", () => {
-        if (errorActive) return;
+    player.on("timeupdate", () => {
+      if (errorActive) return;
+      updateLastKnownPlaybackProgress();
 
-        if (!seekBar.getAttribute("max")) {
-          seekBar.setAttribute("max", player.duration() || 0);
+      if (!seekBar.getAttribute("max")) {
+        seekBar.setAttribute("max", player.duration() || 0);
         }
 
         // Only update seek bar value if user is not actively dragging it
         if (!isSeekBarDragging) {
           seekBar.value = player.currentTime();
-        }
-
-        // Track stable time only when not seeking/dragging
-        if (!isSeekBarDragging && !player.seeking()) {
-          const t = player.currentTime();
-          if (typeof t === "number" && !isNaN(t) && isFinite(t)) {
-            lastStableTime = t;
-          }
         }
 
         // Update current time display
@@ -715,15 +1035,19 @@ function VideoJsPlayer(poster = "") {
         }
 
         seekBar.style.background = `linear-gradient(to right,
-          var(--gold) 0%, var(--gold) ${percent}%,
+          var(--app-text-color) 0%, var(--app-text-color) ${percent}%,
           #aaa ${percent}%, #aaa ${bufferedPercent}%,
           #888 ${bufferedPercent}%, #888 100%)`;
       });
     }
 
     player.on("waiting", () => {
-      if (!errorActive) {
-        loadingEl.classList.remove("hidden");
+      if (!errorActive && !userManuallyPaused) {
+        showLoadingState();
+        if (useWebOSNativePlayer) {
+          hidePlaybackOverlays();
+          shouldAutoPlayAfterBuffering = !userManuallyPaused && !player.paused();
+        }
         // Hide pause overlay when loading starts
         const playOverlay = document.querySelector(
           ".video-action-overlay.center",
@@ -736,7 +1060,17 @@ function VideoJsPlayer(poster = "") {
 
     player.on("canplay", () => {
       if (!errorActive) {
+        const loadingEl = document.querySelector(".video-buffer-loader");
         loadingEl.classList.add("hidden");
+        if (useWebOSNativePlayer && pendingResumeTime > 0 && !resumeTimeApplied) {
+          if (!applyResumeTimeToPlayback()) {
+            scheduleResumeSeekRetry();
+          }
+        }
+        if (useWebOSNativePlayer && shouldAutoPlayAfterBuffering) {
+          shouldAutoPlayAfterBuffering = false;
+          resumePlaybackAfterSeek();
+        }
         // If we're paused after loading completes, show pause overlay again
         if (player.paused() && !isSeekBarDragging) {
           showOverlay("pause");
@@ -744,15 +1078,67 @@ function VideoJsPlayer(poster = "") {
       }
     });
 
-    player.on("stalled", () => {
+    player.on("loadeddata", () => {
       if (!errorActive) {
-        loadingEl.classList.remove("hidden");
+        const loadingEl = document.querySelector(".video-buffer-loader");
+        loadingEl.classList.add("hidden");
+        if (useWebOSNativePlayer && pendingResumeTime > 0 && !resumeTimeApplied) {
+          if (!applyResumeTimeToPlayback()) {
+            scheduleResumeSeekRetry();
+          }
+        }
+        if (useWebOSNativePlayer && shouldAutoPlayAfterBuffering) {
+          shouldAutoPlayAfterBuffering = false;
+          resumePlaybackAfterSeek();
+        }
       }
     });
 
-    player.on("loadstart", () => {
+    player.on("canplaythrough", () => {
       if (!errorActive) {
-        loadingEl.classList.remove("hidden");
+        const loadingEl = document.querySelector(".video-buffer-loader");
+        loadingEl.classList.add("hidden");
+        if (useWebOSNativePlayer && pendingResumeTime > 0 && !resumeTimeApplied) {
+          if (!applyResumeTimeToPlayback()) {
+            scheduleResumeSeekRetry();
+          }
+        }
+        if (useWebOSNativePlayer && shouldAutoPlayAfterBuffering) {
+          shouldAutoPlayAfterBuffering = false;
+          resumePlaybackAfterSeek();
+        }
+      }
+    });
+
+    player.on("stalled", () => {
+      if (!errorActive && !userManuallyPaused) {
+        showLoadingState();
+        if (useWebOSNativePlayer) {
+          hidePlaybackOverlays();
+          shouldAutoPlayAfterBuffering = !userManuallyPaused && !player.paused();
+        }
+      }
+    });
+
+    player.on("durationchange", () => {
+      if (
+        !errorActive &&
+        durationEl &&
+        player.duration() &&
+        durationEl.textContent === "0:00"
+      ) {
+        durationEl.textContent = formatTime(player.duration());
+      }
+      updateLastKnownPlaybackProgress();
+    });
+
+    player.on("loadstart", () => {
+      if (!errorActive && !userManuallyPaused) {
+        showLoadingState();
+        if (useWebOSNativePlayer) {
+          hidePlaybackOverlays();
+          shouldAutoPlayAfterBuffering = !userManuallyPaused && !player.paused();
+        }
       }
 
       // Always hide poster for YouTube trailers
@@ -775,14 +1161,23 @@ function VideoJsPlayer(poster = "") {
     player.on("playing", () => {
       if (!errorActive) {
         hasStartedPlayingOnce = true; // Mark that video has started playing
+        updateLastKnownPlaybackProgress();
+        const loadingEl = document.querySelector(".video-buffer-loader");
         loadingEl.classList.add("hidden");
-
-        // Hide controls after 5 seconds of playing
-        showControls();
+        shouldAutoPlayAfterBuffering = false;
+        hideControlsWithDelay(5000); // Auto-hide controls after 5 seconds of inactivity
 
         // Only show play overlay if we're not seeking
         if (!isSeekBarDragging && !player.seeking()) {
           showOverlay("play");
+        }
+
+        // ONLY unfocus if controls are hidden or NO element is currently focused
+        // This keeps the red/gold border visible even while the video is playing/seeking
+        const isAnythingFocused =
+          isSeekBarFocused || isAspectRatioFocused || isPlayPauseFocused;
+        if (!isAnythingFocused || controlsBar.classList.contains("hidden")) {
+          unfocusAll();
         }
 
         // Reset manual pause flag when video starts playing
@@ -791,25 +1186,22 @@ function VideoJsPlayer(poster = "") {
     });
 
     player.on("pause", () => {
-      // If we paused only to execute a seek, don't mark as user pause or force pause UI.
-      if (isProgrammaticPauseForSeek) {
-        return;
-      }
-
-      // Don't show pause UI if video is still loading/buffering
-      if (!errorActive && !loadingEl.classList.contains("hidden")) {
-        return;
+      // Hide loading indicator when user pauses
+      const loadingEl = document.querySelector(".video-buffer-loader");
+      if (loadingEl) {
+        loadingEl.classList.add("hidden");
       }
 
       // Always show pause overlay when paused, even during seeking
       if (!errorActive) {
-        controlsBar.classList.remove("hidden");
-        titleBar.style.display = "flex";
+        updateLastKnownPlaybackProgress();
+        showControls();
         showOverlay("pause");
-        setTimeout(() => focusPlayPause(), 100);
 
-        // Keep controls visible while paused
-        clearTimeout(controlsTimeout);
+        // ONLY pull focus to play/pause if NOTHING else is focused
+        if (!isSeekBarFocused && !isAspectRatioFocused) {
+          setTimeout(() => focusPlayPause(), 100);
+        }
 
         // Mark that user manually paused (unless it's from seeking)
         if (!player.seeking()) {
@@ -819,46 +1211,21 @@ function VideoJsPlayer(poster = "") {
     });
 
     player.on("error", () => {
-      console.log("❌ Player error:", player.error());
-      const err = player.error && player.error();
+      const mediaError = player && typeof player.error === "function"
+        ? player.error()
+        : null;
+      console.log("❌ Player error:", mediaError);
 
-      // If an error happens during seeking/dragging/debounced seek, attempt recovery
-      if (
-        !errorActive &&
-        (player.seeking() || isSeekBarDragging || pendingSeekTimeout !== null)
-      ) {
-        console.warn("Recovering from error during seek:", err);
-        try {
-          // Hide dialog if it was shown
-          if (errorDialog) errorDialog.classList.add("hidden");
-
-          // Try to jump back to a stable time and resume playback
-          const target = Math.max(
-            0,
-            Math.min(player.duration() || lastStableTime || 0, lastStableTime),
-          );
-          setTimeout(() => {
-            if (errorActive) return;
-            try {
-              player.currentTime(target);
-            } catch (e) {}
-            player
-              .play()
-              .then(() => showOverlay("play"))
-              .catch(() => showOverlay("pause"));
-          }, 200);
-          return;
-        } catch (e) {
-          // Fall through to showing error dialog
-        }
+      if (useWebOSNativePlayer && !isGenuineNativeMediaError(mediaError)) {
+        return;
       }
 
       errorActive = true;
 
-      loadingEl.classList.add("hidden");
-      controlsBar.classList.add("hidden");
-      liveBadge.classList.add("hidden");
-      titleBar.style.display = "none";
+      if (loadingEl) loadingEl.classList.add("hidden");
+      if (controlsBar) controlsBar.classList.add("hidden");
+      if (liveBadge) liveBadge.classList.add("hidden");
+      if (titleBar) titleBar.style.display = "none";
 
       overlays.forEach((o) => o.classList.add("hidden"));
 
@@ -875,12 +1242,13 @@ function VideoJsPlayer(poster = "") {
       ) {
         const errorMsgEl = document.getElementById("errorDialogMessage");
         if (errorMsgEl) {
-          let errorMessage = "Something went wrong";
-          if (err) {
-            errorMessage =
-              err.message || `Error Code: ${err.code}`;
-          }
+          const errorMessage = getMediaErrorMessage(mediaError);
           errorMsgEl.innerText = `⚠️ ${errorMessage}`;
+        }
+      } else if (useWebOSNativePlayer) {
+        const errorMsgEl = document.getElementById("errorDialogMessage");
+        if (errorMsgEl) {
+          errorMsgEl.innerText = `⚠️ ${getMediaErrorMessage(mediaError)}`;
         }
       }
 
@@ -1173,9 +1541,9 @@ function VideoJsPlayer(poster = "") {
         // Save back to localStorage
         localStorage.setItem("playlistsData", JSON.stringify(updatedPlaylists));
 
-        console.log(
-          `Removed episode ${completedEpisodeId} from continue watching`,
-        );
+        // console.log(
+        //   `Removed episode ${completedEpisodeId} from continue watching`,
+        // );
       } catch (error) {
         console.warn("Error removing episode from continue watching:", error);
       }
@@ -1240,38 +1608,56 @@ function VideoJsPlayer(poster = "") {
     }
 
     // Keyboard events
+    function togglePlayPause() {
+      if (player && typeof player.paused === "function") {
+        try {
+          if (player.paused()) {
+            if (typeof player.play === "function") player.play();
+          } else {
+            if (typeof player.pause === "function") player.pause();
+          }
+        } catch (err) {
+          console.warn("Player control error:", err);
+        }
+      }
+    }
+
+    function seekBy(offset) {
+      if (
+        !isLive &&
+        player &&
+        hasStartedPlayingOnce &&
+        typeof player.currentTime === "function"
+      ) {
+        try {
+          debouncedSeek(offset);
+          showOverlay(offset > 0 ? "forward" : "backward");
+        } catch (err) {
+          console.warn("Player seek error:", err);
+        }
+      }
+    }
+
+    function cycleAspectRatio() {
+      const videoEl = getPlaybackVideoElement();
+      if (videoEl && window.VideoAspectRatio) {
+        const newLabel = window.VideoAspectRatio.cycle(videoEl);
+        window.VideoAspectRatio.showOverlay(newLabel);
+      }
+    }
+
     function videojsPlayerdownHandler(e) {
       if (localStorage.getItem("currentPage") !== "videoJsPlayer") return;
 
       const key = e.keyCode || e.which;
       const keyChar = e.key;
 
-      // Handle Back/Exit early
-      if (typeof isBackKey === "function" && isBackKey(e)) {
-        goBack();
-        e.preventDefault();
-        return;
-      }
-
-      const controlsBar = document.querySelector(".custom-video-controls");
-      const isHidden = controlsBar && controlsBar.classList.contains("hidden");
-
-      // Show controls on any key press
-      showControls();
-
-      // If controls were hidden and it's not a volume key, focus Play/Pause and return
-      if (isHidden && !errorActive) {
-        const isVolumeKey =
-          keyChar === "w" ||
-          keyChar === "s" ||
-          keyChar === "m" ||
-          [447, 448, 449].includes(key);
-        if (!isVolumeKey) {
-          showOverlay("pause"); // Show the center button/overlay
-          focusPlayPause();
-          e.preventDefault();
-          return;
-        }
+      // On any arrow press, show controls (seek bar + aspect ratio) and default focus to play/pause
+      if (
+        !errorActive &&
+        ["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(e.key)
+      ) {
+        showControlsAndDefaultFocus();
       }
 
       // Tizen Volume Controls with keyboard (w/s/m)
@@ -1361,9 +1747,9 @@ function VideoJsPlayer(poster = "") {
         }
       }
 
-      // Error handling → Enter key = goBack() (Back keys handled above)
+      // Error handling → Enter & Back keys = goBack()
       if (errorActive) {
-        if (e.key === "Enter") {
+        if (e.key === "Enter" || isBackKey(e)) {
           goBack();
         }
         return;
@@ -1382,14 +1768,15 @@ function VideoJsPlayer(poster = "") {
 
             case "Enter":
               // Apply aspect ratio change using utility
-              const videoEl = document.querySelector(
-                "#videojs-player-tag_html5_api",
-              );
-              if (videoEl && window.VideoAspectRatio) {
-                const newLabel = window.VideoAspectRatio.cycle(videoEl);
-                window.VideoAspectRatio.showOverlay(newLabel);
-              }
+              cycleAspectRatio();
               e.preventDefault();
+              break;
+
+            default:
+              if (isBackKey(e)) {
+                goBack();
+                e.preventDefault();
+              }
               break;
           }
         }
@@ -1408,13 +1795,7 @@ function VideoJsPlayer(poster = "") {
                 hasStartedPlayingOnce &&
                 typeof player.currentTime === "function"
               ) {
-                try {
-                  // Use debounced seek to prevent buffer overload
-                  debouncedSeek(-10);
-                  showOverlay("backward");
-                } catch (err) {
-                  console.warn("Player seek error:", err);
-                }
+                seekBy(-10);
               }
               e.preventDefault();
               break;
@@ -1426,13 +1807,7 @@ function VideoJsPlayer(poster = "") {
                 hasStartedPlayingOnce &&
                 typeof player.currentTime === "function"
               ) {
-                try {
-                  // Use debounced seek to prevent buffer overload
-                  debouncedSeek(10);
-                  showOverlay("forward");
-                } catch (err) {
-                  console.warn("Player seek error:", err);
-                }
+                seekBy(10);
               }
               e.preventDefault();
               break;
@@ -1444,8 +1819,14 @@ function VideoJsPlayer(poster = "") {
               break;
 
             case "ArrowDown":
-              // Move focus to aspect ratio button
-              focusAspectRatio();
+              // Move focus to aspect ratio button if it exists, otherwise stay or move elsewhere
+              const arBtn = document.getElementById("aspectRatioButton");
+              if (arBtn) {
+                focusAspectRatio();
+              } else {
+                // For YouTube or no AR button, maybe just preventDefault
+                e.preventDefault();
+              }
               e.preventDefault();
               break;
 
@@ -1453,6 +1834,13 @@ function VideoJsPlayer(poster = "") {
               // Just unfocus seek bar, don't play/pause
               focusPlayPause();
               e.preventDefault();
+              break;
+
+            default:
+              if (isBackKey(e)) {
+                goBack();
+                e.preventDefault();
+              }
               break;
           }
         }
@@ -1470,17 +1858,7 @@ function VideoJsPlayer(poster = "") {
 
           case "Enter":
             // Toggle play/pause
-            if (player && typeof player.paused === "function") {
-              try {
-                if (player.paused()) {
-                  if (typeof player.play === "function") player.play();
-                } else {
-                  if (typeof player.pause === "function") player.pause();
-                }
-              } catch (err) {
-                console.warn("Player control error:", err);
-              }
-            }
+            togglePlayPause();
             e.preventDefault();
             break;
 
@@ -1491,14 +1869,9 @@ function VideoJsPlayer(poster = "") {
               hasStartedPlayingOnce &&
               typeof player.currentTime === "function"
             ) {
-              try {
-                // Use debounced seek to prevent buffer overload
-                debouncedSeek(10);
-                showOverlay("forward");
-              } catch (err) {
-                console.warn("Player seek error:", err);
-              }
+              seekBy(10);
             }
+            e.preventDefault(); // Added preventDefault to avoid secondary handlers
             break;
 
           case "ArrowLeft":
@@ -1508,19 +1881,23 @@ function VideoJsPlayer(poster = "") {
               hasStartedPlayingOnce &&
               typeof player.currentTime === "function"
             ) {
-              try {
-                // Use debounced seek to prevent buffer overload
-                debouncedSeek(-10);
-                showOverlay("backward");
-              } catch (err) {
-                console.warn("Player seek error:", err);
-              }
+              seekBy(-10);
             }
+            e.preventDefault(); // Added preventDefault to avoid secondary handlers
+            break;
+
+          case "ArrowUp":
+            // Keep focus here or just preventDefault to avoid escaping
+            e.preventDefault();
             break;
         }
 
         // If we handled the key in play/pause mode, return
-        if (["ArrowDown", "Enter", "ArrowRight", "ArrowLeft"].includes(e.key)) {
+        if (
+          ["ArrowDown", "ArrowUp", "Enter", "ArrowRight", "ArrowLeft"].includes(
+            e.key,
+          )
+        ) {
           return;
         }
       }
@@ -1528,79 +1905,97 @@ function VideoJsPlayer(poster = "") {
       // 🔴 Fallback controls (when nothing is focused)
       switch (e.key) {
         case "Enter":
-          if (player && typeof player.paused === "function") {
-            try {
-              if (player.paused()) {
-                if (typeof player.play === "function") player.play();
-              } else {
-                if (typeof player.pause === "function") player.pause();
-              }
-            } catch (err) {
-              console.warn("Player control error:", err);
-            }
-          }
+          togglePlayPause();
           break;
 
         case "ArrowRight":
-          // If controls are visible but nothing is focused, focus Play/Pause
-          if (!isHidden && !errorActive) {
-            focusPlayPause();
-            e.preventDefault();
-            return;
-          }
-
           if (
             !isLive &&
             player &&
             hasStartedPlayingOnce &&
             typeof player.currentTime === "function"
           ) {
-            try {
-              // Use debounced seek to prevent buffer overload
-              debouncedSeek(10);
-              showOverlay("forward");
-            } catch (err) {
-              console.warn("Player seek error:", err);
-            }
+            seekBy(10);
           }
           break;
 
         case "ArrowLeft":
-          // If controls are visible but nothing is focused, focus Play/Pause
-          if (!isHidden && !errorActive) {
-            focusPlayPause();
-            e.preventDefault();
-            return;
-          }
-
           if (
             !isLive &&
             player &&
             hasStartedPlayingOnce &&
             typeof player.currentTime === "function"
           ) {
-            try {
-              // Use debounced seek to prevent buffer overload
-              debouncedSeek(-10);
-              showOverlay("backward");
-            } catch (err) {
-              console.warn("Player seek error:", err);
-            }
+            seekBy(-10);
           }
           break;
 
-        case "ArrowUp":
-        case "ArrowDown":
-          // If controls are visible but nothing is focused, focus Play/Pause
-          if (!isHidden && !errorActive) {
-            focusPlayPause();
-            e.preventDefault();
+        default:
+          if (isBackKey(e)) {
+            goBack();
           }
           break;
       }
     }
 
     document.addEventListener("keydown", videojsPlayerdownHandler);
+
+    function videojsPlayerClickHandler(e) {
+      if (localStorage.getItem("currentPage") !== "videoJsPlayer") return;
+
+      const target = e.target;
+      if (!target) return;
+
+      if (errorActive) {
+        if (target.closest("#errorBackBtn")) {
+          goBack();
+        }
+        return;
+      }
+
+      if (
+        target.closest(".video-action-overlay.center") ||
+        target.closest(".video-action-overlay.center .video-action-icon")
+      ) {
+        showControlsAndDefaultFocus();
+        focusPlayPause();
+        togglePlayPause();
+        return;
+      }
+
+      if (target.closest(".video-action-overlay.left")) {
+        showControlsAndDefaultFocus();
+        focusPlayPause();
+        seekBy(-10);
+        return;
+      }
+
+      if (target.closest(".video-action-overlay.right")) {
+        showControlsAndDefaultFocus();
+        focusPlayPause();
+        seekBy(10);
+        return;
+      }
+
+      if (target.closest("#aspectRatioButton")) {
+        showControls();
+        focusAspectRatio();
+        cycleAspectRatio();
+        return;
+      }
+
+      if (target.closest("#customSeek")) {
+        showControls();
+        focusSeekBar();
+        return;
+      }
+
+      if (target.closest("#videojs-player-tag") || target.closest(".video-js-player-container")) {
+        showControlsAndDefaultFocus();
+      }
+    }
+
+    document.addEventListener("click", videojsPlayerClickHandler, true);
 
     VideoJsPlayer.cleanup = function () {
       // Clear any pending timeouts first
@@ -1612,14 +2007,18 @@ function VideoJsPlayer(poster = "") {
         clearTimeout(pendingResumeTimeout);
         pendingResumeTimeout = null;
       }
-      if (controlsTimeout) {
-        clearTimeout(controlsTimeout);
-        controlsTimeout = null;
+      clearResumeSeekRetry();
+      pendingResumeTime = 0;
+      resumeTimeApplied = false;
+      if (controlsHideTimeout) {
+        clearTimeout(controlsHideTimeout);
+        controlsHideTimeout = null;
       }
 
       // Remove event listener
       try {
         document.removeEventListener("keydown", videojsPlayerdownHandler);
+        document.removeEventListener("click", videojsPlayerClickHandler, true);
       } catch (err) {
         console.warn("Event listener removal error:", err);
       }
@@ -1661,31 +2060,12 @@ function VideoJsPlayer(poster = "") {
     };
   }
 
-  if (isTizen) {
-    setTimeout(() => initPlayer(), 0);
-
-    setTimeout(() => {
-      const videoHtmlElement = document.querySelector(
-        "#videojs-player-tag_html5_api",
-      );
-      if (videoHtmlElement && window.VideoAspectRatio) {
-        window.VideoAspectRatio.initialize(videoHtmlElement);
-      }
-    }, 0);
-  } else {
-    setTimeout(() => initPlayer(), 0);
-  }
+  setTimeout(() => initPlayer(), 0);
 
   setTimeout(() => {
-    const aspectRatioButton = document.getElementById("aspectRatioButton");
-    if (aspectRatioButton) {
-      aspectRatioButton.addEventListener("click", () => {
-        const videoEl = document.querySelector("#videojs-player-tag_html5_api");
-        if (videoEl && window.VideoAspectRatio) {
-          const newLabel = window.VideoAspectRatio.cycle(videoEl);
-          window.VideoAspectRatio.showOverlay(newLabel);
-        }
-      });
+    const videoHtmlElement = getPlaybackVideoElement();
+    if (videoHtmlElement && window.VideoAspectRatio) {
+      window.VideoAspectRatio.initialize(videoHtmlElement);
     }
   }, 0);
 
@@ -1722,28 +2102,14 @@ function VideoJsPlayer(poster = "") {
       <div class="video-action-icon">⏩</div>
     </div>
 
-    ${
-      isTizen
-        ? `<video
+    <video
       id="videojs-player-tag"
-      class="video-js videojs-player-class"
+      class="${useWebOSVideoTag ? "videojs-player-class" : "video-js videojs-player-class"}"
       playsinline
-    ></video>`
-        : `<video
-      id="videojs-player-tag"
-      class="videojs-player-class"
-      src="${srcUrl}"
-      controls
-      autoplay
-      playsinline
-      style="width: 100%; height: 100%; object-fit: contain; background: black;"
-    ></video>`
-    }
+    ></video>
 
     <!-- Custom controls with time displays -->
-    ${
-      isTizen
-        ? `<div class="custom-video-controls hidden">
+    <div class="custom-video-controls hidden">
       <div class="seek-bar-container">
         <span id="currentTime" class="time-display">0:00</span>
         <input id="customSeek" type="range" value="0" min="0" step="0.1" />
@@ -1754,14 +2120,12 @@ function VideoJsPlayer(poster = "") {
           ? ""
           : `<div class="aspect-ratio-container">
         <button class="aspect-ratio-button" id="aspectRatioButton"><i class="fa-solid fa-compress" style="color: ${
-          isAspectRatioFocused ? "var(--gold)" : "white"
+          isAspectRatioFocused ? "var(--app-text-color)" : "white"
         }"></i>Aspect Ratio</button>
       </div>`
       }
 
-    </div>`
-        : ""
-    }
+    </div>
  
     <div id="aspectRatioOverlay" class="aspect-ratio-overlay hidden"></div>
 

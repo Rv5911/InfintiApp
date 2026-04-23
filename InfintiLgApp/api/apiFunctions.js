@@ -132,6 +132,13 @@ async function loginApi(
     loadingOverlay.classList.add("hidden");
     resetLoadingPercentage();
     Toaster.showToast("error", "Login Aborted!");
+    const currentPage =localStorage.getItem("currentPage");
+
+    if(currentPage=="preLoginPage"){
+              // localStorage.setItem("navigationFocus", "navbar");
+        localStorage.setItem("currentPage", "loginPage");
+        Router.showPage("login");
+    }
   });
 
   try {
