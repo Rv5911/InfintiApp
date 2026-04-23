@@ -4,6 +4,8 @@ function VideoJsPlayer(poster = "") {
     localStorage.getItem("selectedVideoItemUrl") ||
     "";
 
+  const isTizen = typeof tizen !== "undefined" && tizen.tvinputdevice;
+
   let isYouTube = srcUrl.includes("youtube.com") || srcUrl.includes("youtu.be");
 
   const previousCleanup = VideoJsPlayer.cleanup;
@@ -463,6 +465,39 @@ function VideoJsPlayer(poster = "") {
       if (attempt < 10) {
         setTimeout(() => initPlayer(attempt + 1), 100);
       }
+      return;
+    }
+
+    if (!isTizen) {
+      console.log("Not Tizen: Using native video element");
+      player = videoElement;
+
+      // Shim common Video.js methods to prevent errors in existing logic
+      if (!player.paused) player.paused = () => videoElement.paused;
+      if (!player.currentTime) {
+        player._currentTime = player.currentTime;
+        player.currentTime = function (val) {
+          if (val !== undefined) {
+            videoElement.currentTime = val;
+            return this;
+          }
+          return videoElement.currentTime;
+        };
+      }
+      if (!player.duration) {
+        player.duration = () => videoElement.duration;
+      }
+      if (!player.seeking) {
+        player.seeking = () => videoElement.seeking;
+      }
+      if (!player.buffered) {
+        player.buffered = () => videoElement.buffered;
+      }
+
+      // Add basic event listeners for custom UI elements that might still be visible
+      videoElement.addEventListener("play", () => showOverlay("play"));
+      videoElement.addEventListener("pause", () => showOverlay("pause"));
+
       return;
     }
 
@@ -1626,16 +1661,20 @@ function VideoJsPlayer(poster = "") {
     };
   }
 
-  setTimeout(() => initPlayer(), 0);
+  if (isTizen) {
+    setTimeout(() => initPlayer(), 0);
 
-  setTimeout(() => {
-    const videoHtmlElement = document.querySelector(
-      "#videojs-player-tag_html5_api",
-    );
-    if (videoHtmlElement && window.VideoAspectRatio) {
-      window.VideoAspectRatio.initialize(videoHtmlElement);
-    }
-  }, 0);
+    setTimeout(() => {
+      const videoHtmlElement = document.querySelector(
+        "#videojs-player-tag_html5_api",
+      );
+      if (videoHtmlElement && window.VideoAspectRatio) {
+        window.VideoAspectRatio.initialize(videoHtmlElement);
+      }
+    }, 0);
+  } else {
+    setTimeout(() => initPlayer(), 0);
+  }
 
   setTimeout(() => {
     const aspectRatioButton = document.getElementById("aspectRatioButton");
@@ -1683,14 +1722,28 @@ function VideoJsPlayer(poster = "") {
       <div class="video-action-icon">⏩</div>
     </div>
 
-    <video
+    ${
+      isTizen
+        ? `<video
       id="videojs-player-tag"
       class="video-js videojs-player-class"
       playsinline
-    ></video>
+    ></video>`
+        : `<video
+      id="videojs-player-tag"
+      class="videojs-player-class"
+      src="${srcUrl}"
+      controls
+      autoplay
+      playsinline
+      style="width: 100%; height: 100%; object-fit: contain; background: black;"
+    ></video>`
+    }
 
     <!-- Custom controls with time displays -->
-    <div class="custom-video-controls hidden">
+    ${
+      isTizen
+        ? `<div class="custom-video-controls hidden">
       <div class="seek-bar-container">
         <span id="currentTime" class="time-display">0:00</span>
         <input id="customSeek" type="range" value="0" min="0" step="0.1" />
@@ -1706,7 +1759,9 @@ function VideoJsPlayer(poster = "") {
       </div>`
       }
 
-    </div>
+    </div>`
+        : ""
+    }
  
     <div id="aspectRatioOverlay" class="aspect-ratio-overlay hidden"></div>
 

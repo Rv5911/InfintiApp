@@ -6,6 +6,7 @@ function LiveVideoJsComponent(
   channelName = ""
 ) {
   const id = "live-videojs-player";
+  const isTizen = typeof tizen !== "undefined" && tizen.tvinputdevice;
   let epgData = [];
 
   // Store reference to previous cleanup to avoid race conditions
@@ -283,6 +284,25 @@ function LiveVideoJsComponent(
 
     // Initial aspect ratio button visibility
     updateAspectRatioButtonVisibility();
+
+    if (!isTizen) {
+      const videoEl = document.getElementById(id);
+      if (videoEl) {
+        window.livePlayer = videoEl;
+        // Shim for API parity
+        if (!window.livePlayer.paused) {
+          window.livePlayer.paused = () => videoEl.paused;
+        }
+        if (!window.livePlayer.play) {
+          window.livePlayer.play = () => videoEl.play();
+        }
+        if (!window.livePlayer.pause) {
+          window.livePlayer.pause = () => videoEl.pause();
+        }
+        if (loadingEl) loadingEl.classList.add("hidden");
+      }
+      return;
+    }
 
     if (isTsStream && typeof flowplayer !== "undefined") {
       const hlsUrl = srcUrl.replace(
@@ -725,7 +745,9 @@ function LiveVideoJsComponent(
         </div>
       </div>
       ${
-        isTsStream
+        !isTizen
+          ? `<video id="${id}" src="${srcUrl}" controls autoplay playsinline webkit-playsinline style="height:100%; width:100%; background: black;"></video>`
+          : isTsStream
           ? `<div id="flowplayer-live" class="flowplayer " style="height:100%; width:100%;">
              <video>
                <source type="application/x-mpegURL" src="${srcUrl.replace(
