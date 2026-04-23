@@ -547,7 +547,7 @@
     cursor: pointer;
     color: #e3e2ff;
     font-size: 24px;
-    transition: all 0.2s ease;
+    /* transition: all 0.2s ease; */
     margin-bottom: -10px;
     width: 20%;
     margin-left: 40px;
@@ -570,7 +570,7 @@
             #2654a2 100%) !important;
     border: 3px solid var(--gold) !important;
     outline: none !important;
-    box-shadow: 0 0 15px rgba(255, 215, 0, 0.3);
+    /* box-shadow: 0 0 15px rgba(255, 215, 0, 0.3); */
 }
 
 .series-cat-toggle-text {
@@ -590,7 +590,7 @@
     cursor: pointer;
     color: #e3e2ff;
     font-size: 24px;
-    transition: all 0.2s ease;
+    /* transition: all 0.2s ease; */
     margin-bottom: -10px;
     width: 20%;
     box-sizing: border-box;
