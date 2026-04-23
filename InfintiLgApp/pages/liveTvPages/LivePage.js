@@ -184,6 +184,7 @@ function LivePage() {
     channelChunk = 1;
     isLoadingChannels = false;
 
+    preCalculateCounts();
     console.log("LivePage init called");
 
     container = document.querySelector(".lp-main-container");
@@ -404,6 +405,17 @@ function LivePage() {
     return streams;
   };
 
+  let categoryCounts = new Map();
+
+  const preCalculateCounts = () => {
+    categoryCounts.clear();
+    const streams = window.allLiveStreams || [];
+    for (const s of streams) {
+      const catId = String(s.category_id);
+      categoryCounts.set(catId, (categoryCounts.get(catId) || 0) + 1);
+    }
+  };
+
   const getCategoryCount = (catId) => {
     if (catId === "All") return (window.allLiveStreams || []).length;
     if (catId === "favorites") {
@@ -418,9 +430,7 @@ function LivePage() {
         ? currentPlaylist.ChannelListLive.length
         : 0;
     }
-    return (window.allLiveStreams || []).filter(
-      (s) => String(s.category_id) === String(catId),
-    ).length;
+    return categoryCounts.get(String(catId)) || 0;
   };
 
   const render = () => {
@@ -1526,11 +1536,10 @@ function LivePage() {
       window.livePlayer.togglePlayPause();
     } else {
       // Check if .paused is a function (Video.js) or a property (Native)
-      const isPaused =
-        typeof window.livePlayer.paused === "function"
-          ? window.livePlayer.paused()
-          : window.livePlayer.paused;
-
+      const isPaused = (typeof window.livePlayer.paused === "function") 
+        ? window.livePlayer.paused() 
+        : window.livePlayer.paused;
+        
       if (isPaused) {
         window.livePlayer.play();
       } else {

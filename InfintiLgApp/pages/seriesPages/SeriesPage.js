@@ -542,6 +542,9 @@ function SeriesPage() {
       });
 
       // Calculate series counts for each category without loading series
+      const seriesCatMap = new Map();
+      categoriesWithSeries.forEach((cat) => seriesCatMap.set(cat.id, cat));
+
       for (const s of allSeries) {
         const ids = new Set();
         if (s.category_id != null) ids.add(Number(s.category_id));
@@ -550,7 +553,7 @@ function SeriesPage() {
         }
 
         for (const cid of ids) {
-          const cat = categoriesWithSeries.find((c) => c.id === cid);
+          const cat = seriesCatMap.get(cid);
           if (cat) {
             cat._seriesCount++;
           }
@@ -2141,8 +2144,7 @@ function SeriesPage() {
               setSeriesFlags(true, false, false);
             } else if (activeEl.id === "series-cat-search-input") {
               const catSearchContainer = qs(".series-cat-search-container");
-              if (catSearchContainer)
-                catSearchContainer.classList.add("focused");
+              if (catSearchContainer) catSearchContainer.classList.add("focused");
               isSeriesCatSearchFocused = true;
             }
             e.preventDefault();

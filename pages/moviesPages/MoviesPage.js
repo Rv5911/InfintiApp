@@ -476,6 +476,9 @@ function MoviesPage() {
       });
 
       // Calculate movie counts for each category without loading movies
+      const catMap = new Map();
+      categoriesWithMovies.forEach((cat) => catMap.set(cat.id, cat));
+
       for (const m of allMovies) {
         const ids = new Set();
         if (m.category_id != null) ids.add(Number(m.category_id));
@@ -484,7 +487,7 @@ function MoviesPage() {
         }
 
         for (const cid of ids) {
-          const cat = categoriesWithMovies.find((c) => c.id === cid);
+          const cat = catMap.get(cid);
           if (cat) {
             cat._movieCount++;
           }
