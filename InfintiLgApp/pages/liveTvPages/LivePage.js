@@ -1525,8 +1525,13 @@ function LivePage() {
     if (typeof window.livePlayer.togglePlayPause === "function") {
       window.livePlayer.togglePlayPause();
     } else {
-      // Video.js instance
-      if (window.livePlayer.paused()) {
+      // Check if .paused is a function (Video.js) or a property (Native)
+      const isPaused =
+        typeof window.livePlayer.paused === "function"
+          ? window.livePlayer.paused()
+          : window.livePlayer.paused;
+
+      if (isPaused) {
         window.livePlayer.play();
       } else {
         window.livePlayer.pause();

@@ -16,8 +16,14 @@ function LiveVideoJsComponent(
   let nativeVideoEventCleanup = [];
   let playbackErrorActive = false;
   const manualAspectRatios = [
-    { label: "16:9", className: "video-aspect-169" },
-    { label: "4:3", className: "video-aspect-43" },
+    {
+      label: "16:9",
+      className: "video-aspect-169",
+    },
+    {
+      label: "4:3",
+      className: "video-aspect-43",
+    },
   ];
   let currentAspectRatioIndex = 0;
 
@@ -62,8 +68,8 @@ function LiveVideoJsComponent(
       videoEl.style.aspectRatio = "4 / 3";
       videoEl.style.maxWidth = "100%";
       videoEl.style.maxHeight = "";
-    } else  {
- return null;
+    } else {
+      return null;
     }
 
     currentAspectRatioIndex = index;
@@ -120,11 +126,20 @@ function LiveVideoJsComponent(
       !isPaused && (videoEl.seeking || videoEl.readyState < haveCurrentData);
 
     if (isError) {
-      setOverlayState({ loading: false, error: true });
+      setOverlayState({
+        loading: false,
+        error: true,
+      });
     } else if (isBuffering) {
-      setOverlayState({ loading: true, error: false });
+      setOverlayState({
+        loading: true,
+        error: false,
+      });
     } else {
-      setOverlayState({ loading: false, error: false });
+      setOverlayState({
+        loading: false,
+        error: false,
+      });
     }
   }
 
@@ -134,7 +149,10 @@ function LiveVideoJsComponent(
 
   function showPlaybackError() {
     playbackErrorActive = true;
-    setOverlayState({ loading: false, error: true });
+    setOverlayState({
+      loading: false,
+      error: true,
+    });
   }
 
   // Store reference to previous cleanup to avoid race conditions
@@ -185,8 +203,16 @@ function LiveVideoJsComponent(
     // Use Intl.DateTimeFormat for proper local timezone formatting
     const options =
       format === "12hrs"
-        ? { hour: "numeric", minute: "2-digit", hour12: true }
-        : { hour: "2-digit", minute: "2-digit", hour12: false };
+        ? {
+            hour: "numeric",
+            minute: "2-digit",
+            hour12: true,
+          }
+        : {
+            hour: "2-digit",
+            minute: "2-digit",
+            hour12: false,
+          };
 
     return new Intl.DateTimeFormat(undefined, options).format(date);
   }
@@ -377,7 +403,8 @@ function LiveVideoJsComponent(
     }
 
     if (aspectRatioBtn) {
-      aspectRatioBtn.style.display = shouldShow && isFs ? "inline-flex" : "none";
+      aspectRatioBtn.style.display =
+        shouldShow && isFs ? "inline-flex" : "none";
     }
 
     if (fullscreenBtn) {
@@ -479,6 +506,7 @@ function LiveVideoJsComponent(
     videoEl.load();
 
     window.livePlayer = videoEl;
+    window.livePlayer.togglePlayPause = togglePlayPause;
     resetManualAspectRatio();
 
     const startPlayback = () => {
@@ -522,47 +550,89 @@ function LiveVideoJsComponent(
     };
 
     const nativeMediaEventHandlers = [
-      ["loadstart", () => {
-        clearPlaybackError();
-        setOverlayState({ loading: true, error: false });
-        syncPlayPauseIconFromMedia(videoEl);
-      }],
-      ["waiting", () => {
-        clearPlaybackError();
-        setOverlayState({ loading: true, error: false });
-      }],
-      ["stalled", () => {
-        clearPlaybackError();
-        setOverlayState({ loading: true, error: false });
-      }],
-      ["seeking", () => {
-        clearPlaybackError();
-        setOverlayState({ loading: true, error: false });
-      }],
-      ["loadedmetadata", () => {
-        clearPlaybackError();
-        syncLoaderFromMedia(videoEl);
-      }],
-      ["loadeddata", () => {
-        clearPlaybackError();
-        syncLoaderFromMedia(videoEl);
-      }],
-      ["canplay", () => {
-        clearPlaybackError();
-        syncLoaderFromMedia(videoEl);
-      }],
-      ["canplaythrough", () => {
-        clearPlaybackError();
-        syncLoaderFromMedia(videoEl);
-      }],
-      ["seeked", () => {
-        clearPlaybackError();
-        syncLoaderFromMedia(videoEl);
-      }],
-      ["timeupdate", () => {
-        clearPlaybackError();
-        syncLoaderFromMedia(videoEl);
-      }],
+      [
+        "loadstart",
+        () => {
+          clearPlaybackError();
+          setOverlayState({
+            loading: true,
+            error: false,
+          });
+          syncPlayPauseIconFromMedia(videoEl);
+        },
+      ],
+      [
+        "waiting",
+        () => {
+          clearPlaybackError();
+          setOverlayState({
+            loading: true,
+            error: false,
+          });
+        },
+      ],
+      [
+        "stalled",
+        () => {
+          clearPlaybackError();
+          setOverlayState({
+            loading: true,
+            error: false,
+          });
+        },
+      ],
+      [
+        "seeking",
+        () => {
+          clearPlaybackError();
+          setOverlayState({
+            loading: true,
+            error: false,
+          });
+        },
+      ],
+      [
+        "loadedmetadata",
+        () => {
+          clearPlaybackError();
+          syncLoaderFromMedia(videoEl);
+        },
+      ],
+      [
+        "loadeddata",
+        () => {
+          clearPlaybackError();
+          syncLoaderFromMedia(videoEl);
+        },
+      ],
+      [
+        "canplay",
+        () => {
+          clearPlaybackError();
+          syncLoaderFromMedia(videoEl);
+        },
+      ],
+      [
+        "canplaythrough",
+        () => {
+          clearPlaybackError();
+          syncLoaderFromMedia(videoEl);
+        },
+      ],
+      [
+        "seeked",
+        () => {
+          clearPlaybackError();
+          syncLoaderFromMedia(videoEl);
+        },
+      ],
+      [
+        "timeupdate",
+        () => {
+          clearPlaybackError();
+          syncLoaderFromMedia(videoEl);
+        },
+      ],
       ["playing", handleNativePlaying],
       ["play", handleNativePlay],
       ["pause", handleNativePause],
@@ -584,7 +654,10 @@ function LiveVideoJsComponent(
     if (retryBtn) {
       retryClickHandler = () => {
         clearPlaybackError();
-        setOverlayState({ loading: true, error: false });
+        setOverlayState({
+          loading: true,
+          error: false,
+        });
         videoEl.src = srcUrl;
         videoEl.load();
         videoEl.play().catch((err) => {
@@ -649,7 +722,10 @@ function LiveVideoJsComponent(
 
     fullscreenChangeHandler = handleFullscreenChange;
     document.addEventListener("fullscreenchange", fullscreenChangeHandler);
-    document.addEventListener("webkitfullscreenchange", fullscreenChangeHandler);
+    document.addEventListener(
+      "webkitfullscreenchange",
+      fullscreenChangeHandler,
+    );
     document.addEventListener("mozfullscreenchange", fullscreenChangeHandler);
     document.addEventListener("MSFullscreenChange", fullscreenChangeHandler);
     handleFullscreenChange();
@@ -703,7 +779,9 @@ function LiveVideoJsComponent(
     if (prevBtn) {
       prevBtn.addEventListener("click", () => {
         const event = new CustomEvent("liveChannelChange", {
-          detail: { direction: "prev" },
+          detail: {
+            direction: "prev",
+          },
         });
         document.dispatchEvent(event);
       });
@@ -712,7 +790,9 @@ function LiveVideoJsComponent(
     if (nextBtn) {
       nextBtn.addEventListener("click", () => {
         const event = new CustomEvent("liveChannelChange", {
-          detail: { direction: "next" },
+          detail: {
+            direction: "next",
+          },
         });
         document.dispatchEvent(event);
       });
@@ -743,6 +823,7 @@ function LiveVideoJsComponent(
           e.preventDefault();
           break;
         case 10252:
+        case 13: // Enter
           togglePlayPause();
           e.preventDefault();
           break;
@@ -761,12 +842,15 @@ function LiveVideoJsComponent(
         const clickedControl = event.target.closest(
           ".play-pause-icon, #lp-fullscreen-btn, #videojs-aspect-ratio, .retry-btn",
         );
-        if (clickedPlayPause || clickedControl || isPlayerOverlayBlockingControls()) {
+        if (
+          clickedPlayPause ||
+          clickedControl ||
+          isPlayerOverlayBlockingControls()
+        ) {
           return;
         }
 
         togglePlayPause();
-
       };
       livePlayerDiv.addEventListener("click", playerContainerClickHandler);
     }
@@ -780,7 +864,11 @@ function LiveVideoJsComponent(
 
     const handleAspectRatioChange = () => {
       const newLabel = cycleManualAspectRatio();
-      if (newLabel && window.VideoAspectRatio && window.VideoAspectRatio.showOverlay) {
+      if (
+        newLabel &&
+        window.VideoAspectRatio &&
+        window.VideoAspectRatio.showOverlay
+      ) {
         window.VideoAspectRatio.showOverlay(newLabel);
       } else {
         console.warn(
@@ -795,10 +883,35 @@ function LiveVideoJsComponent(
       aspectRatioButton.addEventListener("click", aspectRatioChangeHandler);
       console.log("Aspect ratio button event listener attached");
     }
+    // Watchdog timer to ensure player is disposed when not on LivePage
+    if (window._livePlayerWatchdog) clearInterval(window._livePlayerWatchdog);
+    window._livePlayerWatchdog = setInterval(() => {
+      const currentPage = localStorage.getItem("currentPage");
+      const sidebarPage = localStorage.getItem("sidebarPage");
+      const isLivePage =
+        currentPage === "liveTvPage" ||
+        (currentPage === "sidebar" && sidebarPage === "liveTvPage") ||
+        (currentPage === "sortingDialog" && sidebarPage === "liveTvPage");
+
+      if (!isLivePage) {
+        if (LiveVideoJsComponent.cleanup) {
+          console.log(
+            "Watchdog: Navigated away from LivePage, cleaning up player...",
+          );
+          LiveVideoJsComponent.cleanup();
+        }
+      }
+    }, 1000);
   }, 50);
 
   // Add cleanup function to dispose player when component is not open
   LiveVideoJsComponent.cleanup = function () {
+    // Clear watchdog timer
+    if (window._livePlayerWatchdog) {
+      clearInterval(window._livePlayerWatchdog);
+      window._livePlayerWatchdog = null;
+    }
+
     // Clean up volume event listener
     if (window._liveTvVolumeHandler) {
       document.removeEventListener("keydown", window._liveTvVolumeHandler);
@@ -835,10 +948,22 @@ function LiveVideoJsComponent(
     // Clean up event listeners
     try {
       if (fullscreenChangeHandler) {
-        document.removeEventListener("fullscreenchange", fullscreenChangeHandler);
-        document.removeEventListener("webkitfullscreenchange", fullscreenChangeHandler);
-        document.removeEventListener("mozfullscreenchange", fullscreenChangeHandler);
-        document.removeEventListener("MSFullscreenChange", fullscreenChangeHandler);
+        document.removeEventListener(
+          "fullscreenchange",
+          fullscreenChangeHandler,
+        );
+        document.removeEventListener(
+          "webkitfullscreenchange",
+          fullscreenChangeHandler,
+        );
+        document.removeEventListener(
+          "mozfullscreenchange",
+          fullscreenChangeHandler,
+        );
+        document.removeEventListener(
+          "MSFullscreenChange",
+          fullscreenChangeHandler,
+        );
       }
 
       const playPauseIcon = document.querySelector(".play-pause-icon");
