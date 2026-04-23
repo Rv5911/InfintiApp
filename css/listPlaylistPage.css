@@ -1,5 +1,5 @@
 .playlistpage-main-container {
-    /* background: url("../assets/bg-gradient.png"); */
+    /* background: url("./assets/bg-gradient.png"); */
     background-size: cover;
     background-repeat: no-repeat;
     height: 100vh;
@@ -7,7 +7,7 @@
     background-size: cover;
     background-position: center;
     position: fixed;
-    background-image: url("../assets/bg-img.webp");
+    background-image: url("./assets/bg-img.webp");
     display: flex;
 
     padding-right: 40px;

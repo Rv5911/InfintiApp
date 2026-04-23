@@ -117,7 +117,7 @@ function ExitModal() {
     <div class="exit-main-container">
       <div class="settings-header">
         <div class="setting-login-header">
-          <img src="/assets/app-logo.png" alt="Logo" class="exitModal-header-logo" />
+          <img src="./assets/app-logo.png" alt="Logo" class="exitModal-header-logo" />
         </div>
         ${DateTimeComponent()}
       </div>

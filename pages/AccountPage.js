@@ -94,7 +94,7 @@ function AccountPage() {
     <div class="account-page-container">
       <div class="settings-header">
         <div class="setting-login-header">
-          <img src="/assets/app-logo.png" alt="Logo" class="account-header-logo" />
+          <img src="./assets/app-logo.png" alt="Logo" class="account-header-logo" />
         </div>
    ${DateTimeComponent()}
       </div>

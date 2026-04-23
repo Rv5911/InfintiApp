@@ -1558,7 +1558,7 @@ function SeriesDetailPage() {
           seriesInfo.cover || seriesInfo.backdrop
         }')">
             <div class="series-detail-page-header">
-                <div class="series-detail-logo-container"><img src="/assets/app-logo.png" alt="Logo" class="seriesDetail-header-logo"/></div>
+                <div class="series-detail-logo-container"><img src="./assets/app-logo.png" alt="Logo" class="seriesDetail-header-logo"/></div>
                 <div class="series-detail-page-header-title"><p>Info</p></div>
                 <div class="series-detail-page-header-menu" tabindex="0">
                   <svg width="14" height="58" viewBox="0 0 14 58" fill="none" xmlns="http://www.w3.org/2000/svg">

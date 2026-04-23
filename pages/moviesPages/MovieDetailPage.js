@@ -464,7 +464,7 @@ async function MovieDetailPage() {
         var item = getMovieCastData.cast[i];
         var profile = item.profile_path
           ? castImageUrl + item.profile_path
-          : "/assets/placeholder-img.png";
+          : "./assets/placeholder-img.png";
         var name = item.name ? item.name : "";
 
         castHtml +=
@@ -486,7 +486,7 @@ async function MovieDetailPage() {
 <div class="movie-detail-page-container" style="background-image:linear-gradient(290.14deg, rgba(5, 113, 155, 0.7) -93.41%, #010E26 98.1%), url('${backdrop}')">
   <div class="movie-detail-page-content-container">
     <div class="movie-detail-page-header">
-      <div class="movie-detail-logo-container"><img src="/assets/app-logo.png" alt="Logo" class="movieDetail-header-logo"/></div>
+      <div class="movie-detail-logo-container"><img src="./assets/app-logo.png" alt="Logo" class="movieDetail-header-logo"/></div>
       <div class="movie-detail-page-header-title"><p>Info</p></div>
       <div class="movie-detail-page-header-menu" tabindex="0">
         <svg width="14" height="58" viewBox="0 0 14 58" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -552,7 +552,7 @@ async function MovieDetailPage() {
               ${Array.from(
                 { length: Math.min(Math.floor(data.info.rating || 0), 5) },
                 () =>
-                  '<img src="/assets/start-icon.png" alt="Logo" class="movie-card-start-icon"/>',
+                  '<img src="./assets/start-icon.png" alt="Logo" class="movie-card-start-icon"/>',
               ).join("")}
             </div>
           </div>

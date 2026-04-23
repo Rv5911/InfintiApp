@@ -159,7 +159,7 @@ function SettingsPage() {
   <div class="settings-inner-container">
          <div class="settings-header">
             <div class="setting-login-header">
-                <img src="/assets/app-logo.png" alt="Add User" class="playlist-add-user-img">
+                <img src="./assets/app-logo.png" alt="Add User" class="playlist-add-user-img">
             </div>
         </div>
     <div class="settings-main-container">
@@ -168,10 +168,10 @@ function SettingsPage() {
       <div class="settings-first-container">
         <div class="settings-first-content">
           <div class="settings-pages-container">
-            <p class="stream-format"><img src="/assets/stream-icon.png"/>Stream Format</p>
-            <p class="time-format"><img src="/assets/time-icon.png"/>Time Format</p>
-            <p class="parental-control"><img src="/assets/parental-icon.png"/>Parental Control</p>
-            <!-- <p class="clear-app-cache"><img src="/assets/clear-cache-icon-white.png"/>Clear App Cache</p> -->
+            <p class="stream-format"><img src="./assets/stream-icon.png"/>Stream Format</p>
+            <p class="time-format"><img src="./assets/time-icon.png"/>Time Format</p>
+            <p class="parental-control"><img src="./assets/parental-icon.png"/>Parental Control</p>
+            <!-- <p class="clear-app-cache"><img src="./assets/clear-cache-icon-white.png"/>Clear App Cache</p> -->
           </div>
         </div>
       </div>

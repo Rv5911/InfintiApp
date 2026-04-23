@@ -357,11 +357,11 @@ function ListPlaylistPage() {
     <div class="playlistpage-main-container">
         <div class="settings-header">
             <div class="setting-login-header">
-                <img src="/assets/app-logo.png" alt="Add User" class="playlist-add-user-img">
+                <img src="./assets/app-logo.png" alt="Add User" class="playlist-add-user-img">
             </div>
             <div class="playlist-label">List User</div>
             <div class="playlist-add-user">
-            <img src="/assets/listuser-add-user.png" alt="Add User" class="playlist-add-user-image">
+            <img src="./assets/listuser-add-user.png" alt="Add User" class="playlist-add-user-image">
 <p>Add User</p>
             </div>
         </div>

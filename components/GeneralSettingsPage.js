@@ -335,7 +335,7 @@ function GeneralSettingsPage() {
     <div class="gs-main-container">
       <div class="gs-header">
         <div class="gs-login-header">
-          <img src="/assets/logo.png" alt="Logo" class="gs-header-logo" />
+          <img src="./assets/logo.png" alt="Logo" class="gs-header-logo" />
         </div>
         ${DateTimeComponent()}
       </div>

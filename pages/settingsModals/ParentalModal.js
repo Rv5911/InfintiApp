@@ -397,7 +397,7 @@ case "Enter":
     <div class="parental-main-container">
       <div class="settings-header">
         <div class="setting-login-header">
-          <img src="/assets/logo.png" alt="Logo" class="setting-header-logo" />
+          <img src="./assets/logo.png" alt="Logo" class="setting-header-logo" />
         </div>
         ${DateTimeComponent()}
       </div>

@@ -1,2 +1,0 @@
-# CoolTVSmartTvApp
-# infinti-smartv-app

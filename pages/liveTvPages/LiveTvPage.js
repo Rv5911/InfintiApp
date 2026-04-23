@@ -1519,7 +1519,7 @@ function LiveTvPage() {
       card.className = "channel-card";
       card.dataset.name = ch.name;
       card.dataset.url = ch.direct_source;
-      card.dataset.logo = ch.stream_icon || "/assets/placeholder.png";
+      card.dataset.logo = ch.stream_icon || "./assets/placeholder.png";
       card.dataset.streamId = ch.stream_id;
       card.dataset.isAdult = isAdultChannel;
 
@@ -1530,7 +1530,7 @@ function LiveTvPage() {
         : ""
     }">
       <img class="channel-card-logo" onerror="this.onerror=null; this.src='/assets/noImageFound.png';" src="${
-        ch.stream_icon || "/assets/noImageFound.png"
+        ch.stream_icon || "./assets/noImageFound.png"
       }" alt="${ch.name}"/>
       ${
         isAdultChannel && parentalEnabled && !isChannelUnlocked
@@ -4142,7 +4142,7 @@ function LiveTvPage() {
   <div class="livetvpage-main-container">
     <div class="livetv-header">
       <div class="livetv-series-header">
-        <img src="/assets/logo.png" alt="Logo" class="setting-header-logo"/>
+        <img src="./assets/logo.png" alt="Logo" class="setting-header-logo"/>
         <p class="livetv-header-title">Live</p>
       </div>
       <div class="second-livetv-header">
@@ -4150,7 +4150,7 @@ function LiveTvPage() {
         <div class="second-live-header-div">
           <div class="livetv-header-search">
             <input type="text" placeholder="Search Channels" id="livetv-header-search" class="livetv-header-search-input"/>
-            <img src="/assets/search-icon.png" alt="search" class="livetv-header-search-icon"/>
+            <img src="./assets/search-icon.png" alt="search" class="livetv-header-search-icon"/>
           </div>
           <div class="livetv-header-menu">
             <svg width="14" height="58" viewBox="0 0 14 58" fill="none" xmlns="http://www.w3.org/2000/svg">

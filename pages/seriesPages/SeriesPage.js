@@ -430,7 +430,7 @@ function SeriesPage() {
 
         if (shouldBlur) cardDiv.classList.add("series-card-blurred");
 
-        const imgSrc = s.cover || "/assets/noImageFound.png";
+        const imgSrc = s.cover || "./assets/noImageFound.png";
         const rating = isNaN(s.rating_5based)
           ? 0
           : Math.min(5, parseInt(s.rating_5based, 10));
@@ -439,7 +439,7 @@ function SeriesPage() {
             ? `<div class="series-progress-overlay"><div class="series-progress-fill" style="width:${s.progress}%;"></div></div>`
             : "";
         const heartHtml = showHeart
-          ? '<img src="/assets/heart-icon.png" alt="heart-icon" loading="lazy" class="series-card-heart-icon"/>'
+          ? '<img src="./assets/heart-icon.png" alt="heart-icon" loading="lazy" class="series-card-heart-icon"/>'
           : "";
         const lockHtml = showLockIcon
           ? '<i class="fas fa-lock series-card-lock-icon"></i>'
@@ -1206,7 +1206,7 @@ function SeriesPage() {
       if (isFav && !heartIcon && topContent) {
         // Add heart icon if favorited
         const heartImg = document.createElement("img");
-        heartImg.src = "/assets/heart-icon.png";
+        heartImg.src = "./assets/heart-icon.png";
         heartImg.alt = "heart-icon";
         heartImg.className = "series-card-heart-icon";
         heartImg.loading = "lazy";
@@ -1673,7 +1673,7 @@ function SeriesPage() {
         if (isAdding) {
           if (!heartIcon && topContent) {
             const heartImg = document.createElement("img");
-            heartImg.src = "/assets/heart-icon.png";
+            heartImg.src = "./assets/heart-icon.png";
             heartImg.alt = "heart-icon";
             heartImg.className = "series-card-heart-icon";
             heartImg.loading = "lazy";
@@ -2415,7 +2415,7 @@ function SeriesPage() {
 
                 div.innerHTML = `
           <div class="series-card-image-wrapper">
-            <img src="${s.cover || "/assets/noImageFound.png"}" alt="${
+            <img src="${s.cover || "./assets/noImageFound.png"}" alt="${
               s.name
             }" onerror="this.onerror=null; this.src='/assets/noImageFound.png';" loading="lazy" class="series-card-img ${
               shouldBlur ? "blurred-image" : ""
@@ -2437,7 +2437,7 @@ function SeriesPage() {
               showFavHeartIcon ||
               (Array.isArray(allFavoritesSeriesIds) &&
                 allFavoritesSeriesIds.includes(s.series_id))
-                ? '<img src="/assets/heart-icon.png" alt="heart-icon" loading="lazy" class="series-card-heart-icon"/>'
+                ? '<img src="./assets/heart-icon.png" alt="heart-icon" loading="lazy" class="series-card-heart-icon"/>'
                 : ""
             }
             ${
@@ -2608,7 +2608,7 @@ function SeriesPage() {
 
                   div.innerHTML = `
           <div class="series-card-image-wrapper">
-            <img src="${s.cover || "/assets/noImageFound.png"}" alt="${
+            <img src="${s.cover || "./assets/noImageFound.png"}" alt="${
               s.name
             }" onerror="this.onerror=null; this.src='/assets/noImageFound.png';" loading="lazy" class="series-card-img ${
               shouldBlur ? "blurred-image" : ""
@@ -2630,7 +2630,7 @@ function SeriesPage() {
               showFavHeartIcon ||
               (Array.isArray(allFavoritesSeriesIds) &&
                 allFavoritesSeriesIds.includes(s.series_id))
-                ? '<img src="/assets/heart-icon.png" alt="heart-icon" loading="lazy" class="series-card-heart-icon"/>'
+                ? '<img src="./assets/heart-icon.png" alt="heart-icon" loading="lazy" class="series-card-heart-icon"/>'
                 : ""
             }
             ${
@@ -3137,7 +3137,7 @@ function SeriesPage() {
   return `<div class="seriespage-main-container">
     <div class="series-header">
       <div class="first-series-header">
-        <img src="/assets/app-logo.png" alt="Logo" class="series-header-logo"/>
+        <img src="./assets/app-logo.png" alt="Logo" class="series-header-logo"/>
         <div class="series-header-time">
 
 
@@ -3150,7 +3150,7 @@ function SeriesPage() {
         <div class="second-series-header-div">
           <div class="series-header-search">
             <input type="text" placeholder="Search Series" id="series-header-search" class="series-header-search-input"/>
-            <img src="/assets/search-icon.png" alt="search" class="series-header-search-icon"/>
+            <img src="./assets/search-icon.png" alt="search" class="series-header-search-icon"/>
           </div>
           <div class="series-header-menu">
             <svg width="14" height="58" viewBox="0 0 14 58" fill="none" xmlns="http://www.w3.org/2000/svg">

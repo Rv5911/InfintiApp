@@ -1,7 +1,7 @@
 function LiveVideoJsComponent(
   streamId = "",
   srcUrl = "",
-  poster = "/assets/placeholder.png",
+  poster = "./assets/placeholder.png",
   height = "100%",
   channelName = ""
 ) {

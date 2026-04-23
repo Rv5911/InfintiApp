@@ -10,7 +10,7 @@
     background-size: cover;
     background-position: center;
     position: fixed;
-    background-image: url("../assets/bg-img.webp");
+    background-image: url("./assets/bg-img.webp");
     animation: fadeInOut 1s ease-in-out;
 }
 
@@ -56,7 +56,7 @@
     position: fixed;
     background: rgba(255, 255, 255, 0.1);
 
-    /* background-image: url("../assets/login-form-gradient.png"); */
+    /* background-image: url("./assets/login-form-gradient.png"); */
     /* Hardware acceleration hint */
     will-change: transform;
 }
@@ -154,7 +154,7 @@
     background-size: cover;
     background-repeat: no-repeat;
     background-position: center;
-    background-image: url("../assets/bg-gradient.png");
+    background-image: url("./assets/bg-gradient.png");
     /* animation removed for performance */
 }
 

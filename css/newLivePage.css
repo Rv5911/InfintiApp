@@ -10,7 +10,7 @@
     max-height: 100vh;
     box-sizing: border-box;
     color: white;
-    background-image: url("../assets/bg-img.webp");
+    background-image: url("./assets/bg-img.webp");
     animation: fadeInOut 1s ease-in-out;
     display: flex;
     flex-direction: column;

@@ -296,7 +296,7 @@ function DashboardPage() {
 Live TV
 </p>
 
-          <img loading="lazy" src="/assets/dash-live-icon.png" alt="Logo"  />
+          <img loading="lazy" src="./assets/dash-live-icon.png" alt="Logo"  />
 
           </div>
 
@@ -333,13 +333,13 @@ List Users
 Movies
 </p>
 
-          <img loading="lazy" src="/assets/dash-live-icon.png" alt="Logo"  /></div>
+          <img loading="lazy" src="./assets/dash-live-icon.png" alt="Logo"  /></div>
           <div class="series-box">
           <p>
 Series
 </p>
 
-          <img loading="lazy" src="/assets/dash-live-icon.png" alt="Logo"  /></div>
+          <img loading="lazy" src="./assets/dash-live-icon.png" alt="Logo"  /></div>
         </div>
       </div>
 

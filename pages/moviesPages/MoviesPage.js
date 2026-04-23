@@ -395,7 +395,7 @@ function MoviesPage() {
           cardDiv.classList.add("movie-card-blurred");
         }
 
-        const imgSrc = m.stream_icon || "/assets/noImageFound.png";
+        const imgSrc = m.stream_icon || "./assets/noImageFound.png";
         const rating = isNaN(m.rating_5based)
           ? 0
           : Math.min(5, parseInt(m.rating_5based, 10));
@@ -404,7 +404,7 @@ function MoviesPage() {
             ? `<div class="movie-progress-overlay"><div class="movie-progress-fill" style="width:${m.progress}%;"></div></div>`
             : "";
         const heartHtml = showHeart
-          ? '<img src="/assets/heart-icon.png" alt="heart-icon" loading="lazy" class="movie-card-heart-icon"/>'
+          ? '<img src="./assets/heart-icon.png" alt="heart-icon" loading="lazy" class="movie-card-heart-icon"/>'
           : "";
         const lockHtml = showLockIcon
           ? '<i class="fas fa-lock movie-card-lock-icon"></i>'
@@ -870,7 +870,7 @@ function MoviesPage() {
       if (isFav && !heartIcon && topContent) {
         // Add heart icon if favorited
         const heartImg = document.createElement("img");
-        heartImg.src = "/assets/heart-icon.png";
+        heartImg.src = "./assets/heart-icon.png";
         heartImg.alt = "heart-icon";
         heartImg.className = "movie-card-heart-icon";
         heartImg.loading = "lazy";
@@ -1895,7 +1895,7 @@ function MoviesPage() {
           if (isAdding) {
             if (!heartIcon && topContent) {
               const heartImg = document.createElement("img");
-              heartImg.src = "/assets/heart-icon.png";
+              heartImg.src = "./assets/heart-icon.png";
               heartImg.alt = "heart-icon";
               heartImg.className = "movie-card-heart-icon";
               heartImg.loading = "lazy";
@@ -2337,7 +2337,7 @@ function MoviesPage() {
 
                 div.innerHTML = `
           <div class="movie-card-image-wrapper">
-            <img src="${m.stream_icon || "/assets/noImageFound.png"}" alt="${
+            <img src="${m.stream_icon || "./assets/noImageFound.png"}" alt="${
               m.name
             }" onerror="this.onerror=null; this.src='/assets/noImageFound.png';" loading="lazy" class="movies-card-img ${
               shouldBlur ? "blurred-image" : ""
@@ -2359,7 +2359,7 @@ function MoviesPage() {
               showFavHeartIcon ||
               (Array.isArray(favoritesMoviesIds) &&
                 favoritesMoviesIds.includes(m.stream_id))
-                ? '<img src="/assets/heart-icon.png" alt="heart-icon" loading="lazy" class="movie-card-heart-icon"/>'
+                ? '<img src="./assets/heart-icon.png" alt="heart-icon" loading="lazy" class="movie-card-heart-icon"/>'
                 : ""
             }
             ${
@@ -2513,7 +2513,7 @@ function MoviesPage() {
 
                   div.innerHTML = `
             <div class="movie-card-image-wrapper">
-              <img src="${m.stream_icon || "/assets/noImageFound.png"}" alt="${
+              <img src="${m.stream_icon || "./assets/noImageFound.png"}" alt="${
                 m.name
               }" onerror="this.onerror=null; this.src='/assets/noImageFound.png';" loading="lazy" class="movies-card-img ${
                 shouldBlur ? "blurred-image" : ""
@@ -2537,7 +2537,7 @@ function MoviesPage() {
                 showFavHeartIcon ||
                 (Array.isArray(favoritesMoviesIds) &&
                   favoritesMoviesIds.includes(m.stream_id))
-                  ? '<img src="/assets/heart-icon.png" alt="heart-icon" loading="lazy" class="movie-card-heart-icon"/>'
+                  ? '<img src="./assets/heart-icon.png" alt="heart-icon" loading="lazy" class="movie-card-heart-icon"/>'
                   : ""
               }
               ${
@@ -2916,7 +2916,7 @@ function MoviesPage() {
 
     <div class="movies-header">
       <div class="first-movies-header">
-        <img src="/assets/app-logo.png" alt="Logo" class="movies-header-logo"/>
+        <img src="./assets/app-logo.png" alt="Logo" class="movies-header-logo"/>
         <div class="movies-header-right">
         ${DateTimeComponent()}
         </div>
@@ -2926,7 +2926,7 @@ function MoviesPage() {
         <div class="second-movies-header-div">
           <div class="movies-header-search">
             <input type="text" placeholder="Search Movies" id="movies-header-search" class="movies-header-search-input"/>
-            <img src="/assets/search-icon.png" alt="search" class="movies-header-search-icon"/>
+            <img src="./assets/search-icon.png" alt="search" class="movies-header-search-icon"/>
           </div>
           <div class="movies-header-menu">
             <svg width="14" height="58" viewBox="0 0 14 58" fill="none" xmlns="http://www.w3.org/2000/svg">
