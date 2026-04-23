@@ -2210,6 +2210,8 @@ function SeriesPage() {
                   const isBack =
                     [
                       10009,
+                      461,
+                      "461",
                       "Escape",
                       "Back",
                       "BrowserBack",
@@ -2217,6 +2219,8 @@ function SeriesPage() {
                     ].includes(ev.keyCode) ||
                     [
                       10009,
+                      461,
+                      "461",
                       "Escape",
                       "Back",
                       "BrowserBack",

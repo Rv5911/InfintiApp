@@ -1733,9 +1733,7 @@ function LivePage() {
     const isFullscreen = checkIsFullscreen();
 
     // Handle Fullscreen Exit
-    if (
-      ["Escape", "Back", "BrowserBack", "XF86Back", "SoftLeft"].includes(e.key)
-    ) {
+    if (typeof isBackKey === "function" && isBackKey(e)) {
       if (isFullscreen) {
         e.preventDefault();
         e.stopImmediatePropagation();
