@@ -2,7 +2,7 @@
     background-size: cover;
     background-repeat: no-repeat;
     background-position: center;
-    background-image: url("./assets/bg-img.webp");
+    background-image: url("../assets/bg-img.webp");
     height: 100vh;
     animation: fadeInOut 1s ease-in-out;
     overflow: hidden;

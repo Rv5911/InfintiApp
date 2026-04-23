@@ -7,5 +7,5 @@
   "title": "InfintiApp",
   "icon": "app-icon.png",
   "largeIcon": "app-icon.png",
-    "disableBackHistoryAPI" : true
+      "disableBackHistoryAPI" : true
 }

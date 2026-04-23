@@ -6,7 +6,7 @@
     padding-right: 40px;
     color: white;
     padding-left: 40px;
-    background-image: url("./assets/bg-gradient.png");
+    background-image: url("../assets/bg-gradient.png");
     height: 100vh;
     animation: fadeInOut 1s ease-in-out;
 }
