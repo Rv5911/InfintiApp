@@ -93,7 +93,20 @@ function ParentalPinDialog(onSuccess, onCancel, currentPlaylist, fromPage) {
     if (!isDialogActive) return;
     
     // console.log("Key pressed:", e.key); // Debug log
-    if (typeof isBackKey === "function" ? isBackKey(e) : e.key === "Escape") {
+    const isBack = typeof isBackKey === "function" ? isBackKey(e) : e.key === "Escape";
+    if (isBack) {
+      const pinValue = input ? String(input.value || "") : "";
+      if (input && pinValue.length > 0) {
+        e.preventDefault();
+        e.stopPropagation();
+        input.value = pinValue.slice(0, -1);
+        input.dispatchEvent(new Event("input", { bubbles: true }));
+        focusIndex = 0;
+        updateFocus();
+        if (input.focus) input.focus();
+        return;
+      }
+
       e.preventDefault();
       handleCancel();
       return;

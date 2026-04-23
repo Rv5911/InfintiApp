@@ -65,9 +65,6 @@ function LivePage() {
 
   // Parental Control State
   const unlockedLiveAdultCatIds = new Set();
-  const unlockedLiveAdultChannelsInAll = new Set();
-  const unlockedLiveAdultChannelsInFavorites = new Set();
-  const unlockedLiveAdultChannelsInHistory = new Set();
 
   // Adult category detection
   const isLiveAdultCategory = (name) => {
@@ -75,8 +72,62 @@ function LivePage() {
     const configured = Array.isArray(window.adultsCategories)
       ? window.adultsCategories
       : [];
-    if (configured.includes(normalized)) return true;
-    return /(adult|xxx|18\+|18\s*plus|sex|porn|nsfw)/i.test(normalized);
+    return configured.some((term) => {
+      const keyword = String(term || "").trim().toLowerCase();
+      if (!keyword) return false;
+      if (normalized === keyword) return true;
+
+      // Match configured adult phrases exactly inside the card/category name.
+      // This keeps the detection tied to utils/utils.js instead of a broader regex.
+      return normalized.includes(keyword);
+    });
+  };
+
+  const getStreamsForCategory = (catId) => {
+    const currentPlaylist = getCurrentPlaylist();
+
+    if (catId === "All") {
+      return window.allLiveStreams || [];
+    }
+
+    if (catId === "favorites") {
+      return currentPlaylist ? currentPlaylist.favoritesLiveTV || [] : [];
+    }
+
+    if (catId === "channelHistory") {
+      return currentPlaylist ? currentPlaylist.ChannelListLive || [] : [];
+    }
+
+    return (window.allLiveStreams || []).filter(
+      (stream) => String(stream.category_id) === String(catId),
+    );
+  };
+
+  const isAdultStream = (stream) => {
+    if (!stream) return false;
+
+    const streamName = stream.name || stream.title || stream.stream_name || "";
+    if (streamName && isLiveAdultCategory(streamName)) {
+      return true;
+    }
+
+    const category = (window.liveCategories || []).find(
+      (c) => String(c.category_id) === String(stream.category_id),
+    );
+
+    if (category && isLiveAdultCategory(category.category_name)) {
+      return true;
+    }
+
+    if (stream.category_name && isLiveAdultCategory(stream.category_name)) {
+      return true;
+    }
+
+    return false;
+  };
+
+  const categoryHasAdultStreams = (catId) => {
+    return getStreamsForCategory(catId).some((stream) => isAdultStream(stream));
   };
 
   // Initialize
@@ -228,47 +279,21 @@ function LivePage() {
       currentPlaylist && !!currentPlaylist.parentalPassword;
     if (!parentalEnabled) return false;
     if (unlockedLiveAdultCatIds.has(String(catId))) return false;
-
-    if (catId === "All") {
-      return (window.allLiveStreams || []).some((s) => {
-        const c = (window.liveCategories || []).find(
-          (lc) => lc.category_id === s.category_id,
-        );
-        return c && isLiveAdultCategory(c.category_name);
-      });
-    }
-
-    if (catId === "favorites") {
-      const favs = currentPlaylist.favoritesLiveTV || [];
-      return favs.some((f) => {
-        const c = (window.liveCategories || []).find(
-          (lc) => lc.category_id === f.category_id,
-        );
-        return c && isLiveAdultCategory(c.category_name);
-      });
-    }
-
-    if (catId === "channelHistory") return false;
-
-    const currentCat = (window.liveCategories || []).find(
-      (c) => String(c.category_id) === String(catId),
-    );
-    return currentCat && isLiveAdultCategory(currentCat.category_name);
+    return categoryHasAdultStreams(catId);
   };
 
   // Helper to manage Arrow Indicator visibility
   const updateArrowIndicator = () => {
     const arrowRight = document.getElementById("lp-channels-arrow-right");
     const arrowLeft = document.getElementById("lp-channels-arrow-left");
-    // if (!arrowRight || !arrowLeft) return; // Allow arrowLeft to be missing
 
     const grid = document.getElementById("lp-channels-grid");
     if (!grid) return;
 
     // NEW: Hide arrows if category is locked
     if (checkIsCategoryLocked(selectedCategoryId)) {
-      arrowRight.classList.remove("visible");
-      arrowLeft.classList.remove("visible");
+      if (arrowRight) arrowRight.classList.remove("visible");
+      if (arrowLeft) arrowLeft.classList.remove("visible");
       return;
     }
 
@@ -543,40 +568,8 @@ function LivePage() {
 
     list.innerHTML = cats
       .map((cat, idx) => {
-        let isAdult = isLiveAdultCategory(cat.category_name);
-        const currentPlaylist = getCurrentPlaylist();
-        const parentalEnabled =
-          currentPlaylist && !!currentPlaylist.parentalPassword;
-
-        // special check for Favorites
-        if (cat.category_id === "favorites" && parentalEnabled) {
-          const favs = currentPlaylist.favoritesLiveTV || [];
-          const hasAdultFav = favs.some((f) => {
-            const c = (window.liveCategories || []).find(
-              (lc) => lc.category_id === f.category_id,
-            );
-            return c && isLiveAdultCategory(c.category_name);
-          });
-          if (hasAdultFav) {
-            isAdult = true;
-          }
-        }
-
-        // special check for All Channels
-        if (cat.category_id === "All" && parentalEnabled) {
-          const hasAdultInAll = (window.allLiveStreams || []).some((s) => {
-            const c = (window.liveCategories || []).find(
-              (lc) => lc.category_id === s.category_id,
-            );
-            return c && isLiveAdultCategory(c.category_name);
-          });
-          if (hasAdultInAll) {
-            isAdult = true;
-          }
-        }
-
         const isLocked = checkIsCategoryLocked(cat.category_id);
-        const showLock = parentalEnabled && isLocked;
+        const showLock = isLocked;
 
         return `
         <li class="lp-category-item ${
@@ -697,28 +690,6 @@ function LivePage() {
       const parentalEnabled =
         currentPlaylistForParental &&
         !!currentPlaylistForParental.parentalPassword;
-
-      // Determine if channel is unlocked
-      let isChannelUnlocked = true;
-      if (isAdultChannel && parentalEnabled) {
-        if (selectedCategoryId === "All") {
-          isChannelUnlocked = unlockedLiveAdultChannelsInAll.has(
-            String(stream.stream_id),
-          );
-        } else if (selectedCategoryId === "favorites") {
-          isChannelUnlocked = unlockedLiveAdultChannelsInFavorites.has(
-            String(stream.stream_id),
-          );
-        } else if (selectedCategoryId === "channelHistory") {
-          isChannelUnlocked = unlockedLiveAdultChannelsInHistory.has(
-            String(stream.stream_id),
-          );
-        } else {
-          isChannelUnlocked = unlockedLiveAdultCatIds.has(
-            String(selectedCategoryId),
-          );
-        }
-      }
 
       const card = document.createElement("div");
       card.className = "lp-channel-card";
@@ -1402,34 +1373,26 @@ function LivePage() {
   const checkLockAndPlay = (stream) => {
     if (!stream) return;
 
-    const category = (window.liveCategories || []).find(
-      (c) => c.category_id === stream.category_id,
-    );
-    const isAdult = category
-      ? isLiveAdultCategory(category.category_name)
-      : false;
     const currentPlaylist = getCurrentPlaylist();
     const parentalEnabled =
       currentPlaylist && !!currentPlaylist.parentalPassword;
 
-    if (isAdult && parentalEnabled && category) {
-      const catId = String(category.category_id);
-      if (!unlockedLiveAdultCatIds.has(catId)) {
-        ParentalPinDialog(
-          () => {
-            unlockedLiveAdultCatIds.add(catId);
-            renderCategories();
-            playChannel(stream);
-          },
-          () => {
-            console.log("Incorrect PIN for Zapping");
-          },
-          currentPlaylist,
-          "liveTvPage",
-        );
-        return;
-      }
+    if (checkIsCategoryLocked(selectedCategoryId) && parentalEnabled) {
+      ParentalPinDialog(
+        () => {
+          unlockedLiveAdultCatIds.add(String(selectedCategoryId));
+          renderCategories();
+          playChannel(stream);
+        },
+        () => {
+          console.log("Incorrect PIN for Zapping");
+        },
+        currentPlaylist,
+        "liveTvPage",
+      );
+      return;
     }
+
     playChannel(stream);
   };
 
@@ -2434,40 +2397,25 @@ function LivePage() {
         // Remove button
         removeFromHistory(stream);
       } else {
-        // Check for adult content lock (Category Level Check for Favorites/History)
-        const category = (window.liveCategories || []).find(
-          (c) => c.category_id === stream.category_id,
-        );
-        const isAdultChannel = category
-          ? isLiveAdultCategory(category.category_name)
-          : false;
         const currentPlaylistForParental = getCurrentPlaylist();
         const parentalEnabled =
           currentPlaylistForParental &&
           !!currentPlaylistForParental.parentalPassword;
 
-        if (isAdultChannel && parentalEnabled && category) {
-          // Check if the CATEGORY is unlocked
-          const catId = String(category.category_id);
-          if (!unlockedLiveAdultCatIds.has(catId)) {
-            // Show PIN Dialog to unlock the CATEGORY
-            ParentalPinDialog(
-              () => {
-                // PIN Correct - Unlock the Category
-                unlockedLiveAdultCatIds.add(catId);
-                // Re-render categories if visible
-                renderCategories();
-                // Play the channel
-                playChannel(stream);
-              },
-              () => {
-                console.log("Incorrect PIN");
-              },
-              currentPlaylistForParental,
-              "liveTvPage",
-            );
-            return;
-          }
+        if (checkIsCategoryLocked(selectedCategoryId) && parentalEnabled) {
+          ParentalPinDialog(
+            () => {
+              unlockedLiveAdultCatIds.add(String(selectedCategoryId));
+              renderCategories();
+              playChannel(stream);
+            },
+            () => {
+              console.log("Incorrect PIN");
+            },
+            currentPlaylistForParental,
+            "liveTvPage",
+          );
+          return;
         }
 
         // Play channel if not locked or already unlocked
@@ -2508,45 +2456,11 @@ function LivePage() {
             const cats = getFilteredCategories();
             if (cats[index]) {
               const newCategoryId = cats[index].category_id;
-              let isAdult = isLiveAdultCategory(cats[index].category_name);
               const currentPlaylist = getCurrentPlaylist();
               const parentalEnabled =
                 currentPlaylist && !!currentPlaylist.parentalPassword;
 
-              // special check for Favorites
-              if (newCategoryId === "favorites" && parentalEnabled) {
-                const favs = currentPlaylist.favoritesLiveTV || [];
-                const hasAdultFav = favs.some((f) => {
-                  const c = (window.liveCategories || []).find(
-                    (lc) => lc.category_id === f.category_id,
-                  );
-                  return c && isLiveAdultCategory(c.category_name);
-                });
-                if (hasAdultFav) {
-                  isAdult = true;
-                }
-              }
-
-              // special check for All Channels
-              if (newCategoryId === "All" && parentalEnabled) {
-                const hasAdultInAll = (window.allLiveStreams || []).some(
-                  (s) => {
-                    const c = (window.liveCategories || []).find(
-                      (lc) => lc.category_id === s.category_id,
-                    );
-                    return c && isLiveAdultCategory(c.category_name);
-                  },
-                );
-                if (hasAdultInAll) {
-                  isAdult = true;
-                }
-              }
-
-              if (
-                isAdult &&
-                parentalEnabled &&
-                !unlockedLiveAdultCatIds.has(String(newCategoryId))
-              ) {
+              if (checkIsCategoryLocked(newCategoryId) && parentalEnabled) {
                 // Show PIN Dialog
                 ParentalPinDialog(
                   () => {
@@ -2594,40 +2508,25 @@ function LivePage() {
                 e.stopPropagation();
                 removeFromHistory(stream);
               } else {
-                // Check for adult content lock (Category Level Check for Favorites/History)
-                const category = (window.liveCategories || []).find(
-                  (c) => c.category_id === stream.category_id,
-                );
-                const isAdultChannel = category
-                  ? isLiveAdultCategory(category.category_name)
-                  : false;
                 const currentPlaylistForParental = getCurrentPlaylist();
                 const parentalEnabled =
                   currentPlaylistForParental &&
                   !!currentPlaylistForParental.parentalPassword;
 
-                if (isAdultChannel && parentalEnabled && category) {
-                  // Check if the CATEGORY is unlocked
-                  const catId = String(category.category_id);
-                  if (!unlockedLiveAdultCatIds.has(catId)) {
-                    // Show PIN Dialog to unlock the CATEGORY
-                    ParentalPinDialog(
-                      () => {
-                        // PIN Correct - Unlock the Category
-                        unlockedLiveAdultCatIds.add(catId);
-                        // Re-render categories if visible
-                        renderCategories();
-                        // Play the channel
-                        playChannel(stream);
-                      },
-                      () => {
-                        console.log("Incorrect PIN");
-                      },
-                      currentPlaylistForParental,
-                      "liveTvPage",
-                    );
-                    return;
-                  }
+                if (checkIsCategoryLocked(selectedCategoryId) && parentalEnabled) {
+                  ParentalPinDialog(
+                    () => {
+                      unlockedLiveAdultCatIds.add(String(selectedCategoryId));
+                      renderCategories();
+                      playChannel(stream);
+                    },
+                    () => {
+                      console.log("Incorrect PIN");
+                    },
+                    currentPlaylistForParental,
+                    "liveTvPage",
+                  );
+                  return;
                 }
 
                 // Play channel if not locked or already unlocked

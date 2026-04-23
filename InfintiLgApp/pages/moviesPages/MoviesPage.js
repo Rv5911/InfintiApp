@@ -78,9 +78,14 @@ function MoviesPage() {
   };
   const isMovieAdultCategory = (name) => {
     const normalized = (name || "").trim().toLowerCase();
-    const configured = Array.isArray(adultsCategories) ? adultsCategories : [];
-    if (configured.includes(normalized)) return true;
-    return /(adult|xxx|18\+|18\s*plus|sex|porn|nsfw)/i.test(normalized);
+    const configured = Array.isArray(window.adultsCategories)
+      ? window.adultsCategories
+      : [];
+    return configured.some((term) => {
+      const keyword = String(term || "").trim().toLowerCase();
+      if (!keyword) return false;
+      return normalized === keyword || normalized.includes(keyword);
+    });
   };
 
   const isMovieAdult = (movie) => {
@@ -2057,8 +2062,7 @@ function MoviesPage() {
               focusChannels(focusedChannelIndex);
             } else if (activeEl.id === "movies-cat-search-input") {
               const catSearchContainer = qs(".movies-cat-search-container");
-              if (catSearchContainer)
-                catSearchContainer.classList.add("focused");
+              if (catSearchContainer) catSearchContainer.classList.add("focused");
               isCatSearchFocused = true;
             }
             e.preventDefault();

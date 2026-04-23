@@ -64,31 +64,21 @@ function SeriesPage() {
   const SERIES_LONG_PRESS_DURATION = 500;
   let seriesEnterPressTimer = null;
   let isRenderingSeriesCards = false; // Flag to prevent navigation during card rendering
-  // let adultsCategories = [];
+  const adultsCategories = Array.isArray(window.adultsCategories)
+    ? window.adultsCategories
+    : [];
   let visibleSeriesCount = 100;
   let seriesCategoryChunk = 1;
   const SERIES_PAGE_SIZE = 100;
 
-  // ========= ADD THIS CODE AFTER YOUR VARIABLE DECLARATIONS =========
-  let adultsCategories = [
-    "adult",
-    "adults",
-    "18+",
-    "adult content",
-    "xxx",
-    "porn",
-    "adulto",
-    "erotic",
-    "erotica",
-    "mature",
-    "adult series",
-  ].map((cat) => cat.toLowerCase());
-
   const isSeriesAdultCategory = (name) => {
     const normalized = (name || "").trim().toLowerCase();
     const configured = Array.isArray(adultsCategories) ? adultsCategories : [];
-    if (configured.includes(normalized)) return true;
-    return /(adult|xxx|18\+|18\s*plus|sex|porn|nsfw)/i.test(normalized);
+    return configured.some((term) => {
+      const keyword = String(term || "").trim().toLowerCase();
+      if (!keyword) return false;
+      return normalized === keyword || normalized.includes(keyword);
+    });
   };
 
   const isSeriesAdult = (series) => {
