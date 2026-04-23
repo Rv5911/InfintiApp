@@ -2040,9 +2040,14 @@ function SeriesPage() {
         initialFocusCheck();
 
         // Smoothly remove loader
-        if (seriesLoader) {
-          seriesLoader.classList.add("fade-out");
-          setTimeout(() => seriesLoader.remove(), 500);
+        const currentLoader = document.getElementById("home-page-loader");
+        if (currentLoader) {
+          currentLoader.classList.add("fade-out");
+          setTimeout(() => {
+            if (currentLoader && currentLoader.parentElement) {
+              currentLoader.remove();
+            }
+          }, 500);
         }
       }
     }, 10);
@@ -2121,6 +2126,30 @@ function SeriesPage() {
 
       // Back keys
       if (typeof isBackKey === "function" && isBackKey(e)) {
+        const activeEl = document.activeElement;
+        if (activeEl && activeEl.tagName === "INPUT") {
+          if (activeEl.value.length > 0) {
+            activeEl.value = activeEl.value.slice(0, -1);
+            activeEl.dispatchEvent(new Event("input"));
+            e.preventDefault();
+            return;
+          } else {
+            activeEl.blur();
+            if (activeEl.id === "series-header-search") {
+              activeEl.classList.remove("series-header-search-input-focused");
+              focusSeriesChannels(focusedSeriesChannelIndex);
+              setSeriesFlags(true, false, false);
+            } else if (activeEl.id === "series-cat-search-input") {
+              const catSearchContainer = qs(".series-cat-search-container");
+              if (catSearchContainer)
+                catSearchContainer.classList.add("focused");
+              isSeriesCatSearchFocused = true;
+            }
+            e.preventDefault();
+            return;
+          }
+        }
+
         if (
           !inSeriesChannelList &&
           !inSeriesSearch &&
@@ -2223,6 +2252,12 @@ function SeriesPage() {
                       "XF86Back",
                     ].includes(ev.key);
                   if (ev.key === "ArrowDown" || ev.keyCode === 40 || isBack) {
+                    if (isBack && catSearchInput.value.length > 0) {
+                      catSearchInput.value = catSearchInput.value.slice(0, -1);
+                      catSearchInput.dispatchEvent(new Event("input"));
+                      ev.preventDefault();
+                      return;
+                    }
                     ev.preventDefault();
                     catSearchInput.blur();
                     catSearchContainer.classList.add("focused");

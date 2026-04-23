@@ -1739,6 +1739,31 @@ function LivePage() {
 
     // Handle Fullscreen Exit
     if (typeof isBackKey === "function" && isBackKey(e)) {
+      const activeEl = document.activeElement;
+      if (activeEl && activeEl.tagName === "INPUT") {
+        if (activeEl.value.length > 0) {
+          activeEl.value = activeEl.value.slice(0, -1);
+          activeEl.dispatchEvent(new Event("input"));
+          e.preventDefault();
+          return;
+        } else {
+          activeEl.blur();
+          // Update visual state if needed
+          if (activeEl.id === "live-header-search") {
+            focusedSection = "channels";
+            updateFocus();
+          } else if (activeEl.id === "lp-cat-search-input") {
+            focusedSection = "sidebar";
+            updateFocus();
+          } else if (activeEl.id === "lp-chan-search-input") {
+            focusedSection = "channels";
+            updateFocus();
+          }
+          e.preventDefault();
+          return;
+        }
+      }
+
       if (isFullscreen) {
         e.preventDefault();
         e.stopImmediatePropagation();

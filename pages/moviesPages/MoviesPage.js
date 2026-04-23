@@ -2039,6 +2039,29 @@ function MoviesPage() {
 
       // Back keys
       if (typeof isBackKey === "function" && isBackKey(e)) {
+        const activeEl = document.activeElement;
+        if (activeEl && activeEl.tagName === "INPUT") {
+          if (activeEl.value.length > 0) {
+            activeEl.value = activeEl.value.slice(0, -1);
+            activeEl.dispatchEvent(new Event("input"));
+            e.preventDefault();
+            return;
+          } else {
+            activeEl.blur();
+            if (activeEl.id === "movies-header-search") {
+              activeEl.classList.remove("movies-header-search-input-focused");
+              // Return focus to something appropriate
+              focusChannels(focusedChannelIndex);
+            } else if (activeEl.id === "movies-cat-search-input") {
+              const catSearchContainer = qs(".movies-cat-search-container");
+              if (catSearchContainer) catSearchContainer.classList.add("focused");
+              isCatSearchFocused = true;
+            }
+            e.preventDefault();
+            return;
+          }
+        }
+
         if (
           !inChannelList &&
           !inSearch &&
@@ -2149,6 +2172,12 @@ function MoviesPage() {
                       "XF86Back",
                     ].includes(ev.key);
                   if (ev.key === "ArrowDown" || ev.keyCode === 40 || isBack) {
+                    if (isBack && catSearchInput.value.length > 0) {
+                      catSearchInput.value = catSearchInput.value.slice(0, -1);
+                      catSearchInput.dispatchEvent(new Event("input"));
+                      ev.preventDefault();
+                      return;
+                    }
                     ev.preventDefault();
                     catSearchInput.blur();
                     catSearchContainer.classList.add("focused");
