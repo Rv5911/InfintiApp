@@ -272,7 +272,13 @@ function MoviesPage() {
   }
 
   async function renderCardsChunked(selectedCategory) {
-    isRenderingCards = true; // Block navigation during rendering
+    // Cancel any existing rendering process
+    if (renderAnimationFrame) {
+      cancelAnimationFrame(renderAnimationFrame);
+      renderAnimationFrame = null;
+    }
+
+    isRenderingCards = true;
     const currentCardsContainer = qs(".movies-cards-list-container");
     if (
       !currentCardsContainer ||
@@ -1970,12 +1976,6 @@ function MoviesPage() {
 
     function moviesPageKeydownHandler(e) {
       if (localStorage.getItem("currentPage") !== "moviesPage") return;
-
-      // Block all navigation during card rendering
-      if (isRenderingCards) {
-        e.preventDefault();
-        return;
-      }
 
       // Handle dropdown open state
       if (isDropdownOpen) {

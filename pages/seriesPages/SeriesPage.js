@@ -296,7 +296,13 @@ function SeriesPage() {
   }
 
   function renderSeriesCardsChunked(selectedCategory, targetFocusIndex = -1) {
-    isRenderingSeriesCards = true; // Block navigation during rendering
+    // Cancel any existing rendering process
+    if (seriesRenderAnimationFrame) {
+      cancelAnimationFrame(seriesRenderAnimationFrame);
+      seriesRenderAnimationFrame = null;
+    }
+
+    isRenderingSeriesCards = true;
     const currentCardsContainer = qs(".series-cards-list-container");
     if (
       !currentCardsContainer ||
@@ -2057,12 +2063,6 @@ function SeriesPage() {
 
     function seriesPageKeydownHandler(e) {
       if (localStorage.getItem("currentPage") !== "seriesPage") return;
-
-      // Block all navigation during card rendering
-      if (isRenderingSeriesCards) {
-        e.preventDefault();
-        return;
-      }
 
       // Handle dropdown open state
       if (isSeriesDropdownOpen) {
