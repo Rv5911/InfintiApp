@@ -147,8 +147,8 @@
     to right,
     var(--gold) 0%,
     var(--gold) 0%,
-    #888 0%,
-    #888 100%
+    rgba(255, 255, 255, 0.3) 0%,
+    rgba(255, 255, 255, 0.3) 100%
   );
   outline: none;
   transition: background 0.2s linear;
@@ -443,8 +443,8 @@
     to right,
     var(--gold) 0%,
     var(--gold) 0%,
-    #888 0%,
-    #888 100%
+    rgba(255, 255, 255, 0.3) 0%,
+    rgba(255, 255, 255, 0.3) 100%
   );
   outline: none;
   transition: background 0.2s linear;

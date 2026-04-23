@@ -445,9 +445,9 @@ function VideoJsPlayer(poster = "") {
             100;
         }
         seekBar.style.background = `linear-gradient(to right,
-          var(--app-text-color) 0%, var(--app-text-color) ${percent}%,
-          #aaa ${percent}%, #aaa ${bufferedPercent}%,
-          #888 ${bufferedPercent}%, #888 100%)`;
+          var(--gold) 0%, var(--gold) ${percent}%,
+          rgba(255, 255, 255, 0.4) ${percent}%, rgba(255, 255, 255, 0.4) ${bufferedPercent}%,
+          rgba(255, 255, 255, 0.15) ${bufferedPercent}%, rgba(255, 255, 255, 0.15) 100%)`;
       } catch (err) {
         // Ignore errors during immediate update
       }
@@ -1035,9 +1035,9 @@ function VideoJsPlayer(poster = "") {
         }
 
         seekBar.style.background = `linear-gradient(to right,
-          var(--app-text-color) 0%, var(--app-text-color) ${percent}%,
-          #aaa ${percent}%, #aaa ${bufferedPercent}%,
-          #888 ${bufferedPercent}%, #888 100%)`;
+          var(--gold) 0%, var(--gold) ${percent}%,
+          rgba(255, 255, 255, 0.4) ${percent}%, rgba(255, 255, 255, 0.4) ${bufferedPercent}%,
+          rgba(255, 255, 255, 0.15) ${bufferedPercent}%, rgba(255, 255, 255, 0.15) 100%)`;
       });
     }
 
