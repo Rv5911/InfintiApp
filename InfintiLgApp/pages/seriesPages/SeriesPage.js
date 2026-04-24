@@ -245,14 +245,34 @@ function SeriesPage() {
   let seriesRenderAnimationFrame = null;
   let marqueeAnimationFrame = null;
 
-  const updateMarqueeState = (cardEl, selector) => {
+  const updateMarqueeState = (cardEl, selector, attempt = 0) => {
     if (!cardEl) return;
+    if (!cardEl.isConnected) return;
+
     const span = cardEl.querySelector(selector);
     if (!span) return;
+
+    const isFocusedCard = cardEl.classList.contains("focused");
+    const isFocusedCategory = cardEl.classList.contains(
+      "series-channel-category-focused",
+    );
+    if (!isFocusedCard && !isFocusedCategory) return;
 
     span.classList.remove("marquee");
     span.style.removeProperty("--marquee-duration");
     void span.offsetWidth;
+
+    const widthReady = span.clientWidth > 0 && span.scrollWidth > 0;
+    if (!widthReady && attempt < 12) {
+      if (marqueeAnimationFrame) {
+        cancelAnimationFrame(marqueeAnimationFrame);
+        clearTimeout(marqueeAnimationFrame);
+      }
+      marqueeAnimationFrame = setTimeout(() => {
+        updateMarqueeState(cardEl, selector, attempt + 1);
+      }, 50);
+      return;
+    }
 
     if (span.scrollWidth > span.clientWidth + 2) {
       const duration = Math.max(4, span.scrollWidth / 45).toFixed(2);
@@ -702,7 +722,10 @@ function SeriesPage() {
           el.classList.add("first-row-card");
         }
 
-        if (marqueeAnimationFrame) cancelAnimationFrame(marqueeAnimationFrame);
+        if (marqueeAnimationFrame) {
+          cancelAnimationFrame(marqueeAnimationFrame);
+          clearTimeout(marqueeAnimationFrame);
+        }
         marqueeAnimationFrame = requestAnimationFrame(() => {
           if (!el.isConnected || !el.classList.contains("focused")) return;
           updateMarqueeState(el, ".series-card-title span");
@@ -710,7 +733,10 @@ function SeriesPage() {
       }
 
       if (cls === "series-channel-category-focused") {
-        if (marqueeAnimationFrame) cancelAnimationFrame(marqueeAnimationFrame);
+        if (marqueeAnimationFrame) {
+          cancelAnimationFrame(marqueeAnimationFrame);
+          clearTimeout(marqueeAnimationFrame);
+        }
         marqueeAnimationFrame = requestAnimationFrame(() => {
           if (
             !el.isConnected ||
@@ -2450,7 +2476,7 @@ function SeriesPage() {
           <div class="series-card-bottom-content ${
             shouldBlur ? "blurred-text" : ""
           }">
-            <p class="series-card-title">${s.name}</p>
+            <p class="series-card-title"><span data-title="${s.name}">${s.name}</span></p>
             <p class="series-card-description">${s.name}</p>
           </div>
           <div class="series-card-top-content">
@@ -2643,7 +2669,7 @@ function SeriesPage() {
           <div class="series-card-bottom-content ${
             shouldBlur ? "blurred-text" : ""
           }">
-            <p class="series-card-title">${s.name}</p>
+            <p class="series-card-title"><span data-title="${s.name}">${s.name}</span></p>
             <p class="series-card-description">${s.name}</p>
           </div>
           <div class="series-card-top-content">
