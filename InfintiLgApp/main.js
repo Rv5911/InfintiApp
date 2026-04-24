@@ -44,7 +44,7 @@ window.onload = function () {
     selectedPlaylistData = null;
   }
 
-  showSplashScreen();
+  // showSplashScreen();
 
   setTimeout(() => {
     const isLogin = localStorage.getItem("isLogin") === "true";
@@ -59,7 +59,7 @@ window.onload = function () {
     }
 
     // Router.showPage("dashboard");
-  }, 5000);
+  }, 0);
 
   if (typeof logAllDnsEntries === "function") {
     logAllDnsEntries();

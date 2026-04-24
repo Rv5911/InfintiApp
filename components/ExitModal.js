@@ -17,14 +17,27 @@ function ExitModal() {
     if (target === saveBtnExit) {
       if (ExitModal.cleanup) ExitModal.cleanup();
 
-      try {
-        const app = tizen.application.getCurrentApplication();
-        if (app) app.exit();
-      } catch (err) {
-        Toaster.showToast("error", "Failed to exit app");
-      }
+    try {
+            if (typeof tizen !== "undefined" && tizen.application) {
+                const app = tizen.application.getCurrentApplication();
+                if (app) {
+                    app.exit();
+                    return;
+                }
+            }
 
-      closeModal();
+            if (typeof window !== "undefined" && window.close) {
+                window.close();
+                return;
+            }
+
+
+        } catch (err) {
+            Toaster.showToast("error", "Failed to exit app");
+        closeModal();
+
+        }
+
     }
 
     if (target === backBtnExit) {

@@ -234,6 +234,23 @@ function MoviesPage() {
   const SEARCH_DEBOUNCE_DELAY = 350; // Debounce search input
   let searchDebounceTimer = null;
   let renderAnimationFrame = null;
+  let marqueeAnimationFrame = null;
+
+  const updateMarqueeState = (cardEl, selector) => {
+    if (!cardEl) return;
+    const span = cardEl.querySelector(selector);
+    if (!span) return;
+
+    span.classList.remove("marquee");
+    span.style.removeProperty("--marquee-duration");
+    void span.offsetWidth;
+
+    if (span.scrollWidth > span.clientWidth + 2) {
+      const duration = Math.max(4, span.scrollWidth / 45).toFixed(2);
+      span.style.setProperty("--marquee-duration", `${duration}s`);
+      span.classList.add("marquee");
+    }
+  };
 
   async function loadCategoryMovies(categoryId) {
     const category = window.moviesCategories.find((c) => c.id === categoryId);
@@ -633,37 +650,19 @@ function MoviesPage() {
           el.classList.add("first-row-card");
         }
 
-        // IMPROVED MARQUEE: Set dynamic duration based on title width
-        const titleSpan = el.querySelector(".movies-card-title span");
-        if (titleSpan) {
-          const scrollWidth = titleSpan.scrollWidth;
-          const clientWidth = titleSpan.clientWidth;
-          if (scrollWidth > clientWidth + 2) {
-            // Added 2px buffer
-            // "slightly fast" - base speed 45px/s (adjust as needed)
-            const duration = (scrollWidth / 45).toFixed(2);
-            titleSpan.style.setProperty("--marquee-duration", `${duration}s`);
-            titleSpan.classList.add("marquee");
-          } else {
-            titleSpan.classList.remove("marquee");
-          }
-        }
+        if (marqueeAnimationFrame) cancelAnimationFrame(marqueeAnimationFrame);
+        marqueeAnimationFrame = requestAnimationFrame(() => {
+          if (!el.isConnected || !el.classList.contains("focused")) return;
+          updateMarqueeState(el, ".movies-card-title span");
+        });
       }
 
       if (cls === "movie-channel-category-focused") {
-        const nameSpan = el.querySelector(".movie-channel-category-name span");
-        if (nameSpan) {
-          const scrollWidth = nameSpan.scrollWidth;
-          const clientWidth = nameSpan.clientWidth;
-          if (scrollWidth > clientWidth + 2) {
-            // Added 2px buffer
-            const duration = (scrollWidth / 45).toFixed(2);
-            nameSpan.style.setProperty("--marquee-duration", `${duration}s`);
-            nameSpan.classList.add("marquee");
-          } else {
-            nameSpan.classList.remove("marquee");
-          }
-        }
+        if (marqueeAnimationFrame) cancelAnimationFrame(marqueeAnimationFrame);
+        marqueeAnimationFrame = requestAnimationFrame(() => {
+          if (!el.isConnected || !el.classList.contains("movie-channel-category-focused")) return;
+          updateMarqueeState(el, ".movie-channel-category-name span");
+        });
       }
 
       // Optimized Scrolling: Only scroll if absolutely necessary

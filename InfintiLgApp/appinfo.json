@@ -7,5 +7,7 @@
   "title": "InfintiApp",
   "icon": "app-icon.png",
   "largeIcon": "app-icon.png",
-      "disableBackHistoryAPI" : true
+      "disableBackHistoryAPI" : true,
+          "splashBackground": "splash-screen.jpg",
+   "resolution": "1920x1080"
 }

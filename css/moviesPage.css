@@ -293,6 +293,17 @@
     text-overflow: clip;
     overflow: visible;
     width: auto;
+    max-width: none;
+}
+
+.movies-card.focused .movies-card-title span:not(.marquee) {
+    display: block;
+    width: 100%;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    animation: none;
 }
 
 .movies-card-title span::after {
