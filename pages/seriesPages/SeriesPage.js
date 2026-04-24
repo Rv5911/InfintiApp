@@ -67,9 +67,9 @@ function SeriesPage() {
   const adultsCategories = Array.isArray(window.adultsCategories)
     ? window.adultsCategories
     : [];
-  let visibleSeriesCount = 100;
+  let visibleSeriesCount = 16;
   let seriesCategoryChunk = 1;
-  const SERIES_PAGE_SIZE = 100;
+  const SERIES_PAGE_SIZE = 16;
 
   const isSeriesAdultCategory = (name) => {
     const normalized = (name || "").trim().toLowerCase();
@@ -239,8 +239,8 @@ function SeriesPage() {
 
   let isSeriesProcessingData = false;
   const SERIES_CHUNK_SIZE = 50;
-  const MAX_VISIBLE_SERIES_CARDS = 15;
-  const SERIES_SEARCH_DEBOUNCE_DELAY = 300;
+  const MAX_VISIBLE_SERIES_CARDS = 12;
+  const SERIES_SEARCH_DEBOUNCE_DELAY = 350;
   let seriesSearchDebounceTimer = null;
   let seriesRenderAnimationFrame = null;
 
@@ -255,6 +255,7 @@ function SeriesPage() {
       ? window.allSeriesStreams
       : [];
     const categorySeries = [];
+    const addedSeriesIds = new Set();
 
     // Process in smaller chunks to prevent freezing
     const PROCESS_CHUNK = 100;
@@ -269,7 +270,8 @@ function SeriesPage() {
         }
 
         if (ids.has(categoryId)) {
-          if (!categorySeries.some((x) => x.series_id === s.series_id)) {
+          if (!addedSeriesIds.has(s.series_id)) {
+            addedSeriesIds.add(s.series_id);
             categorySeries.push(s);
           }
         }
@@ -342,7 +344,7 @@ function SeriesPage() {
 
     // FIXED: Handle search results properly
     if (seriesSearchQuery.trim()) {
-      seriesToShow = (selectedCategory._sortedCache || []).slice(0, 30);
+      seriesToShow = (selectedCategory._sortedCache || []).slice(0, 16);
     } else {
       const limit = Math.max(visibleSeriesCount, MAX_VISIBLE_SERIES_CARDS);
       seriesToShow = selectedCategory._sortedCache.slice(0, limit);
@@ -380,7 +382,7 @@ function SeriesPage() {
       parentalLockEnabledAgain && isAdultSelectedAgain && isUnlockedAgain;
 
     // Increased chunk size for better performance
-    const SERIES_CARD_CHUNK_SIZE = 8;
+    const SERIES_CARD_CHUNK_SIZE = 4;
 
     let currentIndex = 0;
     let focusApplied = false;
@@ -445,7 +447,7 @@ function SeriesPage() {
         <div class="series-card-image-wrapper">
           <img src="${imgSrc}" alt="${s.name}" 
                onerror="this.onerror=null; this.src='/assets/noImageFound.png';" 
-               loading="lazy" class="series-card-img ${
+               loading="lazy" decoding="async" fetchpriority="low" class="series-card-img ${
                  shouldBlur ? "blurred-image" : ""
                }"/>
           ${progressHtml}
@@ -505,9 +507,8 @@ function SeriesPage() {
 
       currentIndex += SERIES_CARD_CHUNK_SIZE;
 
-      seriesRenderAnimationFrame = requestAnimationFrame(() => {
-        setTimeout(renderNextChunk, 10);
-      });
+      // Keep rendering on the next frame so the UI stays responsive.
+      seriesRenderAnimationFrame = requestAnimationFrame(renderNextChunk);
     };
 
     seriesRenderAnimationFrame = requestAnimationFrame(renderNextChunk);
@@ -1570,15 +1571,10 @@ function SeriesPage() {
 
     const targetFocusIndex = inSeriesChannelList ? -1 : focusedSeriesCardIndex;
 
-    if (window.requestIdleCallback) {
-      requestIdleCallback(() => {
-        renderSeriesCardsChunked(loadedCategory, targetFocusIndex);
-      });
-    } else {
-      requestAnimationFrame(() => {
-        renderSeriesCardsChunked(loadedCategory, targetFocusIndex);
-      });
-    }
+    // Start rendering on the next frame so the spinner can paint first.
+    requestAnimationFrame(() => {
+      renderSeriesCardsChunked(loadedCategory, targetFocusIndex);
+    });
   }
   // expose for Sidebar sorting dialog to re-render on Apply
   window.renderSeries = renderSeries;
@@ -2444,7 +2440,7 @@ function SeriesPage() {
           <div class="series-card-image-wrapper">
             <img src="${s.cover || "./assets/noImageFound.png"}" alt="${
               s.name
-            }" onerror="this.onerror=null; this.src='/assets/noImageFound.png';" loading="lazy" class="series-card-img ${
+            }" onerror="this.onerror=null; this.src='/assets/noImageFound.png';" loading="lazy" decoding="async" fetchpriority="low" class="series-card-img ${
               shouldBlur ? "blurred-image" : ""
             }"/>
           </div>
@@ -2637,7 +2633,7 @@ function SeriesPage() {
           <div class="series-card-image-wrapper">
             <img src="${s.cover || "./assets/noImageFound.png"}" alt="${
               s.name
-            }" onerror="this.onerror=null; this.src='/assets/noImageFound.png';" loading="lazy" class="series-card-img ${
+            }" onerror="this.onerror=null; this.src='/assets/noImageFound.png';" loading="lazy" decoding="async" fetchpriority="low" class="series-card-img ${
               shouldBlur ? "blurred-image" : ""
             }"/>
           </div>
@@ -3113,7 +3109,7 @@ function SeriesPage() {
           seriesSearchQuery = newQuery;
 
           if (seriesSearchQuery.trim()) {
-            visibleSeriesCount = 30; // Limited for Tizen performance
+            visibleSeriesCount = 16; // Keep search lists small on TV devices
             // Clear cache to force fresh search
             const selectedCategory = window.seriesCategories.find(
               (c) => c.id === selectedSeriesCategoryId,
@@ -3127,9 +3123,6 @@ function SeriesPage() {
             // Reset to normal view when search is cleared
             seriesSearchQuery = "";
           }
-
-          // Small delay to prevent UI freeze on Tizen
-          await new Promise((resolve) => setTimeout(resolve, 100));
 
           await renderSeries();
           highlightActiveSeriesCategory();

@@ -69,7 +69,7 @@ function MoviesPage() {
     const totalAvailable = selectedCategory._sortedCache.length;
 
     if (currentVisible < totalAvailable) {
-      visibleCount = Math.min(currentVisible + 15, totalAvailable);
+      visibleCount = Math.min(currentVisible + 8, totalAvailable);
 
       setTimeout(() => {
         renderCardsChunked(selectedCategory);
@@ -123,14 +123,14 @@ function MoviesPage() {
     }
 
     // Only blur adult cards in these special categories
-    const shouldBlurInCategory = [-3, -1, -2].includes(selectedCategoryId); // All, Favorites, Continue Watching
+  const shouldBlurInCategory = [-3, -1, -2].includes(selectedCategoryId); // All, Favorites, Continue Watching
 
     return shouldBlurInCategory && isMovieAdult(movie);
   };
 
-  let visibleCount = 100;
+  let visibleCount = 16;
   let categoryChunk = 1;
-  const PAGE_SIZE = 100;
+  const PAGE_SIZE = 16;
 
   const currentPlaylistName = JSON.parse(
     localStorage.getItem("selectedPlaylist"),
@@ -230,8 +230,8 @@ function MoviesPage() {
 
   let isProcessingData = false;
   const CHUNK_SIZE = 50; // Reduced chunk size for low-end devices
-  const MAX_VISIBLE_CARDS = 15; // Limit visible cards for performance
-  const SEARCH_DEBOUNCE_DELAY = 300; // Debounce search input
+  const MAX_VISIBLE_CARDS = 12; // Limit visible cards for performance
+  const SEARCH_DEBOUNCE_DELAY = 350; // Debounce search input
   let searchDebounceTimer = null;
   let renderAnimationFrame = null;
 
@@ -246,6 +246,7 @@ function MoviesPage() {
       ? window.allMoviesStreams
       : [];
     const categoryMovies = [];
+    const addedMovieIds = new Set();
 
     // Process in smaller chunks to prevent freezing
     const PROCESS_CHUNK = 100;
@@ -260,7 +261,8 @@ function MoviesPage() {
         }
 
         if (ids.has(categoryId)) {
-          if (!categoryMovies.some((x) => x.stream_id === m.stream_id)) {
+          if (!addedMovieIds.has(m.stream_id)) {
+            addedMovieIds.add(m.stream_id);
             categoryMovies.push(m);
           }
         }
@@ -330,7 +332,7 @@ function MoviesPage() {
     if (searchQuery.trim()) {
       moviesToShow = (selectedCategory._sortedCache || []).slice(
         0,
-        Math.max(visibleCount, 30),
+        Math.max(visibleCount, 16),
       );
     } else {
       moviesToShow = selectedCategory._sortedCache.slice(0, visibleCount);
@@ -365,7 +367,7 @@ function MoviesPage() {
     currentCardsContainer.innerHTML = "";
 
     // Increase chunk size for better performance (less iterations)
-    const CARD_CHUNK_SIZE = 8; // Increased from 4
+    const CARD_CHUNK_SIZE = 4;
 
     let currentIndex = 0;
 
@@ -425,7 +427,7 @@ function MoviesPage() {
         <div class="movie-card-image-wrapper">
           <img src="${imgSrc}" alt="${m.name}" 
                onerror="this.onerror=null; this.src='/assets/noImageFound.png';" 
-               loading="lazy" class="movies-card-img ${
+               loading="lazy" decoding="async" fetchpriority="low" class="movies-card-img ${
                  shouldBlur ? "blurred-image" : ""
                }"/>
           ${progressHtml}
@@ -453,10 +455,8 @@ function MoviesPage() {
       currentCardsContainer.appendChild(fragment);
       currentIndex += CARD_CHUNK_SIZE;
 
-      // Reduce delay between chunks for faster rendering
-      setTimeout(() => {
-        renderAnimationFrame = requestAnimationFrame(renderNextChunk);
-      }, 10); // Reduced from 20ms
+      // Keep rendering on the next frame so the UI stays responsive.
+      renderAnimationFrame = requestAnimationFrame(renderNextChunk);
     };
 
     renderAnimationFrame = requestAnimationFrame(renderNextChunk);
@@ -1484,16 +1484,10 @@ function MoviesPage() {
         ? selectedCategory
         : await loadCategoryMovies(selectedCategoryId);
 
-    // Use requestIdleCallback if available, otherwise requestAnimationFrame
-    if (window.requestIdleCallback) {
-      requestIdleCallback(() => {
-        renderCardsChunked(loadedCategory);
-      });
-    } else {
-      requestAnimationFrame(() => {
-        renderCardsChunked(loadedCategory);
-      });
-    }
+    // Start rendering on the next frame so the spinner can paint first.
+    requestAnimationFrame(() => {
+      renderCardsChunked(loadedCategory);
+    });
   }
   window.renderMovies = renderMovies;
   // ========= Events =========
@@ -2376,7 +2370,7 @@ function MoviesPage() {
           <div class="movie-card-image-wrapper">
             <img src="${m.stream_icon || "./assets/noImageFound.png"}" alt="${
               m.name
-            }" onerror="this.onerror=null; this.src='/assets/noImageFound.png';" loading="lazy" class="movies-card-img ${
+            }" onerror="this.onerror=null; this.src='/assets/noImageFound.png';" loading="lazy" decoding="async" fetchpriority="low" class="movies-card-img ${
               shouldBlur ? "blurred-image" : ""
             }"/>
           </div>
@@ -2552,7 +2546,7 @@ function MoviesPage() {
             <div class="movie-card-image-wrapper">
               <img src="${m.stream_icon || "./assets/noImageFound.png"}" alt="${
                 m.name
-              }" onerror="this.onerror=null; this.src='/assets/noImageFound.png';" loading="lazy" class="movies-card-img ${
+              }" onerror="this.onerror=null; this.src='/assets/noImageFound.png';" loading="lazy" decoding="async" fetchpriority="low" class="movies-card-img ${
                 shouldBlur ? "blurred-image" : ""
               }"/>
             </div>
@@ -2904,7 +2898,7 @@ function MoviesPage() {
           searchQuery = newQuery;
 
           if (searchQuery.trim()) {
-            visibleCount = 30; // Limited for Tizen performance
+            visibleCount = 16; // Keep search lists small on TV devices
             // Clear cache to force fresh search
             const selectedCategory = window.moviesCategories.find(
               (c) => c.id === selectedCategoryId,
@@ -2919,15 +2913,12 @@ function MoviesPage() {
             searchQuery = "";
           }
 
-          // Small delay to prevent UI freeze on Tizen
-          await new Promise((resolve) => setTimeout(resolve, 100));
-
           await renderMovies();
           highlightActiveCategory();
 
           // Always focus on channels after search to maintain navigation
           focusChannels(focusedChannelIndex);
-        }, 700); // 700ms debounce for Tizen
+        }, SEARCH_DEBOUNCE_DELAY);
       });
     }
 
