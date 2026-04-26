@@ -5,6 +5,10 @@
 }
 .video-js-player-container {
   background: black !important;
+  overflow: hidden !important;
+  position: relative !important;
+  width: 100vw;
+  height: 100vh;
 }
 /* .video-js-player-container{
   animation: fadeInOut 1s ease-in-out;
@@ -195,25 +199,7 @@
   object-fit: fill !important;
 }
 
-.video-aspect-235 {
-  padding-top: 5%;
-  padding-bottom: 5%;
-  object-fit: fill;
-}
-
-.video-aspect-169 {
-  width: 100% !important;
-  height: 100% !important;
-  object-fit: fill !important;
-}
-
-.video-aspect-43 {
-  padding-left: 12%;
-  padding-right: 12%;
-  padding-top: 2%;
-  padding-bottom: 2%;
-  object-fit: fill;
-}
+/* Aspect ratio logic moved to inline styles in VideoAspectRatio utility */
 
 .video-js .vjs-tech {
   background: rgb(0, 0, 0) !important;

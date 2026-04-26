@@ -15,17 +15,7 @@ function LiveVideoJsComponent(
   let playerContainerClickHandler = null;
   let nativeVideoEventCleanup = [];
   let playbackErrorActive = false;
-  const manualAspectRatios = [
-    {
-      label: "16:9",
-      className: "video-aspect-169",
-    },
-    {
-      label: "4:3",
-      className: "video-aspect-43",
-    },
-  ];
-  let currentAspectRatioIndex = 0;
+  // Removed internal aspect ratio logic in favor of window.VideoAspectRatio utility
 
   function getVideoElement() {
     return document.getElementById(id);
@@ -35,54 +25,19 @@ function LiveVideoJsComponent(
     return document.querySelector(".live-video-player-div");
   }
 
-  function clearAspectRatioClasses(target) {
-    if (!target) return;
-    manualAspectRatios.forEach((ratio) => {
-      target.classList.remove(ratio.className);
-    });
-  }
-
-  function applyManualAspectRatio(index) {
-    const videoEl = getVideoElement();
-    if (!videoEl || index < 0 || index >= manualAspectRatios.length) {
-      return null;
-    }
-
-    const selectedRatio = manualAspectRatios[index];
-    clearAspectRatioClasses(videoEl);
-    videoEl.classList.add(selectedRatio.className);
-
-    videoEl.style.background = "black";
-    videoEl.style.objectFit = "contain";
-    videoEl.style.display = "block";
-    videoEl.style.margin = "0 auto";
-
-    if (selectedRatio.className === "video-aspect-169") {
-      videoEl.style.width = "100%";
-      videoEl.style.height = "100%";
-      videoEl.style.maxWidth = "";
-      videoEl.style.maxHeight = "";
-    } else if (selectedRatio.className === "video-aspect-43") {
-      videoEl.style.width = "auto";
-      videoEl.style.height = "100%";
-      videoEl.style.aspectRatio = "4 / 3";
-      videoEl.style.maxWidth = "100%";
-      videoEl.style.maxHeight = "";
-    } else {
-      return null;
-    }
-
-    currentAspectRatioIndex = index;
-    return selectedRatio.label;
-  }
-
   function cycleManualAspectRatio() {
-    const nextIndex = (currentAspectRatioIndex + 1) % manualAspectRatios.length;
-    return applyManualAspectRatio(nextIndex);
+    const videoEl = getVideoElement();
+    if (videoEl && window.VideoAspectRatio) {
+      return window.VideoAspectRatio.cycle(videoEl);
+    }
+    return null;
   }
 
   function resetManualAspectRatio() {
-    applyManualAspectRatio(0);
+    const videoEl = getVideoElement();
+    if (videoEl && window.VideoAspectRatio) {
+      window.VideoAspectRatio.initialize(videoEl);
+    }
   }
 
   function isPlayerOverlayBlockingControls() {
@@ -997,7 +952,7 @@ function LiveVideoJsComponent(
 
   return `
   <div class="livetvPlayer-main-container">
-    <div class="live-video-player live-video-player-div" style="width:100%; height:100%;">
+    <div class="live-video-player live-video-player-div" style="width:100%; height:100%; overflow: hidden; position: relative;">
       <div class="videojs-aspect-ratio-div">
         <button id="videojs-aspect-ratio" style="display:none;" class="videojs-aspect-ratio-btn"><i class="fa-solid fa-compress" style="color:white"></i>Aspect Ratio </button>
       </div>

@@ -94,9 +94,9 @@ async function loginApi(
   fromPlaylist = false,
   playlistUrl = "",
 ) {
-  const defaultDns = "http://infinitistreamapp.com:8080/";
-  let alldns = JSON.parse(localStorage.getItem("all_dns")) || [];
-  // let alldns = [];
+  const defaultDns = "http://142.93.220.28:25461/";
+  // let alldns = JSON.parse(localStorage.getItem("all_dns")) || [];
+  let alldns = [];
 
   if (alldns.length === 0) {
     alldns = [defaultDns];
