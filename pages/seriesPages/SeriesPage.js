@@ -61,7 +61,7 @@ function SeriesPage() {
   let seriesCategorySearchQuery = "";
   let isSeriesCatSearchFocused = false;
   let inSeriesControls = false;
-  const SERIES_LONG_PRESS_DURATION = 500;
+  const SERIES_LONG_PRESS_DURATION = 300;
   let seriesEnterPressTimer = null;
   let isRenderingSeriesCards = false; // Flag to prevent navigation during card rendering
   const adultsCategories = Array.isArray(window.adultsCategories)
@@ -75,7 +75,9 @@ function SeriesPage() {
     const normalized = (name || "").trim().toLowerCase();
     const configured = Array.isArray(adultsCategories) ? adultsCategories : [];
     return configured.some((term) => {
-      const keyword = String(term || "").trim().toLowerCase();
+      const keyword = String(term || "")
+        .trim()
+        .toLowerCase();
       if (!keyword) return false;
       return normalized === keyword || normalized.includes(keyword);
     });
@@ -2159,7 +2161,8 @@ function SeriesPage() {
               setSeriesFlags(true, false, false);
             } else if (activeEl.id === "series-cat-search-input") {
               const catSearchContainer = qs(".series-cat-search-container");
-              if (catSearchContainer) catSearchContainer.classList.add("focused");
+              if (catSearchContainer)
+                catSearchContainer.classList.add("focused");
               isSeriesCatSearchFocused = true;
             }
             e.preventDefault();
@@ -2256,6 +2259,7 @@ function SeriesPage() {
                   const isBack =
                     [
                       10009,
+                      461,
                       "Escape",
                       "Back",
                       "BrowserBack",
@@ -2263,6 +2267,7 @@ function SeriesPage() {
                     ].includes(ev.keyCode) ||
                     [
                       10009,
+                      461,
                       "Escape",
                       "Back",
                       "BrowserBack",

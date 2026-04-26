@@ -6,13 +6,13 @@ function LoginPage() {
 
     // Cache elements once
     const loginInputs = Array.from(
-      document.querySelectorAll(".login-page-input")
+      document.querySelectorAll(".login-page-input"),
     );
     const loginButtons = Array.from(
-      document.querySelectorAll(".login-page-btn")
+      document.querySelectorAll(".login-page-btn"),
     );
     const toggleIcons = Array.from(
-      document.querySelectorAll(".toggle-password")
+      document.querySelectorAll(".toggle-password"),
     );
 
     // Create a flat list of focusable elements with pre-calculated metadata
@@ -49,14 +49,14 @@ function LoginPage() {
 
     // Fast lookups for specific indices we jump to
     const addUserBtnIndex = focusableItems.findIndex(
-      (item) => item.isAddPlaylistBtn
+      (item) => item.isAddPlaylistBtn,
     );
     const usernameInputIndex = focusableItems.findIndex(
-      (item) => item.id === "login-username"
+      (item) => item.id === "login-username",
     );
     const toggleIconIndex = focusableItems.findIndex((item) => item.isToggle);
     const passwordInputIndex = focusableItems.findIndex(
-      (item) => item.isPasswordInput
+      (item) => item.isPasswordInput,
     );
 
     // Cached toggle icon element for quick access
@@ -129,7 +129,7 @@ function LoginPage() {
         loginApi(
           playlistUsername.value,
           playlistPassword.value,
-          playlistName.value
+          playlistName.value,
         ).then((response) => {
           if (response) {
             LoginPage.cleanup();
@@ -243,13 +243,13 @@ function LoginPage() {
           setFocusState(focusableItems[focusIndex], true);
         }
       } else if (e.key === "Enter") {
+        e.preventDefault();
         if (currentItem.isInput) {
           currentItem.element.focus();
         } else if (currentItem.isButton) {
           currentItem.element.click();
         } else if (currentItem.isToggle) {
-          // Use the cached element directly
-          if (mainToggleIcon) togglePasswordVisibility(mainToggleIcon);
+          togglePasswordVisibility(currentItem.element);
         }
       }
     }
@@ -299,40 +299,40 @@ function LoginPage() {
   }, 0);
 
   return `
-    <div class="login-page-container" style="background-image: none !important;">
+  <div class="login-page-container" style="background-image: none !important;">
 
-      <div class="login-form" style="background-image: none !important;">
-      <div class="login-form-logo-container">
+    <div class="login-form" style="background-image: none !important;">
+    <div class="login-form-logo-container">
 
-      <img src="./assets/app-logo.png" alt="Logo" class="login-form-logo" />
-      </div>
-      <p class="login-form-title">Login Details</p>
-        <div class="login-page-form-container">
-          <div class="login-input-container">
-            <input type="text" id="login-playlist-name" value="SimonWinter"  class="login-page-input" placeholder="Anyname" autocomplete="new-password" />
-            <img src="./assets/playlist-name-icon.png" style="opacity: 0.8;" alt="Logo" class="logo" />
+    <img src="./assets/app-logo.png" alt="Logo" class="login-form-logo" />
+    </div>
+    <p class="login-form-title">Login Details</p>
+      <div class="login-page-form-container">
+        <div class="login-input-container">
+          <input type="text" id="login-playlist-name"  class="login-page-input" placeholder="Anyname" autocomplete="new-password" />
+          <img src="./assets/playlist-name-icon.png" style="opacity: 0.8;" alt="Logo" class="logo" />
+        </div>
+        <div class="login-input-container">
+          <input type="text" id="login-username"   class="login-page-input" placeholder="User Name" autocomplete="new-password" />
+          <img src="./assets/playlist-username-icon.png" style="opacity: 0.8;" alt="Logo" class="logo" />
+        </div>
+        <div class="password-wrapper">
+          <div class="login-input-container password-container">
+            <input type="password"  id="login-password"    class="login-page-input" placeholder="Password" autocomplete="new-password" />
+            <img src="./assets/playlist-password-icon.png" style="opacity: 0.8;" alt="Logo" class="logo" />
           </div>
-          <div class="login-input-container">
-            <input type="text" id="login-username" value="SimonWinter"   class="login-page-input" placeholder="User Name" autocomplete="new-password" />
-            <img src="./assets/playlist-username-icon.png" style="opacity: 0.8;" alt="Logo" class="logo" />
+          <div class="toggle-password-container">
+            <i class="fa-regular fa-eye-slash toggle-password"></i>
           </div>
-          <div class="password-wrapper">
-            <div class="login-input-container password-container">
-              <input type="password"  id="login-password" value="1z5gFtKLe5"   class="login-page-input" placeholder="Password" autocomplete="new-password" />
-              <img src="./assets/playlist-password-icon.png" style="opacity: 0.8;" alt="Logo" class="logo" />
-            </div>
-            <div class="toggle-password-container">
-              <i class="fa-regular fa-eye-slash toggle-password"></i>
-            </div>
-          </div>
-          <div class="button-container">
-            <button class="btn add-playlist login-page-btn">LOGIN</button>
-            <button class="btn list-playlist login-page-btn">
-              <img src="./assets/list-users-login.png" alt="Logo" class="list-users-icon" />List Users
-            </button>
-          </div>
+        </div>
+        <div class="button-container">
+          <button class="btn add-playlist login-page-btn">LOGIN</button>
+          <button class="btn list-playlist login-page-btn">
+            <img src="./assets/list-users-login.png" alt="Logo" class="list-users-icon" />List Users
+          </button>
         </div>
       </div>
     </div>
-  `;
+  </div>
+`;
 }

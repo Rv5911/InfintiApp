@@ -54,7 +54,7 @@ function MoviesPage() {
   let selectedCardForDropdown = null;
   let isDropdownOpen = false;
   let isCatSearchFocused = false;
-  const LONG_PRESS_DURATION = 200;
+  const LONG_PRESS_DURATION = 300;
   let enterPressTimer = null;
 
   const loadMoreSearchResults = () => {
@@ -82,7 +82,9 @@ function MoviesPage() {
       ? window.adultsCategories
       : [];
     return configured.some((term) => {
-      const keyword = String(term || "").trim().toLowerCase();
+      const keyword = String(term || "")
+        .trim()
+        .toLowerCase();
       if (!keyword) return false;
       return normalized === keyword || normalized.includes(keyword);
     });
@@ -123,7 +125,7 @@ function MoviesPage() {
     }
 
     // Only blur adult cards in these special categories
-  const shouldBlurInCategory = [-3, -1, -2].includes(selectedCategoryId); // All, Favorites, Continue Watching
+    const shouldBlurInCategory = [-3, -1, -2].includes(selectedCategoryId); // All, Favorites, Continue Watching
 
     return shouldBlurInCategory && isMovieAdult(movie);
   };
@@ -686,7 +688,11 @@ function MoviesPage() {
           clearTimeout(marqueeAnimationFrame);
         }
         marqueeAnimationFrame = requestAnimationFrame(() => {
-          if (!el.isConnected || !el.classList.contains("movie-channel-category-focused")) return;
+          if (
+            !el.isConnected ||
+            !el.classList.contains("movie-channel-category-focused")
+          )
+            return;
           updateMarqueeState(el, ".movie-channel-category-name span");
         });
       }
@@ -2081,7 +2087,8 @@ function MoviesPage() {
               focusChannels(focusedChannelIndex);
             } else if (activeEl.id === "movies-cat-search-input") {
               const catSearchContainer = qs(".movies-cat-search-container");
-              if (catSearchContainer) catSearchContainer.classList.add("focused");
+              if (catSearchContainer)
+                catSearchContainer.classList.add("focused");
               isCatSearchFocused = true;
             }
             e.preventDefault();
@@ -2186,6 +2193,7 @@ function MoviesPage() {
                   const isBack =
                     [
                       10009,
+                      461,
                       "Escape",
                       "Back",
                       "BrowserBack",
@@ -2193,6 +2201,7 @@ function MoviesPage() {
                     ].includes(ev.keyCode) ||
                     [
                       10009,
+                      461,
                       "Escape",
                       "Back",
                       "BrowserBack",

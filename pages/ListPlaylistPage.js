@@ -10,7 +10,7 @@ function ListPlaylistPage() {
   let removeFocus = false;
   let modalFocusIndex = 0;
   let modalOpen = false;
-  const LONG_PRESS_DURATION = 500; // 500ms for long press
+  const LONG_PRESS_DURATION = 300; // 500ms for long press
   let enterPressTimer = null;
 
   setTimeout(() => {
@@ -147,7 +147,7 @@ function ListPlaylistPage() {
       if (focusIndex >= 0 && focusIndex < playlistsData.length) {
         modal.classList.remove("hidden");
         modalOpen = true;
-        modalFocusIndex = -1;
+        modalFocusIndex = 0;
         updateFocus();
       }
     }
