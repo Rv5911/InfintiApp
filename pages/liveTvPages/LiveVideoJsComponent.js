@@ -40,6 +40,23 @@ function LiveVideoJsComponent(
     }
   }
 
+  function syncPlayerLayout(isFullscreen) {
+    const livePlayerDiv = getLivePlayerContainer();
+    if (!livePlayerDiv) return;
+
+    if (isFullscreen) {
+      livePlayerDiv.style.removeProperty("aspect-ratio");
+      livePlayerDiv.style.width = "100%";
+      livePlayerDiv.style.height = "100%";
+      livePlayerDiv.style.maxHeight = "none";
+    } else {
+      livePlayerDiv.style.width = "100%";
+      livePlayerDiv.style.height = "auto";
+      livePlayerDiv.style.setProperty("aspect-ratio", "16 / 9");
+      livePlayerDiv.style.maxHeight = "100%";
+    }
+  }
+
   function isPlayerOverlayBlockingControls() {
     const loadingEl = document.querySelector(".live-video-loader");
     const errorEl = document.querySelector(".live-video-error");
@@ -403,7 +420,7 @@ function LiveVideoJsComponent(
   // If no URL is provided
   if (!srcUrl || srcUrl.trim() === "") {
     return `
-      <div class="live-video-player live-video-player-div" style="width:100%; height:100%;">
+      <div class="live-video-player live-video-player-div" style="width:100%; aspect-ratio:16 / 9; height:auto; overflow:hidden; position:relative;">
         <div class="live-no-url-message">
           <div class="no-url-icon">📺</div>
           <p class="no-url-text">Please select any channel to play</p>
@@ -463,6 +480,7 @@ function LiveVideoJsComponent(
     window.livePlayer = videoEl;
     window.livePlayer.togglePlayPause = togglePlayPause;
     resetManualAspectRatio();
+    syncPlayerLayout(isFullscreenActive());
 
     const startPlayback = () => {
       const playPromise = videoEl.play();
@@ -667,10 +685,12 @@ function LiveVideoJsComponent(
       if (liveBadgeEl) liveBadgeEl.style.display = "flex";
 
       if (isFs) {
+        syncPlayerLayout(true);
         wakeFullscreenControls();
       } else {
         clearTimeout(window._liveFullscreenControlsTimer);
         window._liveFullscreenControlsTimer = null;
+        syncPlayerLayout(false);
         setFullscreenControlsVisible(true);
       }
     };
@@ -952,7 +972,7 @@ function LiveVideoJsComponent(
 
   return `
   <div class="livetvPlayer-main-container">
-    <div class="live-video-player live-video-player-div" style="width:100%; height:100%; overflow: hidden; position: relative;">
+    <div class="live-video-player live-video-player-div" style="width:100%; aspect-ratio:16 / 9; height:auto; overflow: hidden; position: relative;">
       <div class="videojs-aspect-ratio-div">
         <button id="videojs-aspect-ratio" style="display:none;" class="videojs-aspect-ratio-btn"><i class="fa-solid fa-compress" style="color:white"></i>Aspect Ratio </button>
       </div>

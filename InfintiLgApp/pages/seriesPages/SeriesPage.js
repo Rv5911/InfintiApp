@@ -425,6 +425,17 @@ function SeriesPage() {
 
     let currentIndex = 0;
     let focusApplied = false;
+    const removeLoader = (loaderId) => {
+      const loader = document.getElementById(loaderId);
+      if (!loader) return;
+
+      loader.classList.add("fade-out");
+      setTimeout(() => {
+        if (loader && loader.parentElement) {
+          loader.remove();
+        }
+      }, 500);
+    };
 
     const renderNextChunk = () => {
       if (currentIndex >= seriesToShow.length) {
@@ -439,6 +450,8 @@ function SeriesPage() {
           ) {
             focusSeriesCards(targetFocusIndex);
           }
+          removeLoader("home-page-loader");
+          removeLoader("series-focus-restore-overlay");
         }
         isRenderingSeriesCards = false; // Re-enable navigation after rendering completes
         return;
@@ -526,21 +539,14 @@ function SeriesPage() {
           focusApplied = true;
 
           // FADE OUT LOADERS after focus is applied
-          const seriesLoader = document.getElementById("home-page-loader");
           const globalLoader = document.getElementById("loading-overlay");
 
           if (globalLoader) {
             globalLoader.classList.add("hidden");
           }
 
-          if (seriesLoader) {
-            seriesLoader.classList.add("fade-out");
-            setTimeout(() => {
-              if (seriesLoader && seriesLoader.parentElement) {
-                seriesLoader.remove();
-              }
-            }, 500);
-          }
+          removeLoader("home-page-loader");
+          removeLoader("series-focus-restore-overlay");
         }
       }
 
@@ -1993,6 +1999,22 @@ function SeriesPage() {
     const savedCardIndex = localStorage.getItem("seriesLastCardIndex");
     const isRestoring =
       savedCategoryId && savedChannelIndex !== null && savedCardIndex !== null;
+
+    if (isRestoring) {
+      const restoreOverlayId = "series-focus-restore-overlay";
+      let restoreOverlay = document.getElementById(restoreOverlayId);
+      if (!restoreOverlay) {
+        restoreOverlay = document.createElement("div");
+        restoreOverlay.id = restoreOverlayId;
+        restoreOverlay.style.cssText =
+          "position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #000; z-index: 10000; display: flex; justify-content: center; align-items: center;";
+        restoreOverlay.innerHTML = '<div class="spinner"></div>';
+        document.body.appendChild(restoreOverlay);
+      }
+
+      const loadingOverlay = document.getElementById("loading-overlay");
+      if (loadingOverlay) loadingOverlay.classList.add("hidden");
+    }
 
     // Only show loading spinner if NOT restoring focus (restoration has its own overlay)
     const container = qs(".series-content-container");

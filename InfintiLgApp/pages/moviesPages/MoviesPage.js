@@ -1707,6 +1707,22 @@ function MoviesPage() {
     const isRestoring =
       savedCategoryId && savedCategoryIndex !== null && savedCardIndex !== null;
 
+    if (isRestoring) {
+      const overlayId = "movies-focus-restore-overlay";
+      let overlay = document.getElementById(overlayId);
+      if (!overlay) {
+        overlay = document.createElement("div");
+        overlay.id = overlayId;
+        overlay.style.cssText =
+          "position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #000; z-index: 10000; display: flex; justify-content: center; align-items: center;";
+        overlay.innerHTML = '<div class="spinner"></div>';
+        document.body.appendChild(overlay);
+      }
+
+      const loadingOverlay = document.getElementById("loading-overlay");
+      if (loadingOverlay) loadingOverlay.classList.add("hidden");
+    }
+
     // Only show loading spinner if NOT restoring focus (restoration has its own overlay)
     const container = qs(".movies-content-container");
     if (container && !isRestoring) {
@@ -1732,22 +1748,6 @@ function MoviesPage() {
         selectedCategoryId = Number(savedCategoryId);
         focusedChannelIndex = Number(savedCategoryIndex);
         focusedCardIndex = Number(savedCardIndex);
-
-        // CREATE OVERLAY
-        const overlayId = "movies-focus-restore-overlay";
-        let overlay = document.getElementById(overlayId);
-        if (!overlay) {
-          overlay = document.createElement("div");
-          overlay.id = overlayId;
-          overlay.style.cssText =
-            "position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #000; z-index: 10000; display: flex; justify-content: center; align-items: center;";
-          overlay.innerHTML = '<div class="spinner"></div>';
-          document.body.appendChild(overlay);
-        }
-
-        // Ensure global loader is hidden when restoration overlay is active
-        const loadingOverlay = document.getElementById("loading-overlay");
-        if (loadingOverlay) loadingOverlay.classList.add("hidden");
 
         // Calculate how many cards need to be visible to show the focused card
         const cardsNeededToShow = focusedCardIndex + 1;

@@ -10,7 +10,10 @@ window.onload = function () {
   // Live Data Save
   window.allLiveStreams = [];
   window.liveCategories = [];
-
+let isWebos =
+  typeof window !== "undefined" &&
+  (typeof window.webOS !== "undefined" ||
+   typeof window.PalmSystem !== "undefined");
   //  Register remote keys (Tizen TV)
   if (typeof tizen !== "undefined" && tizen.tvinputdevice) {
     const keys = tizen.tvinputdevice.getSupportedKeys();
@@ -43,8 +46,10 @@ window.onload = function () {
   } else {
     selectedPlaylistData = null;
   }
+if(!isWebos){
 
   showSplashScreen();
+}
 
   setTimeout(() => {
     const isLogin = localStorage.getItem("isLogin") === "true";
@@ -59,7 +64,7 @@ window.onload = function () {
     }
 
     // Router.showPage("dashboard");
-  }, 5000);
+  }, isWebos? 0 : 5000);
 
   if (typeof logAllDnsEntries === "function") {
     logAllDnsEntries();

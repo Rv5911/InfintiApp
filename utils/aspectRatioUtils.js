@@ -46,26 +46,7 @@ window.VideoAspectRatio = (function () {
         margin: "0",
       },
     },
-    {
-      label: "2.35:1",
-      value: "2.35:1",
-      style: {
-        width: "100%",
-        height: "100%",
-        top: "0",
-        bottom: "0",
-        left: "0",
-        right: "0",
-        position: "absolute",
-        objectFit: "fill",
-        transform: "scaleY(0.75)",
-        transformOrigin: "center center",
-        clipPath: "none",
-        overflow: "hidden",
-        padding: "0",
-        margin: "0",
-      },
-    },
+  
   ];
 
   let currentIndex = 0;

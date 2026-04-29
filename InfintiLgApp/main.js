@@ -10,7 +10,10 @@ window.onload = function () {
   // Live Data Save
   window.allLiveStreams = [];
   window.liveCategories = [];
-
+let isWebos =
+  typeof window !== "undefined" &&
+  (typeof window.webOS !== "undefined" ||
+   typeof window.PalmSystem !== "undefined");
   //  Register remote keys (Tizen TV)
   if (typeof tizen !== "undefined" && tizen.tvinputdevice) {
     const keys = tizen.tvinputdevice.getSupportedKeys();
@@ -43,8 +46,10 @@ window.onload = function () {
   } else {
     selectedPlaylistData = null;
   }
+if(!isWebos){
 
-  // showSplashScreen();
+  showSplashScreen();
+}
 
   setTimeout(() => {
     const isLogin = localStorage.getItem("isLogin") === "true";
@@ -59,7 +64,7 @@ window.onload = function () {
     }
 
     // Router.showPage("dashboard");
-  }, 0);
+  }, isWebos? 0 : 5000);
 
   if (typeof logAllDnsEntries === "function") {
     logAllDnsEntries();
@@ -73,7 +78,7 @@ window.onload = function () {
 function showSplashScreen() {
   const splashPage = document.getElementById("splash-page");
   splashPage.innerHTML = `
-    <div class="splash-page-container" style="background-image: url('./assets/bg-img.png');">
+    <div class="splash-page-container" style="background-image: url('/assets/bg-img.webp');">
       <img src="./assets/app-logo.png" alt="Logo" class="logo" />
     </div>
   `;
