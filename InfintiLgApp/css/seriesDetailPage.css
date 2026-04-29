@@ -702,23 +702,7 @@
     z-index: 9999;
 }
 
-.series-detail-start-over-button {
-    margin-right: 30px;
-    padding-top: 10px;
-    border-radius: 58px;
-    padding-bottom: 10px;
-    padding-left: 28px;
-    border: 2.46px solid rgba(255, 255, 255, 0.25);
-    color: white;
-    font-weight: 600;
-    outline: none;
-    white-space: nowrap;
-    /* text-wrap: nowrap; */
-    /* text-wrap: nowrap; */
-    font-size: 24px;
-    background: rgba(0, 0, 0, 0.6);
-    padding-right: 28px;
-}
+
 
 /* NEW: Horizontal layout styles matching MovieDetailPage */
 .series-detail-content-main {

@@ -74,6 +74,7 @@ function VideoJsPlayer(poster = "") {
   let pendingResumeTime = 0;
   let resumeTimeApplied = false;
   let resumeSeekRetryTimeout = null;
+  let isSeekSessionActive = false;
 
   // 🔴 Track if video has started playing for the first time
   let hasStartedPlayingOnce = false;
@@ -377,11 +378,9 @@ function VideoJsPlayer(poster = "") {
     showControls(); // Show controls immediately when seeking requested
     const shouldPauseDuringSeek = !useWebOSNativePlayer;
 
-    // Clear any pending seek operation
-    if (pendingSeekTimeout) {
-      clearTimeout(pendingSeekTimeout);
-      pendingSeekTimeout = null;
-    }
+    // Clear any pending seek operation but keep the active seek session alive
+    if (pendingSeekTimeout) clearTimeout(pendingSeekTimeout);
+    pendingSeekTimeout = null;
 
     // Clear any pending resume timeout
     if (pendingResumeTimeout) {
@@ -389,17 +388,29 @@ function VideoJsPlayer(poster = "") {
       pendingResumeTimeout = null;
     }
 
-    // Accumulate the seek offset
-    accumulatedSeekOffset += offset;
+    if (!isSeekSessionActive) {
+      isSeekSessionActive = true;
+      wasPlayingBeforeSeek = !!(player && typeof player.paused === "function")
+        ? !player.paused()
+        : false;
 
-    // Store play state before seeking (only once per seek session)
-    const isFirstSeek = pendingSeekTimeout === null;
-    if (isFirstSeek) {
-      wasPlayingBeforeSeek = !player.paused();
-      if (shouldPauseDuringSeek && wasPlayingBeforeSeek && !userManuallyPaused) {
-        player.pause();
+      if (
+        shouldPauseDuringSeek &&
+        wasPlayingBeforeSeek &&
+        !userManuallyPaused &&
+        player &&
+        typeof player.pause === "function"
+      ) {
+        try {
+          player.pause();
+        } catch (err) {
+          console.warn("Initial seek pause failed:", err);
+        }
       }
     }
+
+    // Accumulate the seek offset
+    accumulatedSeekOffset += offset;
 
     // 🔴 IMMEDIATELY update seek bar for smooth visual feedback
     const seekBar = document.getElementById("customSeek");
@@ -423,8 +434,11 @@ function VideoJsPlayer(poster = "") {
 
     if (seekBar && player && player.currentTime) {
       try {
-        const currentTime = player.currentTime();
-        const duration = player.duration();
+        const currentTime = Number(player.currentTime());
+        const duration = Number(player.duration());
+        if (!Number.isFinite(currentTime) || !Number.isFinite(duration) || duration <= 0) {
+          throw new Error("Seek metrics unavailable");
+        }
         const newTime = Math.max(
           0,
           Math.min(duration, currentTime + accumulatedSeekOffset),
@@ -455,21 +469,43 @@ function VideoJsPlayer(poster = "") {
 
     // Set a new timeout to execute the seek after 300ms of no input
     pendingSeekTimeout = setTimeout(() => {
+      const finalizeSeekSession = () => {
+        isSeekSessionActive = false;
+        pendingSeekTimeout = null;
+      };
+
       if (!player || !player.currentTime || errorActive) {
         accumulatedSeekOffset = 0;
+        finalizeSeekSession();
         return;
       }
 
       try {
-        const currentTime = player.currentTime();
-        const duration = player.duration();
+        const currentTime = Number(player.currentTime());
+        const duration = Number(player.duration());
+        if (!Number.isFinite(currentTime) || !Number.isFinite(duration) || duration <= 0) {
+          throw new Error("Seek metrics unavailable");
+        }
         const newTime = Math.max(
           0,
           Math.min(duration, currentTime + accumulatedSeekOffset),
         );
 
+        if (Math.abs(newTime - currentTime) < 0.25) {
+          accumulatedSeekOffset = 0;
+          finalizeSeekSession();
+          return;
+        }
+
         // Execute the accumulated seek
-        player.currentTime(newTime);
+        try {
+          player.currentTime(newTime);
+        } catch (seekErr) {
+          console.warn("Player seek apply failed:", seekErr);
+          accumulatedSeekOffset = 0;
+          finalizeSeekSession();
+          return;
+        }
 
         // Update seek bar
         const seekBar = document.getElementById("customSeek");
@@ -506,7 +542,7 @@ function VideoJsPlayer(poster = "") {
         accumulatedSeekOffset = 0;
       }
 
-      pendingSeekTimeout = null;
+      finalizeSeekSession();
     }, 300); // Wait 300ms after last input before executing seek
   }
 
@@ -858,6 +894,9 @@ function VideoJsPlayer(poster = "") {
     player.on("seeked", () => {
       console.log("Seek completed");
       updateLastKnownPlaybackProgress();
+      isSeekSessionActive = false;
+      accumulatedSeekOffset = 0;
+      pendingSeekTimeout = null;
 
       // Auto-play after seeking regardless of previous state (as requested)
       if (
@@ -1061,7 +1100,7 @@ function VideoJsPlayer(poster = "") {
     player.on("canplay", () => {
       if (!errorActive) {
         const loadingEl = document.querySelector(".video-buffer-loader");
-        loadingEl.classList.add("hidden");
+        if (loadingEl) loadingEl.classList.add("hidden");
         if (useWebOSNativePlayer && pendingResumeTime > 0 && !resumeTimeApplied) {
           if (!applyResumeTimeToPlayback()) {
             scheduleResumeSeekRetry();
@@ -1081,7 +1120,7 @@ function VideoJsPlayer(poster = "") {
     player.on("loadeddata", () => {
       if (!errorActive) {
         const loadingEl = document.querySelector(".video-buffer-loader");
-        loadingEl.classList.add("hidden");
+        if (loadingEl) loadingEl.classList.add("hidden");
         if (useWebOSNativePlayer && pendingResumeTime > 0 && !resumeTimeApplied) {
           if (!applyResumeTimeToPlayback()) {
             scheduleResumeSeekRetry();
@@ -1097,7 +1136,7 @@ function VideoJsPlayer(poster = "") {
     player.on("canplaythrough", () => {
       if (!errorActive) {
         const loadingEl = document.querySelector(".video-buffer-loader");
-        loadingEl.classList.add("hidden");
+        if (loadingEl) loadingEl.classList.add("hidden");
         if (useWebOSNativePlayer && pendingResumeTime > 0 && !resumeTimeApplied) {
           if (!applyResumeTimeToPlayback()) {
             scheduleResumeSeekRetry();
@@ -1163,7 +1202,7 @@ function VideoJsPlayer(poster = "") {
         hasStartedPlayingOnce = true; // Mark that video has started playing
         updateLastKnownPlaybackProgress();
         const loadingEl = document.querySelector(".video-buffer-loader");
-        loadingEl.classList.add("hidden");
+        if (loadingEl) loadingEl.classList.add("hidden");
         shouldAutoPlayAfterBuffering = false;
         hideControlsWithDelay(5000); // Auto-hide controls after 5 seconds of inactivity
 
@@ -1222,6 +1261,7 @@ function VideoJsPlayer(poster = "") {
 
       errorActive = true;
 
+      const loadingEl = document.querySelector(".video-buffer-loader");
       if (loadingEl) loadingEl.classList.add("hidden");
       if (controlsBar) controlsBar.classList.add("hidden");
       if (liveBadge) liveBadge.classList.add("hidden");
