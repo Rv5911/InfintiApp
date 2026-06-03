@@ -62,7 +62,7 @@ const Router = (() => {
     },
     videoJsPlayer: {
       el: document.getElementById("videojs-player"),
-      render: VideoJsPlayer,
+      render: AvPlayer,
     },
     exitModal: {
       el: document.getElementById("exit-modal"),
