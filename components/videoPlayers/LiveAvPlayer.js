@@ -1286,6 +1286,7 @@ function LiveAvPlayer(
             }
         },
         togglePlayPause: togglePlayPause,
+        cycleAspectRatio: cycleAspectRatio,
         retry: retryPlayback,
         syncFocus: updateFocusUI,
         refreshControlsVisibility: applyControlsVisibility,
@@ -1326,8 +1327,8 @@ function LiveAvPlayer(
         channelName +
         "</span>" +
         "</div>" +
-        '<div id="live-play-pause-btn" class="av-live-pp-btn av-live-nav-btn hidden" data-id="play-pause"><i class="fa-solid fa-pause"></i></div>' +
-        '<div id="lp-fullscreen-btn" class="av-live-fs-btn av-live-nav-btn hidden" data-id="fullscreen-toggle"><i class="fa-solid fa-expand"></i></div>' +
+        '<div id="live-play-pause-btn" class="av-live-pp-btn av-live-nav-btn hidden" data-id="play-pause" onclick="if(window.livePlayer && window.livePlayer.togglePlayPause) window.livePlayer.togglePlayPause()"><i class="fa-solid fa-pause"></i></div>' +
+        '<div id="lp-fullscreen-btn" class="av-live-fs-btn av-live-nav-btn hidden" data-id="fullscreen-toggle" onclick="if(window.toggleFullscreen) window.toggleFullscreen()"><i class="fa-solid fa-expand"></i></div>' +
         '<div id="av-live-bottom-bar" class="av-live-bottom-ctrls hidden">' +
         '<div class="av-live-seek-row">' +
         '<span id="av-live-curr-time" class="av-live-t">0:00</span>' +
@@ -1335,7 +1336,7 @@ function LiveAvPlayer(
         '<span class="av-live-t">LIVE</span>' +
         "</div>" +
         '<div class="av-live-btns-row">' +
-        '<div id="lp-tizen-aspect-ratio-btn" class="av-live-opt av-live-nav-btn" data-id="ar"><i class="fa-solid fa-rectangle-list"></i> ' +
+        '<div id="lp-tizen-aspect-ratio-btn" class="av-live-opt av-live-nav-btn" data-id="ar" onclick="if(window.livePlayer && window.livePlayer.cycleAspectRatio) window.livePlayer.cycleAspectRatio()"><i class="fa-solid fa-rectangle-list"></i> ' +
         window.i18n.t("aspectRatio") +
         '</div>' +
         '<div id="lp-tizen-audio-btn" class="av-live-opt av-live-nav-btn" data-id="audio"><i class="fa-solid fa-music"></i> ' +

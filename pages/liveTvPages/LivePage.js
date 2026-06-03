@@ -138,8 +138,9 @@ function LivePage() {
     init();
   }, 0);
 
-  // Cross-browser fullscreen detection helper
   const checkIsFullscreen = () => {
+    const playerContainer = document.getElementById("lp-player-container");
+    if (playerContainer && playerContainer.classList.contains("lp-avplay-fullscreen")) return true;
     return (
       document.fullscreenElement ||
       document.webkitFullscreenElement ||
@@ -148,34 +149,50 @@ function LivePage() {
     );
   };
 
-  // Add this function after state variables, before cleanup function
   const toggleFullscreen = () => {
     const playerContainer = document.getElementById("lp-player-container");
     if (!playerContainer) return;
 
     if (!checkIsFullscreen()) {
       // Enter fullscreen
-      if (playerContainer.requestFullscreen) {
-        playerContainer.requestFullscreen();
-      } else if (playerContainer.mozRequestFullScreen) {
-        playerContainer.mozRequestFullScreen();
-      } else if (playerContainer.webkitRequestFullscreen) {
-        playerContainer.webkitRequestFullscreen(Element.ALLOW_KEYBOARD_INPUT);
-      } else if (playerContainer.msRequestFullscreen) {
-        playerContainer.msRequestFullscreen();
+      playerContainer.classList.add("lp-avplay-fullscreen");
+      const sidebar = document.querySelector(".lp-sidebar");
+      if (sidebar) sidebar.style.display = "none";
+      const header = document.querySelector(".live-header");
+      if (header) header.style.display = "none";
+      const channels = document.querySelector(".lp-channels-section");
+      if (channels) channels.style.display = "none";
+      const epg = document.querySelector(".lp-epg-container");
+      if (epg) epg.style.display = "none";
+      const topSection = document.querySelector(".lp-top-section");
+      if (topSection) {
+          topSection.style.height = "100%";
+          topSection.style.width = "100%";
       }
+      const content = document.querySelector(".lp-content");
+      if (content) content.style.padding = "0";
     } else {
       // Exit fullscreen
-      if (document.exitFullscreen) {
-        document.exitFullscreen();
-      } else if (document.mozCancelFullScreen) {
-        document.mozCancelFullScreen();
-      } else if (document.webkitExitFullscreen) {
-        document.webkitExitFullscreen();
-      } else if (document.msExitFullscreen) {
-        document.msExitFullscreen();
+      playerContainer.classList.remove("lp-avplay-fullscreen");
+      const sidebar = document.querySelector(".lp-sidebar");
+      if (sidebar) sidebar.style.display = "";
+      const header = document.querySelector(".live-header");
+      if (header) header.style.display = "";
+      const channels = document.querySelector(".lp-channels-section");
+      if (channels) channels.style.display = "";
+      const epg = document.querySelector(".lp-epg-container");
+      if (epg) epg.style.display = "";
+      const topSection = document.querySelector(".lp-top-section");
+      if (topSection) {
+          topSection.style.height = "";
+          topSection.style.width = "";
       }
+      const content = document.querySelector(".lp-content");
+      if (content) content.style.padding = "";
     }
+    const evt = document.createEvent("Event");
+    evt.initEvent("lp-avplay-fullscreen-toggle", true, true);
+    document.dispatchEvent(evt);
   };
 
   const cleanup = () => {
@@ -258,6 +275,7 @@ function LivePage() {
 
     localStorage.setItem("navigationFocus", "liveTvPage");
     window.cleanupLivePage = cleanup;
+    window.toggleFullscreen = toggleFullscreen;
     // Listen for focus changes from Navbar
     window.addEventListener(
       "navigation-focus-change",
@@ -1032,7 +1050,8 @@ function LivePage() {
           document.getElementById("live-play-pause-btn");
         const aspectRatioBtn =
           document.getElementById("videojs-aspect-ratio") ||
-          document.getElementById("flow-aspect-ratio");
+          document.getElementById("flow-aspect-ratio") ||
+          document.getElementById("lp-tizen-aspect-ratio-btn");
         const fullscreenBtn = document.getElementById("lp-fullscreen-btn");
 
         // Check if video is actually playing
@@ -1083,6 +1102,7 @@ function LivePage() {
             if (fullscreenBtn) {
               const icon = fullscreenBtn.querySelector(".lp-fullscreen-icon");
               if (icon) icon.classList.add("lp-control-focused");
+              else fullscreenBtn.classList.add("lp-control-focused");
             }
           }
 
@@ -1100,7 +1120,8 @@ function LivePage() {
         document.getElementById("live-play-pause-btn");
       const aspectRatioBtn =
         document.getElementById("videojs-aspect-ratio") ||
-        document.getElementById("flow-aspect-ratio");
+        document.getElementById("flow-aspect-ratio") ||
+        document.getElementById("lp-tizen-aspect-ratio-btn");
       const fullscreenBtn = document.getElementById("lp-fullscreen-btn");
 
       if (playPauseIcon) playPauseIcon.style.display = "none";
@@ -1267,23 +1288,8 @@ function LivePage() {
           window.livePlayer = null;
         }
 
-        const currentPlaylist = getCurrentPlaylist();
-        const isTs =
-          (currentPlaylist.streamFormat
-            ? currentPlaylist.streamFormat
-            : ""
-          ).toLowerCase() === "ts";
-
-        if (isTs && typeof FlowLivePlayerComponent === "function") {
-          videoWrapper.innerHTML = FlowLivePlayerComponent(
-            stream.stream_id,
-            liveVideoUrl,
-            stream.stream_icon,
-            "100%",
-            stream.name || "",
-          );
-        } else if (typeof LiveVideoJsComponent === "function") {
-          videoWrapper.innerHTML = LiveVideoJsComponent(
+        if (typeof LiveAvPlayer === "function") {
+          videoWrapper.innerHTML = LiveAvPlayer(
             stream.stream_id,
             liveVideoUrl,
             stream.stream_icon,
@@ -1740,16 +1746,8 @@ function LivePage() {
         e.preventDefault();
         e.stopImmediatePropagation();
 
-        // Cross-browser exit fullscreen
-        if (document.exitFullscreen) {
-          document.exitFullscreen();
-        } else if (document.webkitExitFullscreen) {
-          document.webkitExitFullscreen();
-        } else if (document.mozCancelFullScreen) {
-          document.mozCancelFullScreen();
-        } else if (document.msExitFullscreen) {
-          document.msExitFullscreen();
-        }
+        // Exit avplay fullscreen
+        toggleFullscreen();
         return;
       } else {
         // Not in fullscreen, navigate to dashboard
@@ -2382,7 +2380,8 @@ function LivePage() {
           // Aspect Ratio focused - Click it
           const btn =
             document.getElementById("videojs-aspect-ratio") ||
-            document.getElementById("flow-aspect-ratio");
+            document.getElementById("flow-aspect-ratio") ||
+            document.getElementById("lp-tizen-aspect-ratio-btn");
           if (btn) btn.click();
         }
       }
