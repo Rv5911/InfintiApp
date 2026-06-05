@@ -1,4 +1,21 @@
-window.onload = function () {
+const SPLASH_DURATION_MS = 5000;
+const splashStartedAt = Date.now();
+
+showSplashScreenWhenReady();
+startAppWhenReady();
+
+function startAppWhenReady() {
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", initApp, {
+      once: true,
+    });
+    return;
+  }
+
+  initApp();
+}
+
+function initApp() {
   // Movies Data Save
   window.moviesCategories = [];
   window.allMoviesStreams = [];
@@ -10,10 +27,6 @@ window.onload = function () {
   // Live Data Save
   window.allLiveStreams = [];
   window.liveCategories = [];
-let isWebos =
-  typeof window !== "undefined" &&
-  (typeof window.webOS !== "undefined" ||
-   typeof window.PalmSystem !== "undefined");
   //  Register remote keys (Tizen TV)
   // if (typeof tizen !== "undefined" && tizen.tvinputdevice) {
   //   const keys = tizen.tvinputdevice.getSupportedKeys();
@@ -46,10 +59,10 @@ let isWebos =
   } else {
     selectedPlaylistData = null;
   }
-if(!isWebos){
-
-  showSplashScreen();
-}
+  const splashRemainingTime = Math.max(
+    SPLASH_DURATION_MS - (Date.now() - splashStartedAt),
+    0
+  );
 
   setTimeout(() => {
     const isLogin = localStorage.getItem("isLogin") === "true";
@@ -64,7 +77,7 @@ if(!isWebos){
     }
 
     // Router.showPage("dashboard");
-  }, isWebos? 0 : 5000);
+  }, splashRemainingTime);
 
   if (typeof logAllDnsEntries === "function") {
     logAllDnsEntries();
@@ -73,10 +86,23 @@ if(!isWebos){
   if (typeof getTmbdId === "function") {
     getTmbdId();
   }
-};
+}
+
+function showSplashScreenWhenReady() {
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", showSplashScreen, {
+      once: true,
+    });
+    return;
+  }
+
+  showSplashScreen();
+}
 
 function showSplashScreen() {
   const splashPage = document.getElementById("splash-page");
+  if (!splashPage) return;
+
   splashPage.innerHTML = `
     <div class="splash-page-container" style="background-image: url('splash-screen.jpg');">
 
