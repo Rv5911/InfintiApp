@@ -1,0 +1,13 @@
+{
+  "id": "com.infinti.app",
+  "version": "1.0.0",
+  "vendor": "My Company",
+  "type": "web",
+  "main": "index.html",
+  "title": "InfintiApp",
+  "icon": "app-icon.png",
+  "largeIcon": "app-icon.png",
+      "disableBackHistoryAPI" : true,
+          "splashBackground": "splash-screen.jpg",
+   "resolution": "1920x1080"
+}

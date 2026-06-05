@@ -1,0 +1,19 @@
+.prelogin-page-container {
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  animation: fadeInOut 1s ease-in-out;
+  background-size: cover;
+  background-position: center;
+  position: fixed;
+  background-image: url("../assets/bg-img.png");
+}
+
+.prelogin-logo {
+  width: 300px;
+  height: 300px;
+  zoom: 2;
+  object-fit: contain;
+}

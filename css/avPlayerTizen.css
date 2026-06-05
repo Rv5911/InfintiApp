@@ -1,0 +1,497 @@
+/* Import app theme variables */
+:root {
+    --gold: #ffd700;
+    --dark-gold: #fdbd0f;
+    --app-blue: #60aaf8;
+    --app-gradient: #60aaf8;
+    --light-gradient: #60aaf8;
+}
+
+#avplay-container {
+    background: black !important;
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 1000;
+}
+
+#avplay-object {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 10;
+}
+
+.av-buffer-loader {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.7);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    gap: 16px;
+    zoom: 1.5;
+    font-size: 20px;
+    color: white;
+    z-index: 50;
+}
+
+.av-buffer-loader.hidden {
+    display: none !important;
+}
+
+.av-buffer-loader .spinner {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    background: conic-gradient(from 0deg, #5AB3F4, #B752E6, transparent 70%);
+    -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 3px), #000 0);
+    mask: radial-gradient(farthest-side, transparent calc(100% - 3px), #000 0);
+    animation: av-spin 0.8s linear infinite;
+}
+
+@keyframes av-spin {
+    0% {
+        transform: rotate(0deg);
+    }
+
+    100% {
+        transform: rotate(360deg);
+    }
+}
+
+/* Title Bar */
+.av-title-bar {
+    position: absolute;
+    top: 10px;
+    left: 15px;
+    zoom: 2.5;
+    right: 15px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 40;
+    padding: 6px 10px;
+    border-radius: 6px;
+    max-width: calc(100% - 30px);
+}
+
+.av-title-bar.hidden {
+    display: none !important;
+}
+
+.av-title-text {
+    font-size: 16px;
+    font-weight: 600;
+    color: white;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: block;
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
+}
+
+/* Controls Styles */
+.av-controls {
+    position: absolute;
+    bottom: 30px;
+    width: 90%;
+    left: 50%;
+    zoom: 1.8;
+    transform: translateX(-50%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 15px;
+    padding: 20px;
+    border-radius: 12px;
+    z-index: 45;
+    background: linear-gradient(to top, rgba(0, 0, 0, 0.9), rgba(0, 0, 0, 0.5));
+}
+
+.av-controls.hidden {
+    display: none !important;
+}
+
+.av-seek-bar-container {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    gap: 15px;
+}
+
+.av-time-display {
+    color: white;
+    font-size: 14px;
+    font-weight: bold;
+    min-width: 60px;
+    text-align: center;
+    background: rgba(255, 255, 255, 0.1);
+    padding: 4px 10px;
+    border-radius: 6px;
+}
+
+.av-seek-bar {
+    flex: 1;
+    height: 8px;
+    border-radius: 4px;
+    appearance: none;
+    background: #444;
+    outline: none;
+    cursor: pointer;
+}
+
+.av-seek-bar::-webkit-slider-thumb {
+    appearance: none;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: white;
+    border: 3px solid #3498db;
+    cursor: pointer;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+}
+
+.av-seek-bar.focused {
+    outline: 3px solid var(--gold);
+    background: #555;
+}
+
+.av-seek-bar.focused::-webkit-slider-thumb {
+    transform: scale(1.3);
+    border-color: var(--gold);
+    background: var(--app-blue);
+}
+
+/* Buttons Container */
+.av-buttons-row {
+    display: flex;
+    gap: 50px;
+    /* Increased gap further */
+    justify-content: center;
+    width: 100%;
+}
+
+.av-control-btn {
+    background: rgba(255, 255, 255, 0.1);
+    border: 2px solid transparent;
+    color: white;
+    padding: 12px 30px;
+    border-radius: 12px;
+    font-size: 20px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    cursor: pointer;
+}
+
+#av-ar-btn,
+#av-audio-btn {
+    margin-right: 20px;
+    /* Specific margin as requested */
+}
+
+.av-control-btn i {
+    font-size: 24px;
+    /* Increased icon size */
+}
+
+.av-control-btn.focused {
+    background: var(--app-gradient);
+    /* Use requested gradient */
+    border-color: white;
+    transform: scale(1.1);
+    box-shadow: 0 0 20px rgba(255, 255, 255, 0.3);
+}
+
+/* Overlays */
+.av-action-overlay {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 48;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.av-action-overlay.center {
+    left: 50%;
+    transform: translate(-50%, -50%);
+}
+
+.av-action-overlay.left {
+    left: 25%;
+    transform: translate(-50%, -50%);
+}
+
+.av-action-overlay.right {
+    left: 75%;
+    transform: translate(-50%, -50%);
+}
+
+.av-action-overlay.hidden {
+    display: none !important;
+}
+
+.av-action-icon {
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background: rgba(0, 0, 0, 0.5);
+    color: white;
+    font-size: 60px;
+    border: 3px solid transparent;
+    zoom: 1.2;
+}
+
+.av-action-overlay.center.focused .av-action-icon {
+    border-color: white;
+    background: var(--app-gradient);
+    /* Use requested gradient */
+}
+
+/* Aspect Ratio Overlay */
+.av-aspect-overlay {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: rgba(0, 0, 0, 0.8);
+    color: white;
+    padding: 20px 40px;
+    font-size: 24px;
+    border-radius: 10px;
+    z-index: 100;
+    display: none;
+    border: 2px solid #3498db;
+}
+
+.av-aspect-overlay.show {
+    display: block;
+    animation: aspectFadeInOut 2s forwards;
+}
+
+@keyframes aspectFadeInOut {
+    0% {
+        opacity: 0;
+    }
+
+    20% {
+        opacity: 1;
+    }
+
+    80% {
+        opacity: 1;
+    }
+
+    100% {
+        opacity: 0;
+    }
+}
+/* Sidebar Base — shared by both audio and subtitle panels */
+.av-sidebar {
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 28%;
+    height: 100%;
+    z-index: 2000;
+    display: none; /* Hidden by default */
+    flex-direction: column;
+    padding: 20px;
+    box-sizing: border-box;
+    background-clip: padding-box;
+    transition: transform 0.3s ease-in-out;
+    overflow: hidden;
+    pointer-events: none;
+    will-change: transform;
+    box-shadow: none;
+    transform: translate3d(100%, 0, 0);
+}
+.av-sidebar.open {
+    display: flex; /* Show when open class is added */
+    transform: translate3d(0, 0, 0);
+    pointer-events: auto;
+}
+
+/* Audio Sidebar — slides in from RIGHT */
+.av-audio-sidebar {
+    background: black;
+    /* border-left: 2px solid var(--gold); */
+}
+
+/* Subtitle Sidebar — slides in from RIGHT */
+.av-subtitle-sidebar {
+    background: black;
+}
+
+.av-sidebar-title {
+    color: white;
+    font-size: 28px;
+    margin-bottom: 25px;
+    border-bottom: 2px solid var(--gold);
+    padding-bottom: 10px;
+}
+
+/* Audio sidebar: gold accent */
+.av-audio-sidebar .av-sidebar-title {
+    border-bottom-color: var(--gold);
+}
+
+/* Subtitle sidebar: gold accent */
+.av-subtitle-sidebar .av-sidebar-title {
+    border-bottom-color: var(--gold);
+}
+
+
+.av-sidebar-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    overflow-y: auto;
+}
+
+.av-sidebar-item {
+    color: white;
+    font-size: 20px;
+    padding: 12px 20px;
+    border-radius: 8px;
+    cursor: pointer;
+    background: transparent;
+    border: 2px solid transparent;
+    transition: all 0.2s ease;
+}
+
+.av-sidebar-item.focused {
+    background: #d0d0d0;
+    border-color: transparent;
+    transform: scale(1.02);
+    color: black;
+}
+
+.av-sidebar-item.active {
+    color: white;
+    font-weight: bold;
+    background: rgba(255, 255, 255, 0.15);
+    border-color: transparent;
+}
+
+/* Audio sidebar: blue/gold accent - focused state */
+.av-audio-sidebar .av-sidebar-item.focused {
+    background: #d0d0d0;
+    border-color: transparent;
+    color: black;
+}
+
+/* Audio sidebar: blue/gold accent - active/selected state */
+.av-audio-sidebar .av-sidebar-item.active {
+    color: white;
+    font-weight: bold;
+    background: rgba(255, 255, 255, 0.15);
+    border-color: transparent;
+}
+
+/* Subtitle sidebar: purple/gold accent - focused state */
+.av-subtitle-sidebar .av-sidebar-item.focused {
+    background: #d0d0d0;
+    border-color: transparent;
+    color: black;
+}
+
+/* Subtitle sidebar: purple/gold accent - active/selected state */
+.av-subtitle-sidebar .av-sidebar-item.active {
+    color: white;
+    font-weight: bold;
+    background: rgba(255, 255, 255, 0.15);
+    border-color: transparent;
+}
+
+.av-error-display {
+    text-align: center;
+    padding: 30px;
+    background: rgba(44, 62, 80, 0.9);
+    border-radius: 15px;
+    border: 2px solid #e74c3c;
+    box-shadow: 0 0 30px rgba(0, 0, 0, 0.5);
+    max-width: 80%;
+}
+
+.av-error-icon {
+    font-size: 80px;
+    margin-bottom: 20px;
+}
+
+.av-error-display h3 {
+    font-size: 32px;
+    margin-bottom: 15px;
+    color: #e74c3c;
+    margin-top: 0;
+}
+
+.av-error-display p {
+    font-size: 20px;
+    margin: 5px 0;
+}
+
+.av-retry-btn {
+    margin-top: 25px;
+    padding: 12px 40px;
+    background: var(--app-gradient);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 20px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    outline: none;
+    display: inline-block;
+}
+
+.av-retry-btn.focused {
+    background: white !important;
+    color: var(--app-blue) !important;
+    box-shadow: 0 0 15px rgba(255, 215, 0, 0.4);
+    transform: scale(1.1);
+}
+
+
+.av-subtitle-display {
+    position: absolute;
+    bottom: 160px; /* Slightly higher to ensure clearance */
+    left: 0;
+    width: 100%;
+    text-align: center;
+    color: white;
+    font-size: 42px;
+    font-weight: 700;
+    line-height: 1.4;
+    padding: 0 80px;
+    box-sizing: border-box;
+    text-shadow:
+        3px  3px 0 #000,
+       -3px -3px 0 #000,
+        3px -3px 0 #000,
+       -3px  3px 0 #000,
+        3px  0   0 #000,
+       -3px  0   0 #000,
+        0    3px 0 #000,
+        0   -3px 0 #000;
+    z-index: 5000; /* Higher than sidebar (2000) */
+    pointer-events: none;
+    display: none;
+    visibility: visible;
+    opacity: 1;
+}
