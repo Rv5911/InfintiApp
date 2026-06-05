@@ -1281,7 +1281,7 @@ function LivePage() {
     if (videoWrapper) {
       videoWrapper.innerHTML = `
         <div style="width:100%; height:100%; background:black; display:flex; align-items:center; justify-content:center; flex-direction:column; color:#fff;">
-          <i class="fas fa-spinner fa-spin" style="font-size: 50px; margin-bottom:10px;"></i>
+          <i class="fas fa-spinner fa-spin" style="font-size: 50px; margin-bottom:10px; color:#2daae3;"></i>
           <p>Loading channel...</p>
         </div>
       `;

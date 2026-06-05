@@ -315,13 +315,17 @@ function LiveAvPlayer(
     function makeParentsTransparent(el) {
         var current = el;
         while (current) {
+            if (
+                current === document.body ||
+                current === document.documentElement ||
+                (current.classList && current.classList.contains("lp-main-container"))
+            ) {
+                break;
+            }
             current.style.backgroundColor = "transparent";
             current.style.backgroundImage = "none";
-            if (current === document.documentElement) break;
             current = current.parentElement;
         }
-        document.documentElement.style.backgroundColor = "transparent";
-        document.body.style.backgroundColor = "transparent";
     }
 
     var arIndex = 0; // 0: 16:9, 1: 4:3, 2: 2.35:1
