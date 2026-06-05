@@ -6,7 +6,7 @@
 }
 
 :root {
-    --gold: #2daae3;
+    --gold: #2daae3 !important;
     --dark-panel: rgba(7, 12, 12, 0.85);
     --panel-border: rgba(255, 255, 255, 0.04);
     --card-bg: rgba(0, 0, 0, 0.45);

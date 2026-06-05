@@ -817,7 +817,7 @@ function VideoJsPlayer(poster = "") {
             }
           : {
               src:
-                srcUrl || "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8",
+                srcUrl ,
               type: srcUrl.endsWith(".m3u8")
                 ? "application/x-mpegURL"
                 : "video/mp4",

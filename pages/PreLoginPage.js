@@ -18,7 +18,10 @@ function PreLoginPage() {
                 selectedPlaylist.playlistUrl
             ).then((response) => {
                 const res = response;
-            });
+            }).catch(()=>{
+                      localStorage.setItem("currentPage", "loginPage");
+      Router.showPage("login");
+            })
         }
 
         // Block all keys while on PreLoginPage
