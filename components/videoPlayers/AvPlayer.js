@@ -3,6 +3,8 @@ function AvPlayer() {
         window.selectedVideoItemUrl ||
         localStorage.getItem("selectedVideoItemUrl") ||
         "";
+    var isYouTube =
+        srcUrl.indexOf("youtube.com") !== -1 || srcUrl.indexOf("youtu.be") !== -1;
 
     var previousCleanup = AvPlayer.cleanup;
     if (previousCleanup) {
@@ -24,7 +26,7 @@ function AvPlayer() {
         } catch (e) {}
     }
     var titleText =
-        playingItemData.title || playingItemData.name || window.i18n.t("videoPlayer");
+        playingItemData.title || playingItemData.name || "Video Player";
 
     function makeParentsTransparent(el) {
         var current = el;
@@ -42,8 +44,10 @@ function AvPlayer() {
         typeof getCurrentPlaylist === "function" ? getCurrentPlaylist() : null;
     var currentPlaylistName = cp ? cp.playlistName : "";
     var isLive = localStorage.getItem("isLive") === "true";
+    var backKeysCodes = [10009, 461, 8, 27, 10079, 100079];
 
     var avplay = null;
+    var player = null;
     var controlsHideTimeout = null;
     var overlayTimeout = null;
     var errorActive = false;
@@ -53,14 +57,19 @@ function AvPlayer() {
     var isPlayPauseFocused = true;
     var isSeekBarFocused = false;
     var isAspectRatioFocused = false;
-    var isAudioFocused = false;
-    var isSubtitleFocused = false;
 
     // Seeking variables
     var accumulatedSeekOffset = 0;
     var pendingSeekTimeout = null;
     var wasPlayingBeforeSeek = false;
     var hasStartedPlayingOnce = false;
+
+    // Resume time variables
+    var pendingResumeTimeMs = 0;
+    var targetResumeTimeMs = 0;
+    var isInitialResumePending = false;
+    var resumeTimeApplied = false;
+    var resumeSeekRetryTimeout = null;
 
     // Sidebar states
     var isSidebarOpen = false;
@@ -140,82 +149,6 @@ function AvPlayer() {
         return -1;
     }
 
-    function getCurrentAudioStreamIndex() {
-        if (!avplay) return -1;
-
-        try {
-            var currentStreamInfo = avplay.getCurrentStreamInfo() || [];
-            for (var i = 0; i < currentStreamInfo.length; i++) {
-                if (currentStreamInfo[i].type === "AUDIO") {
-                    return parseInt(currentStreamInfo[i].index, 10);
-                }
-            }
-        } catch (e) {}
-
-        return -1;
-    }
-
-    function applyAudioTrackSelection(track, trackArrayPos) {
-        if (!avplay || !track) return false;
-
-        var audioType = track.type === "AUDIO" ? "AUDIO" : track.type;
-        var expectedGlobalIndex = parseInt(track.index, 10);
-        var relativeIndex = trackArrayPos;
-        var attempts = [];
-
-        function addAttempt(value) {
-            if (value === null || typeof value === "undefined") return;
-            var parsed = parseInt(value, 10);
-            if (isNaN(parsed) || parsed < 0) return;
-            for (var i = 0; i < attempts.length; i++) {
-                if (attempts[i] === parsed) return;
-            }
-            attempts.push(parsed);
-        }
-
-        addAttempt(expectedGlobalIndex);
-        addAttempt(relativeIndex);
-        addAttempt(trackArrayPos);
-
-        var attemptPos = 0;
-
-        function tryNextAttempt() {
-            if (attemptPos >= attempts.length) {
-                selectedAudioTrackIndex = -1;
-                return false;
-            }
-
-            var apiIndex = attempts[attemptPos++];
-            try {
-                avplay.setSelectTrack(audioType, apiIndex);
-            } catch (e1) {
-                try {
-                    if (typeof avplay.selectTrack === "function") {
-                        avplay.selectTrack(audioType, apiIndex);
-                    } else {
-                        return tryNextAttempt();
-                    }
-                } catch (e2) {
-                    return tryNextAttempt();
-                }
-            }
-
-            selectedAudioTrackIndex = expectedGlobalIndex;
-            setTimeout(function() {
-                var activeIndex = getCurrentAudioStreamIndex();
-                if (activeIndex === expectedGlobalIndex) {
-                    selectedAudioTrackIndex = activeIndex;
-                } else {
-                    tryNextAttempt();
-                }
-            }, 150);
-
-            return true;
-        }
-
-        return tryNextAttempt();
-    }
-
     // Formatter
     function formatTime(ms) {
         if (!ms || isNaN(ms)) return "0:00:00";
@@ -237,6 +170,124 @@ function AvPlayer() {
         } else {
             return mins + ":" + (secs < 10 ? "0" : "") + secs;
         }
+    }
+
+    function isBackNavigationKey(e) {
+        var keyCode = e && (e.keyCode || e.which);
+        if (backKeysCodes.indexOf(keyCode) !== -1) return true;
+        if (typeof isBackKey === "function") {
+            return isBackKey(e);
+        }
+        return false;
+    }
+
+    function syncPlayerAdapter() {
+        if (!avplay) {
+            player = null;
+            return;
+        }
+
+        player = {
+            paused: function() {
+                try {
+                    return avplay.getState() !== "PLAYING";
+                } catch (e) {
+                    return true;
+                }
+            },
+            play: function() {
+                return avplay.play();
+            },
+            pause: function() {
+                return avplay.pause();
+            },
+            currentTime: function() {
+                return avplay.getCurrentTime();
+            },
+            duration: function() {
+                return avplay.getDuration();
+            },
+            seekTo: function(ms) {
+                return avplay.seekTo(ms);
+            },
+            getState: function() {
+                return avplay.getState();
+            },
+            dispose: function() {
+                try {
+                    avplay.stop();
+                } catch (e) {}
+                try {
+                    avplay.close();
+                } catch (e) {}
+            },
+        };
+    }
+
+    function clearResumeSeekRetry() {
+        if (resumeSeekRetryTimeout) {
+            clearTimeout(resumeSeekRetryTimeout);
+            resumeSeekRetryTimeout = null;
+        }
+    }
+
+    function applyResumeTimeToPlayback() {
+        if (!pendingResumeTimeMs || resumeTimeApplied || errorActive || !avplay) return false;
+
+        try {
+            var duration = avplay.getDuration();
+            if (pendingResumeTimeMs > 0 && pendingResumeTimeMs < duration) {
+                avplay.seekTo(pendingResumeTimeMs);
+                // console.log("[AvPlayer] Resume seek applied:", pendingResumeTimeMs, "ms");
+                pendingResumeTimeMs = 0;
+                resumeTimeApplied = true;
+                clearResumeSeekRetry();
+                return true;
+            }
+        } catch (e) {
+            console.warn("[AvPlayer] Resume seek application failed:", e);
+        }
+        return false;
+    }
+
+    function scheduleResumeSeekRetry() {
+        if (!pendingResumeTimeMs || resumeTimeApplied || errorActive || !avplay) return;
+
+        clearResumeSeekRetry();
+        resumeSeekRetryTimeout = setTimeout(function() {
+            if (!applyResumeTimeToPlayback()) {
+                var state = "UNKNOWN";
+                try { state = avplay.getState(); } catch (e) {}
+                // console.log("[AvPlayer] Resume retry - state:", state, "pending:", pendingResumeTimeMs);
+                if (state === "PLAYING" || state === "READY" || state === "PAUSED") {
+                    scheduleResumeSeekRetry();
+                }
+            }
+        }, 300);
+    }
+
+    function getPlaybackProgress() {
+        var currentTime = 0;
+        var duration = 0;
+
+        try {
+            if (avplay) {
+                currentTime = Number(avplay.getCurrentTime());
+                duration = Number(avplay.getDuration());
+            } else if (player) {
+                if (typeof player.currentTime === "function") {
+                    currentTime = Number(player.currentTime());
+                }
+                if (typeof player.duration === "function") {
+                    duration = Number(player.duration());
+                }
+            }
+        } catch (e) {}
+
+        return {
+            currentTime: isNaN(currentTime) ? 0 : currentTime,
+            duration: isNaN(duration) ? 0 : duration,
+        };
     }
 
     function showFatalError(message) {
@@ -262,9 +313,9 @@ function AvPlayer() {
             loader.innerHTML =
                 '<div class="av-error-display">' +
                 '<div class="av-error-icon">\u26a0\ufe0f</div>' +
-                "<h3>Playback Error</h3>" +
+                "<h3></h3>" +
                 "<p>" +
-                (message || "An unknown error occurred.") +
+                ( "Something went wrong. Please try again") +
                 "</p>" +
                 '<div id="av-retry-btn" class="av-retry-btn focused">RETRY</div>' +
                 '<p style="font-size: 16px; margin-top: 14px; opacity: 0.65;">Press \u2190 BACK to exit</p>' +
@@ -273,10 +324,17 @@ function AvPlayer() {
     }
 
     function retryPlayback() {
-        console.log("RETRYING PLAYBACK...");
+        // console.log("RETRYING PLAYBACK...");
         errorActive = false;
         isErrorRetryFocused = false;
         isLoading = true;
+
+        // Reset resume time state
+        clearResumeSeekRetry();
+        pendingResumeTimeMs = 0;
+        targetResumeTimeMs = 0;
+        isInitialResumePending = false;
+        resumeTimeApplied = false;
 
         // Reset loader UI
         var loader = document.getElementById("avplay-loader");
@@ -440,28 +498,10 @@ function AvPlayer() {
         showControls();
     }
 
-    function focusAudio() {
-        unfocusAll();
-        isAudioFocused = true;
-        var btn = document.getElementById("av-audio-btn");
-        if (btn) btn.classList.add("focused");
-        showControls();
-    }
-
-    function focusSubtitle() {
-        unfocusAll();
-        isSubtitleFocused = true;
-        var btn = document.getElementById("av-subtitle-btn");
-        if (btn) btn.classList.add("focused");
-        showControls();
-    }
-
     function unfocusAll() {
         isPlayPauseFocused = false;
         isSeekBarFocused = false;
         isAspectRatioFocused = false;
-        isAudioFocused = false;
-        isSubtitleFocused = false;
 
         var focusedEls = document.querySelectorAll(".focused");
         for (var i = 0; i < focusedEls.length; i++) {
@@ -715,10 +755,7 @@ function AvPlayer() {
         var rawTracks = sidebarType === "audio" ? audioTracks : subtitleTracks;
         var tracks = sidebarType === "subtitle" ? getDeduplicatedTracks(rawTracks) : rawTracks;
 
-        var sidebarHeader =
-            sidebarType === "audio"
-                ? "🎵 " + window.i18n.t("audio")
-                : "💬 " + window.i18n.t("subtitles");
+        var sidebarHeader = sidebarType === "audio" ? "🎵 Audio" : "💬 Subtitles";
         var html = '<div class="av-sidebar-title">' + sidebarHeader + "</div>";
         html += '<div class="av-sidebar-list" id="av-sidebar-scroll-list">';
 
@@ -728,15 +765,13 @@ function AvPlayer() {
                 '<div class="av-sidebar-item' +
                 (isOffActive ? " active" : "") +
                 (sidebarFocusIndex === 0 ? " focused" : "") +
-                '" data-index="-1">' +
-                window.i18n.t("off") +
-                "</div>";
+                '" data-index="-1">Off</div>';
         }
 
         if (tracks.length === 0) {
             // Show a non-interactive loading row — no toast, no hard stop
             html +=
-                '<div class="av-sidebar-item" style="opacity:0.5;">Fetching tracks…</div>';
+                '<div class="av-sidebar-item" style="opacity:0.5;">No Data Available</div>';
         } else {
             for (var i = 0; i < tracks.length; i++) {
                 var track = tracks[i];
@@ -815,10 +850,6 @@ function AvPlayer() {
             var timeoutRef = sidebarOpenTimeout;
             sidebarOpenTimeout = null;
             if (isDestroyed) return; // Player already exited ��� do NOT show any toast
-            if (audioTracks.length === 0) {
-                if (Toaster) Toaster.showToast("error", window.i18n.t("noAudioTracksFound"));
-                return;
-            }
 
             // Sync with native player to detect natively active audio track
             if (
@@ -839,6 +870,13 @@ function AvPlayer() {
                 } catch (e) {
                     console.warn("Could not sync native audio track", e);
                 }
+            }
+
+            if (audioTracks.length === 0) {
+                if (typeof Toaster !== "undefined" && Toaster) {
+                    Toaster.showToast("error", "No Audio tracks found");
+                }
+                return;
             }
 
             isSidebarOpen = true;
@@ -865,22 +903,23 @@ function AvPlayer() {
         // Fetch tracks first
         fetchTrackInfo();
 
-        // Check for subtitle tracks and open sidebar
+        // Open sidebar even if tracks are empty — renderSidebar handles the loading state
         sidebarOpenTimeout = setTimeout(function() {
             var timeoutRef = sidebarOpenTimeout;
             sidebarOpenTimeout = null;
-            var dedupedTracks = getDeduplicatedTracks(subtitleTracks);
-            if (dedupedTracks.length === 0) {
-                if (Toaster) Toaster.showToast("error", window.i18n.t("noSubtitlesFound"));
-                return;
-            }
             if (isDestroyed) return; 
        
-            // Subtitles default to OFF — no auto-sync with native player.
-            // User must manually select a track from the sidebar.
+            var dedupedTracks = getDeduplicatedTracks(subtitleTracks);
+            if (dedupedTracks.length === 0) {
+                if (typeof Toaster !== "undefined" && Toaster) {
+                    Toaster.showToast("error", "No Subtitle tracks found");
+                }
+                return;
+            }
 
             isSidebarOpen = true;
             sidebarType = "subtitle";
+
             // Focus on currently selected track instead of always focusing "Off"
             var currentPos = getSubtitleArrayPos(dedupedTracks);
             sidebarFocusIndex = currentPos === -1 ? 0 : currentPos + 1;
@@ -906,8 +945,7 @@ function AvPlayer() {
         //   • User picks a track → setSilentSubtitle(false) + setSelectTrack → subtitles ON
         //   • User picks Off     → setSilentSubtitle(true)                  → subtitles OFF
         // Opening/closing the sidebar must never interfere with that state.
-        if (sidebarType === "audio") focusAudio();
-        else focusSubtitle();
+        focusAspectRatio();
     }
 
     function selectTrackFromSidebar() {
@@ -922,9 +960,9 @@ function AvPlayer() {
             selectedSubtitleTrackIndex = -1;
             // Toast hidden as requested
             // if (Toaster) Toaster.showToast("info", "Subtitles: OFF");
-            console.log(
-                "SUBTITLE OFF — calling setSilentSubtitle(true) to hide native subtitles",
-            );
+            // console.log(
+            //     "SUBTITLE OFF — calling setSilentSubtitle(true) to hide native subtitles",
+            // );
 
             // Clear the subtitle overlay immediately
             var subtitleDisplay = document.getElementById("av-subtitle-display");
@@ -952,7 +990,7 @@ function AvPlayer() {
                     tracks,
                 );
                 if (Toaster)
-                    Toaster.showToast("error", window.i18n.t("noTrackFoundForThisSelection"));
+                    Toaster.showToast("error", "No track found for this selection");
                 closeSidebar();
                 return;
             }
@@ -977,16 +1015,16 @@ function AvPlayer() {
                 selectedAudioTrackIndex = avplayGlobalIndex;
             }
 
-            console.log(
-                "SELECTING TRACK — capturedSidebarType:",
-                capturedSidebarType,
-                "reportedType:",
-                reportedType,
-                "globalIndex:",
-                avplayGlobalIndex,
-                "name:",
-                name,
-            );
+            // console.log(
+            //     "SELECTING TRACK — capturedSidebarType:",
+            //     capturedSidebarType,
+            //     "reportedType:",
+            //     reportedType,
+            //     "globalIndex:",
+            //     avplayGlobalIndex,
+            //     "name:",
+            //     name,
+            // );
 
             // ── AVPLAY API CALL ──────────────────────────────────────────────────────────
             // Use an IIFE to capture all values in their own scope — closeSidebar() runs
@@ -995,7 +1033,7 @@ function AvPlayer() {
                 setTimeout(function() {
                     try {
                         var playerState = avplay ? avplay.getState() : "NONE";
-                        console.log("Player state before setSelectTrack:", playerState);
+                        // console.log("Player state before setSelectTrack:", playerState);
 
                         if (playerState !== "PLAYING" && playerState !== "PAUSED") {
                             console.warn(
@@ -1005,8 +1043,7 @@ function AvPlayer() {
                             if (Toaster)
                                 Toaster.showToast(
                                     "error",
-                                    window.i18n.t("playerNotReadyToSwitchTrack") +
-                                    " (" +
+                                    "Cannot switch track — player not ready (" +
                                     playerState +
                                     ")",
                                 );
@@ -1031,26 +1068,26 @@ function AvPlayer() {
                                     break;
                                 }
                             }
-                            console.log(
-                                "Subtitle — globalIndex:",
-                                gIdx,
-                                "typedRelativeIndex:",
-                                typedRelativeIndex,
-                                "mixedRelativeIndex:",
-                                mixedRelativeIndex,
-                            );
+                            // console.log(
+                            //     "Subtitle — globalIndex:",
+                            //     gIdx,
+                            //     "typedRelativeIndex:",
+                            //     typedRelativeIndex,
+                            //     "mixedRelativeIndex:",
+                            //     mixedRelativeIndex,
+                            // );
 
                             var success = false;
 
                             // 1. Try global index first (Correct for Tizen 5.0+)
                             try {
                                 avplay.setSelectTrack(primaryType, gIdx);
-                                console.log(
-                                    "setSelectTrack OK: type=" +
-                                    primaryType +
-                                    " globalIdx=" +
-                                    gIdx,
-                                );
+                                // console.log(
+                                //     "setSelectTrack OK: type=" +
+                                //     primaryType +
+                                //     " globalIdx=" +
+                                //     gIdx,
+                                // );
                                 success = true;
                             } catch (e1) {
                                 console.log(
@@ -1063,12 +1100,12 @@ function AvPlayer() {
                                 try {
                                     if (typedRelativeIndex !== -1) {
                                         avplay.setSelectTrack(primaryType, typedRelativeIndex);
-                                        console.log(
-                                            "setSelectTrack OK: type=" +
-                                            primaryType +
-                                            " typedRelIdx=" +
-                                            typedRelativeIndex,
-                                        );
+                                        // console.log(
+                                        //     "setSelectTrack OK: type=" +
+                                        //     primaryType +
+                                        //     " typedRelIdx=" +
+                                        //     typedRelativeIndex,
+                                        // );
                                     } else {
                                         avplay.setSelectTrack(primaryType, mixedRelativeIndex);
                                         console.log(
@@ -1089,12 +1126,12 @@ function AvPlayer() {
                                     // 3. Try alternate type with global index
                                     try {
                                         avplay.setSelectTrack(alternateType, gIdx);
-                                        console.log(
-                                            "setSelectTrack OK (alt type): " +
-                                            alternateType +
-                                            " globalIdx=" +
-                                            gIdx,
-                                        );
+                                        // console.log(
+                                        //     "setSelectTrack OK (alt type): " +
+                                        //     alternateType +
+                                        //     " globalIdx=" +
+                                        //     gIdx,
+                                        // );
                                         success = true;
                                     } catch (e3) {
                                         // 4. Try alternate type with relative index
@@ -1106,23 +1143,23 @@ function AvPlayer() {
                                                 );
                                             if (altRelativeIndex !== -1) {
                                                 avplay.setSelectTrack(alternateType, altRelativeIndex);
-                                                console.log(
-                                                    "setSelectTrack OK (alt type): " +
-                                                    alternateType +
-                                                    " typedRelIdx=" +
-                                                    altRelativeIndex,
-                                                );
+                                                // console.log(
+                                                //     "setSelectTrack OK (alt type): " +
+                                                //     alternateType +
+                                                //     " typedRelIdx=" +
+                                                //     altRelativeIndex,
+                                                // );
                                             } else {
                                                 avplay.setSelectTrack(
                                                     alternateType,
                                                     mixedRelativeIndex,
                                                 );
-                                                console.log(
-                                                    "setSelectTrack OK (alt type): " +
-                                                    alternateType +
-                                                    " mixedRelIdx=" +
-                                                    mixedRelativeIndex,
-                                                );
+                                                // console.log(
+                                                //     "setSelectTrack OK (alt type): " +
+                                                //     alternateType +
+                                                //     " mixedRelIdx=" +
+                                                //     mixedRelativeIndex,
+                                                // );
                                             }
                                             success = true;
                                         } catch (e4) {
@@ -1141,7 +1178,7 @@ function AvPlayer() {
                                 if (Toaster)
                                     Toaster.showToast(
                                         "error",
-                                        window.i18n.t("subtitleTrackCouldNotBeActivated"),
+                                        "Subtitle track could not be activated",
                                     );
                             } else {
                                 // Once successfully hooked, re-enable delivery of events
@@ -1149,7 +1186,16 @@ function AvPlayer() {
                                 isSelectionPending = false;
                             }
                         } else {
-                            applyAudioTrackSelection(tracks[trackArrayPos], trackArrayPos);
+                            // Audio track selection — global index is correct for AUDIO type
+                            var audioType = rType === "AUDIO" ? "AUDIO" : rType;
+                            // console.log("Audio setSelectTrack — type:", audioType, "index:", gIdx, "indexType:", typeof gIdx);
+                            try {
+                                avplay.setSelectTrack(audioType, parseInt(gIdx, 10));
+                                // console.log("Audio setSelectTrack OK — idx:", gIdx);
+                            } catch (e) {
+                                console.warn("Audio setSelectTrack failed", e);
+                                selectedAudioTrackIndex = -1;
+                            }
                         }
                     } catch (apiErr) {
                         console.error("setSelectTrack threw exception:", apiErr);
@@ -1157,7 +1203,7 @@ function AvPlayer() {
                         if (Toaster)
                             Toaster.showToast(
                                 "error",
-                                window.i18n.t("trackSwitchFailed") + ": " + String(apiErr),
+                                "Track switch failed: " + String(apiErr),
                             );
                     }
                 }, 50);
@@ -1341,20 +1387,20 @@ function AvPlayer() {
                 return;
             }
 
-            console.log("FETCHED ALL TRACKS:", tracks.length);
+            // console.log("FETCHED ALL TRACKS:", tracks.length);
             audioTracks = [];
             subtitleTracks = [];
             for (var i = 0; i < tracks.length; i++) {
-                console.log(
-                    "Track " +
-                    i +
-                    ": Type=" +
-                    tracks[i].type +
-                    " Index=" +
-                    tracks[i].index +
-                    " Extra=" +
-                    tracks[i].extra_info,
-                );
+                // console.log(
+                //     "Track " +
+                //     i +
+                //     ": Type=" +
+                //     tracks[i].type +
+                //     " Index=" +
+                //     tracks[i].index +
+                //     " Extra=" +
+                //     tracks[i].extra_info,
+                // );
                 if (tracks[i].type === "AUDIO") audioTracks.push(tracks[i]);
                 if (tracks[i].type === "SUBTITLE" || tracks[i].type === "TEXT")
                     subtitleTracks.push(tracks[i]);
@@ -1362,18 +1408,23 @@ function AvPlayer() {
 
             // NOTE: We do NOT sync from getCurrentTrackInfo here — Tizen 5.5 is unreliable.
             // selectedAudioTrackIndex / selectedSubtitleTrackIndex persist across rebuilds.
-            console.log(
-                "After fetch - audio tracks:",
-                audioTracks.length,
-                "subtitle tracks:",
-                subtitleTracks.length,
-            );
-            console.log(
-                "Resolved audio array pos:",
-                getAudioArrayPos(),
-                "subtitle array pos:",
-                getSubtitleArrayPos(),
-            );
+            // console.log(
+            //     "After fetch - audio tracks:",
+            //     audioTracks.length,
+            //     "subtitle tracks:",
+            //     subtitleTracks.length,
+            // );
+            // console.log(
+            //     "Resolved audio array pos:",
+            //     getAudioArrayPos(),
+            //     "subtitle array pos:",
+            //     getSubtitleArrayPos(),
+            // );
+
+            // If sidebar is open, trigger a re-render to show newly discovered tracks
+            if (isSidebarOpen) {
+                renderSidebar();
+            }
 
             // If tracks are still not found, retry
             if (
@@ -1458,233 +1509,315 @@ function AvPlayer() {
         }
     }
 
+
     function goBack() {
-        var cp =
-            typeof getCurrentPlaylist === "function" ? getCurrentPlaylist() : null;
-        var allRecentlyWatchedMovies = cp ? cp.continueWatchingMovies || [] : [];
-        var allRecentlyWatchedSeries = cp ? cp.continueWatchingSeries || [] : [];
+      isDestroyed = true;
+      isSidebarOpen = false;
+      isLoading = true;
+      errorActive = false;
+      audioTracks = [];
+      subtitleTracks = [];
+      selectedAudioTrackIndex = -1;
+      selectedSubtitleTrackIndex = -1;
+      isSelectionPending = false;
 
-        var navbarEl = document.querySelector("#navbar-root");
-        if (navbarEl) navbarEl.style.display = "block";
+      if (sidebarOpenTimeout) {
+        clearTimeout(sidebarOpenTimeout);
+        sidebarOpenTimeout = null;
+      }
+      clearResumeSeekRetry();
+      closeSidebar();
 
-        var fromHome = localStorage.getItem("fromHome");
-        if (fromHome === "true") {
-            document.body.style.backgroundImage = "none";
-            document.body.style.backgroundColor = "black";
+      var audioSb = document.getElementById("av-audio-sidebar");
+      var subtitleSb = document.getElementById("av-subtitle-sidebar");
+      if (audioSb) {
+        audioSb.classList.remove("open");
+        audioSb.style.display = "none";
+        audioSb.innerHTML = "";
+      }
+      if (subtitleSb) {
+        subtitleSb.classList.remove("open");
+        subtitleSb.style.display = "none";
+        subtitleSb.innerHTML = "";
+      }
 
-            if (avplay && !isLive && !errorActive) {
-                var resumeTime = 0;
-                var duration = 0;
-                try {
-                    resumeTime = avplay.getCurrentTime() / 1000;
-                    duration = avplay.getDuration() / 1000;
-                } catch (e) {}
+      var subtitleDisplay = document.getElementById("av-subtitle-display");
+      if (subtitleDisplay) {
+        subtitleDisplay.innerHTML = "";
+        subtitleDisplay.style.display = "none";
+      }
 
-                var isVideoCompleted =
-                    duration > 0 && Math.abs(resumeTime - duration) < 5;
-                if (resumeTime > 5 && !isVideoCompleted) {
-                    var continueWatchingItem = {
-                        itemId: playingItemData.season ?
-                            localStorage.getItem("selectedSeriesId") :
-                            localStorage.getItem("selectedMovieId"),
-                        episodeId: playingItemData.season ?
-                            localStorage.getItem("selectedEpisodeId") :
-                            null,
-                        resumeTime: resumeTime,
-                        duration: duration,
-                        type: playingItemData.season ? "series" : "movie",
-                    };
-                    var cwTypeKey = playingItemData.season ? "continueWatchingSeries" : "continueWatchingMovies";
-                    // De-duplicate: remove existing entry before saving updated resume time
-                    try {
-                        var playlists = JSON.parse(localStorage.getItem("playlistsData")) || [];
-                        var cpName = JSON.parse(localStorage.getItem("selectedPlaylist") || "{}").playlistName;
-                        playlists = playlists.map(function(pl) {
-                            if (pl.playlistName !== cpName) return pl;
-                            if (continueWatchingItem.type === "series") {
-                                pl.continueWatchingSeries = (pl.continueWatchingSeries || []).filter(function(item) {
-                                    return !(item.itemId === continueWatchingItem.itemId && item.episodeId === continueWatchingItem.episodeId);
-                                });
-                            } else {
-                                pl.continueWatchingMovies = (pl.continueWatchingMovies || []).filter(function(item) {
-                                    return item.itemId !== continueWatchingItem.itemId;
-                                });
-                            }
-                            return pl;
-                        });
-                        localStorage.setItem("playlistsData", JSON.stringify(playlists));
-                    } catch(e) {}
-                    if (typeof addItemToHistory === "function") {
-                        addItemToHistory(continueWatchingItem, cwTypeKey);
-                    }
-                }
-            }
-            localStorage.setItem("fromHome", "false");
-            localStorage.setItem("currentPage", "homePage");
-            if (typeof Router !== "undefined" && Router.showPage)
-                Router.showPage("homePage");
-            setTimeout(function() {
-                var homeButton = document.querySelector('[data-page="homePage"]');
-                if (homeButton) homeButton.focus();
-            }, 100);
-            if (AvPlayer.cleanup) AvPlayer.cleanup();
-            return;
+      const currentPlaylist = getCurrentPlaylist();
+      const allRecentlyWatchedMovies = currentPlaylist.continueWatchingMovies
+        ? currentPlaylist.continueWatchingMovies
+        : [];
+      const allRecentlyWatchedSeries = currentPlaylist.continueWatchingSeries
+        ? currentPlaylist.continueWatchingSeries
+        : [];
+      const selectedMovieId = localStorage.getItem("selectedMovieId");
+      const currentPlayer = player;
+      const currentAvplay = avplay;
+
+      const navbarEl = document.querySelector("#navbar-root");
+      if (navbarEl) {
+        navbarEl.style.display = "block";
+      }
+
+      // Simple return for trailers
+      if (fromValue === "trailer_series") {
+        document.body.style.backgroundImage = "none";
+        document.body.style.backgroundColor = "black";
+        disposePlayer();
+        localStorage.setItem("currentPage", "seriesDetailPage");
+        Router.showPage("seriesDetail");
+        return;
+      }
+      if (fromValue === "trailer_movie") {
+        document.body.style.backgroundImage = "none";
+        document.body.style.backgroundColor = "black";
+        disposePlayer();
+        localStorage.setItem("currentPage", "moviesDetailPage");
+        Router.showPage("movieDetail");
+        return;
+      }
+
+      if (fromValue === "series") {
+        const episodeId = localStorage.getItem("selectedEpisodeId");
+        localStorage.setItem("lastPlayedEpisodeId", episodeId);
+      }
+
+      function disposePlayer() {
+        // First stop subtitle rendering
+        try {
+          if (currentAvplay) {
+            try { currentAvplay.setSilentSubtitle(true); } catch(e) {}
+          }
+        } catch (e) {}
+        
+        if (currentPlayer) {
+          try {
+            currentPlayer.pause();
+          } catch (e) {}
+          try {
+            currentPlayer.dispose();
+          } catch (e) {
+            console.warn("Error disposing player", e);
+          }
         }
-
-        if (fromValue === "trailer_series" || fromValue === "trailer_movie") {
-            document.body.style.backgroundImage = "none";
-            document.body.style.backgroundColor = "black";
-            if (fromValue === "trailer_series") {
-                localStorage.setItem("currentPage", "seriesDetailPage");
-                if (typeof Router !== "undefined" && Router.showPage)
-                    Router.showPage("seriesDetail");
-            } else {
-                localStorage.setItem("currentPage", "moviesDetailPage");
-                if (typeof Router !== "undefined" && Router.showPage)
-                    Router.showPage("movieDetail");
-            }
-            if (AvPlayer.cleanup) AvPlayer.cleanup();
-            return;
+        
+        // Also try to stop/close avplay directly
+        if (currentAvplay) {
+          try {
+            currentAvplay.stop();
+          } catch (e) {}
+          try {
+            currentAvplay.close();
+          } catch (e) {}
         }
+        player = null;
+        avplay = null;
+      }
 
-        if (avplay && !isLive && !errorActive) {
-            var resumeTime = 0;
-            var duration = 0;
-            try {
-                resumeTime = avplay.getCurrentTime() / 1000;
-                duration = avplay.getDuration() / 1000;
-            } catch (e) {}
+      if (!isYouTube) {
+        if (currentPlayer) {
+          let resumeTime = 0;
+          let duration = 0;
 
-            var isVideoCompleted =
-                duration > 0 && Math.abs(resumeTime - duration) < 5;
-            if (isVideoCompleted) {
-                if (fromValue === "series") {
-                    var currentEpisodeId = localStorage.getItem("selectedEpisodeId");
-                    var seriesEpisodes = {};
-                    try {
-                        seriesEpisodes =
-                            JSON.parse(localStorage.getItem("seriesEpisodesData")) || {};
-                    } catch (e) {}
-                    var currentSeason = localStorage.getItem("selectedSeason") || "1";
-                    var seasonEpisodes = seriesEpisodes[currentSeason] || [];
-                    var currentEpisodeIndex = -1;
-                    for (var idx = 0; idx < seasonEpisodes.length; idx++) {
-                        if (seasonEpisodes[idx].id.toString() === currentEpisodeId) {
-                            currentEpisodeIndex = idx;
-                            break;
-                        }
-                    }
+          try {
+            if (!isLive && typeof currentPlayer.currentTime === "function") {
+              resumeTime = Math.floor(Number(currentPlayer.currentTime()) / 1000);
+            }
+            if (typeof currentPlayer.duration === "function") {
+              duration = Math.floor(Number(currentPlayer.duration()) / 1000);
+            }
+          } catch (e) {
+            resumeTime = 0;
+            duration = 0;
+          }
 
-                    if (
-                        currentEpisodeIndex !== -1 &&
-                        currentEpisodeIndex < seasonEpisodes.length - 1
-                    ) {
-                        localStorage.setItem(
-                            "lastPlayedEpisodeId",
-                            seasonEpisodes[currentEpisodeIndex + 1].id.toString(),
-                        );
-                    }
-                    removeEpisodeFromContinueWatching(currentEpisodeId);
-                    if (checkIfAllEpisodesCompleted(currentEpisodeId, seriesEpisodes)) {
-                        if (typeof removeItemFromHistoryById === "function") {
-                            removeItemFromHistoryById(
-                                localStorage.getItem("selectedSeriesId"),
-                                "continueWatchingSeries",
-                            );
-                        }
-                    }
-                } else if (fromValue === "movie") {
-                    if (typeof removeItemFromHistoryById === "function") {
-                        removeItemFromHistoryById(
-                            localStorage.getItem("selectedMovieId"),
-                            "continueWatchingMovies",
-                        );
-                    }
-                }
-            } else if (resumeTime > 5 && !isVideoCompleted) {
-                var continueWatchingItem = {
-                    itemId: playingItemData.season ?
-                        localStorage.getItem("selectedSeriesId") :
-                        localStorage.getItem("selectedMovieId"),
-                    episodeId: playingItemData.season ?
-                        localStorage.getItem("selectedEpisodeId") :
-                        null,
-                    resumeTime: resumeTime,
-                    duration: duration,
-                    type: playingItemData.season ? "series" : "movie",
+          const isVideoCompleted =
+            duration > 0 && Math.abs(resumeTime - duration) < 5; // 5-second buffer
+
+          // If video is completed, focus on next episode (for series)
+          if (isVideoCompleted) {
+            if (fromValue === "series") {
+              const currentEpisodeId =
+                localStorage.getItem("selectedEpisodeId");
+              const seriesEpisodes =
+                JSON.parse(localStorage.getItem("seriesEpisodesData")) || {};
+              const currentSeason =
+                localStorage.getItem("selectedSeason") || "1";
+
+              // Find current episode and get next one
+              const seasonEpisodes = seriesEpisodes[currentSeason] || [];
+              const currentEpisodeIndex = seasonEpisodes.findIndex(
+                (ep) => ep.id.toString() === currentEpisodeId,
+              );
+
+              if (
+                currentEpisodeIndex !== -1 &&
+                currentEpisodeIndex < seasonEpisodes.length - 1
+              ) {
+                // Focus on next episode
+                const nextEpisodeId =
+                  seasonEpisodes[currentEpisodeIndex + 1].id;
+                localStorage.setItem(
+                  "lastPlayedEpisodeId",
+                  nextEpisodeId.toString(),
+                );
+              } else {
+                // No next episode, remove the focus marker
+                localStorage.removeItem("lastPlayedEpisodeId");
+              }
+
+              // Remove the completed episode from continue watching
+              removeEpisodeFromContinueWatching(currentEpisodeId);
+
+              // Only remove from continue watching if ALL episodes in the series are completed
+              const allEpisodesCompleted = checkIfAllEpisodesCompleted(
+                currentEpisodeId,
+                seriesEpisodes,
+              );
+              if (allEpisodesCompleted) {
+                removeItemFromHistoryById(
+                  localStorage.getItem("selectedSeriesId"),
+                  "continueWatchingSeries",
+                );
+              }
+            } else if (fromValue === "movie") {
+              // MOVIES: Remove from continue watching when completed
+              removeItemFromHistoryById(
+                localStorage.getItem("selectedMovieId"),
+                "continueWatchingMovies",
+              );
+            }
+            // If there are still incomplete episodes, keep the series in continue watching
+          } else if (resumeTime > 5 && !isVideoCompleted) {
+            const continueWatchingItem = {
+              itemId: playingItemData.season
+                ? localStorage.getItem("selectedSeriesId")
+                : localStorage.getItem("selectedMovieId"),
+              episodeId: playingItemData.season
+                ? localStorage.getItem("selectedEpisodeId")
+                : null,
+              resumeTime,
+              duration,
+              type: playingItemData.season ? "series" : "movie",
+            };
+
+            // Load playlists
+            let playlists =
+              JSON.parse(localStorage.getItem("playlistsData")) || [];
+
+            playlists = playlists.map((pl) => {
+              if (pl.playlistName !== currentPlaylistName) return pl;
+
+              if (continueWatchingItem.type === "series") {
+                // Remove old entry for same series+episode
+                let updatedSeries = (pl.continueWatchingSeries || []).filter(
+                  (item) =>
+                    !(
+                      item.itemId === continueWatchingItem.itemId &&
+                      item.episodeId === continueWatchingItem.episodeId
+                    ),
+                );
+                pl = {
+                  ...pl,
+                  continueWatchingSeries: updatedSeries,
                 };
-                var cwTypeKey = playingItemData.season ? "continueWatchingSeries" : "continueWatchingMovies";
-                // De-duplicate: remove existing entry before saving updated resume time
-                try {
-                    var playlists = JSON.parse(localStorage.getItem("playlistsData")) || [];
-                    var cpName = JSON.parse(localStorage.getItem("selectedPlaylist") || "{}").playlistName;
-                    playlists = playlists.map(function(pl) {
-                        if (pl.playlistName !== cpName) return pl;
-                        if (continueWatchingItem.type === "series") {
-                            pl.continueWatchingSeries = (pl.continueWatchingSeries || []).filter(function(item) {
-                                return !(item.itemId === continueWatchingItem.itemId && item.episodeId === continueWatchingItem.episodeId);
-                            });
-                        } else {
-                            pl.continueWatchingMovies = (pl.continueWatchingMovies || []).filter(function(item) {
-                                return item.itemId !== continueWatchingItem.itemId;
-                            });
-                        }
-                        return pl;
-                    });
-                    localStorage.setItem("playlistsData", JSON.stringify(playlists));
-                } catch(e) {}
-                if (typeof addItemToHistory === "function") {
-                    addItemToHistory(continueWatchingItem, cwTypeKey);
-                }
+              } else {
+                // Remove old entry for same movie
+                let updatedMovies = (pl.continueWatchingMovies || []).filter(
+                  (item) => item.itemId !== continueWatchingItem.itemId,
+                );
+                pl = {
+                  ...pl,
+                  continueWatchingMovies: updatedMovies,
+                };
+              }
+
+              return pl;
+            });
+
+            // Save cleaned playlists back to localStorage
+            localStorage.setItem("playlistsData", JSON.stringify(playlists));
+
+            // Finally, add updated item via your function
+            if (continueWatchingItem.type === "series") {
+              addItemToHistory(continueWatchingItem, "continueWatchingSeries");
+            } else {
+              addItemToHistory(continueWatchingItem, "continueWatchingMovies");
             }
+          }
+
+          // Set player to null first to prevent further access
+          player = null;
+
+          // Then safely dispose
+          try {
+            if (typeof currentPlayer.pause === "function") {
+              currentPlayer.pause();
+            }
+          } catch (err) {
+            console.warn("Player pause error:", err);
+          }
+
+          try {
+            if (typeof currentPlayer.dispose === "function") {
+              currentPlayer.dispose();
+            }
+          } catch (err) {
+            console.warn("Player dispose error:", err);
+          }
+          avplay = null;
+        } else if (currentAvplay) {
+          disposePlayer();
         }
 
-        if (fromValue === "movie") {
-            var isCwMovie = false;
-            for (var m = 0; m < allRecentlyWatchedMovies.length; m++) {
-                if (
-                    allRecentlyWatchedMovies[m] &&
-                    allRecentlyWatchedMovies[m].itemId ===
-                    localStorage.getItem("selectedMovieId")
-                ) {
-                    isCwMovie = true;
-                    break;
-                }
-            }
-            localStorage.setItem(
-                "isContinueWatchingMovie",
-                isCwMovie ? "false" : "true",
-            );
-            if (typeof buildDynamicSidebarOptions === "function")
-                buildDynamicSidebarOptions();
-            localStorage.setItem("currentPage", "moviesDetailPage");
-            if (typeof Router !== "undefined" && Router.showPage)
-                Router.showPage("movieDetail");
+        if (fromValue == "movie") {
+          const isContinueWatchingMovie = allRecentlyWatchedMovies.some(
+            (movie) =>
+              movie && movie.itemId === localStorage.getItem("selectedMovieId"),
+          );
+
+          localStorage.setItem(
+            "isContinueWatchingMovie",
+            isContinueWatchingMovie == false ? "true" : "false",
+          );
+
+          // buildDynamicSidebarOptions();
+          localStorage.setItem("currentPage", "moviesDetailPage");
+          Router.showPage("movieDetail");
         } else {
-            var isCwSeries = false;
-            for (var s = 0; s < allRecentlyWatchedSeries.length; s++) {
-                if (
-                    allRecentlyWatchedSeries[s] &&
-                    allRecentlyWatchedSeries[s].itemId ===
-                    localStorage.getItem("selectedSeriesId")
-                ) {
-                    isCwSeries = true;
-                    break;
-                }
-            }
-            localStorage.setItem(
-                "isContinueWatchingSeries",
-                isCwSeries ? "false" : "true",
-            );
-            if (typeof buildDynamicSidebarOptions === "function")
-                buildDynamicSidebarOptions();
-            localStorage.setItem("isReturningFromPlayer", "true");
-            localStorage.setItem("currentPage", "seriesDetailPage");
-            if (typeof Router !== "undefined" && Router.showPage)
-                Router.showPage("seriesDetail");
-        }
+          const isContinueWatchingSeries = allRecentlyWatchedSeries.some(
+            (series) =>
+              series &&
+              series.itemId === localStorage.getItem("selectedSeriesId"),
+          );
 
-        if (AvPlayer.cleanup) AvPlayer.cleanup();
+          localStorage.setItem(
+            "isContinueWatchingSeries",
+            isContinueWatchingSeries === false ? "true" : "false",
+          );
+          // buildDynamicSidebarOptions();
+          localStorage.setItem("currentPage", "seriesDetailPage");
+          Router.showPage("seriesDetail");
+        }
+      } else {
+        if (currentPlayer && typeof currentPlayer.dispose === "function") {
+          currentPlayer.dispose();
+        } else if (currentAvplay) {
+          disposePlayer();
+        }
+        avplay = null;
+        if (fromValue == "movie") {
+          localStorage.setItem("currentPage", "moviesDetailPage");
+          Router.showPage("movieDetail");
+        } else {
+          localStorage.setItem("currentPage", "seriesDetailPage");
+          Router.showPage("seriesDetail");
+        }
+      }
     }
 
     // Delay init
@@ -1697,6 +1830,7 @@ function AvPlayer() {
             return;
         }
         avplay = ap;
+        syncPlayerAdapter();
 
         var loader = document.getElementById("avplay-loader");
         var seekBar = document.getElementById("av-seek-bar");
@@ -1704,7 +1838,7 @@ function AvPlayer() {
         var totalTimeEl = document.getElementById("av-total-time");
 
         try {
-            console.log("OPENING STREAM:", srcUrl);
+            // console.log("OPENING STREAM:", srcUrl);
             avplay.open(srcUrl);
 
             // [NEW] - Apply 15-second buffer size to survive network/bitrate drops
@@ -1736,9 +1870,13 @@ function AvPlayer() {
             avplay.setDisplayRect(0, 0, 1920, 1080);
             avplay.setListener({
                 onbufferingstart: function() {
+                    if (!avplay) return;
                     isLoading = true; // Set loading state
                     if (loader && !errorActive) {
                         loader.classList.remove("hidden");
+                        if (isInitialResumePending) {
+                            loader.style.background = "black";
+                        }
                         var playOverlay = document.querySelector(
                             ".av-action-overlay.center",
                         );
@@ -1746,18 +1884,32 @@ function AvPlayer() {
                     }
                 },
                 onbufferingcomplete: function() {
+                    if (!avplay) return;
+                    // [MODIFIED] - If we are in initial resume seek, do NOT hide the loader yet.
+                    // Let oncurrentplaytime or applyResumeTimeToPlayback handle the visibility.
+                    if (isInitialResumePending) {
+                        console.log(
+                            "[AvPlayer] Buffering complete, but resume is pending. Keeping loader.",
+                        );
+                        return;
+                    }
+
                     isLoading = false; // Reset loading state
-                    if (loader) loader.classList.add("hidden");
+                    if (loader) {
+                        loader.classList.add("hidden");
+                        loader.style.backgroundColor = "";
+                    }
                     // Re-enforce visibility on buff complete
                     var container = document.getElementById("avplay-container");
                     if (container) makeParentsTransparent(container);
                 },
                 onsubtitlechange: function(duration, text, data3, data4) {
+                    if (!avplay) return;
                     var subtitleDisplay = document.getElementById("av-subtitle-display");
                     if (subtitleDisplay && selectedSubtitleTrackIndex !== -1) {
                         var subText = (text || "").toString().trim();
                         if (subText.length > 0) {
-                            console.log("Subtitle received (" + duration + "ms):", subText);
+                            // console.log("Subtitle received (" + duration + "ms):", subText);
                             subtitleDisplay.innerHTML = subText;
                             subtitleDisplay.style.display = "block";
                             subtitleDisplay.style.visibility = "visible";
@@ -1783,6 +1935,7 @@ function AvPlayer() {
                     }
                 },
                 onstreamcompleted: function() {
+                    if (!avplay) return;
                     goBack();
                 },
                 onerror: function(errorObj) {
@@ -1796,6 +1949,71 @@ function AvPlayer() {
                         }
                     }
 
+                    // Save resume time to continue watching before showing error
+                    try {
+                        var playbackProgress = getPlaybackProgress();
+                        var resumeTime = Math.floor(playbackProgress.currentTime / 1000);
+                        var duration = Math.floor(playbackProgress.duration / 1000);
+
+                        if (!isYouTube && !isLive && resumeTime > 5 && duration > 0) {
+                            var isNearCompletion = Math.abs(resumeTime - duration) < 5;
+                            var continueWatchingItem = {
+                                itemId: playingItemData.season
+                                    ? localStorage.getItem("selectedSeriesId")
+                                    : localStorage.getItem("selectedMovieId"),
+                                episodeId: playingItemData.season
+                                    ? localStorage.getItem("selectedEpisodeId")
+                                    : null,
+                                resumeTime: resumeTime,
+                                duration: duration,
+                                type: playingItemData.season ? "series" : "movie",
+                            };
+
+                            let playlists =
+                                JSON.parse(localStorage.getItem("playlistsData")) || [];
+
+                            playlists = playlists.map((pl) => {
+                                if (pl.playlistName !== currentPlaylistName) return pl;
+
+                                if (continueWatchingItem.type === "series") {
+                                    let updatedSeries = (pl.continueWatchingSeries || []).filter(
+                                        (item) =>
+                                            !(
+                                                item.itemId === continueWatchingItem.itemId &&
+                                                item.episodeId === continueWatchingItem.episodeId
+                                            ),
+                                    );
+                                    pl = {
+                                        ...pl,
+                                        continueWatchingSeries: updatedSeries,
+                                    };
+                                } else {
+                                    let updatedMovies = (pl.continueWatchingMovies || []).filter(
+                                        (item) => item.itemId !== continueWatchingItem.itemId,
+                                    );
+                                    pl = {
+                                        ...pl,
+                                        continueWatchingMovies: updatedMovies,
+                                    };
+                                }
+
+                                return pl;
+                            });
+
+                            localStorage.setItem("playlistsData", JSON.stringify(playlists));
+
+                            if (!isNearCompletion) {
+                                if (continueWatchingItem.type === "series") {
+                                    addItemToHistory(continueWatchingItem, "continueWatchingSeries");
+                                } else {
+                                    addItemToHistory(continueWatchingItem, "continueWatchingMovies");
+                                }
+                            }
+                        }
+                    } catch (saveErr) {
+                        console.warn("Failed to save resume time on error:", saveErr);
+                    }
+
                     // UNKNOWN_ERROR_EVENT_FROM_PLAYER is a transient Tizen 5.5 event.
                     // It does NOT always mean fatal failure — attempt recovery first.
                     if (errorType === "UNKNOWN_ERROR_EVENT_FROM_PLAYER") {
@@ -1804,7 +2022,7 @@ function AvPlayer() {
                             if (!avplay || errorActive) return;
                             try {
                                 var state = avplay.getState();
-                                console.log("Recovery check - player state:", state);
+                                // console.log("Recovery check - player state:", state);
                                 if (state === "PAUSED") {
                                     avplay.play();
                                 } else if (state === "IDLE" || state === "NONE") {
@@ -1826,6 +2044,9 @@ function AvPlayer() {
 
                     // Fatal errors — show error screen
                     errorActive = true;
+                    clearResumeSeekRetry();
+                    pendingResumeTimeMs = 0;
+                    resumeTimeApplied = false;
                     var readableError = String(errorType);
                     if (errorType === "PLAYER_ERROR_NOT_SUPPORTED_FORMAT")
                         readableError = "Format Not Supported by this TV";
@@ -1838,7 +2059,26 @@ function AvPlayer() {
                     showFatalError(readableError);
                 },
                 oncurrentplaytime: function(ms) {
-                    if (pendingSeekTimeout || errorActive) return;
+                    if (!avplay || pendingSeekTimeout || errorActive) return;
+
+                    // [NEW] - If we were waiting for an initial resume, hide loader once we actually start playing at/near target
+                    if (isInitialResumePending) {
+                        // Check if we reached the target or passed a safe fallback threshold (5s)
+                        if (ms >= targetResumeTimeMs - 1000 || ms > 5000) {
+                            // console.log(
+                            //     "[AvPlayer] Playback reached resume target or fallback. Hiding special resume loader.",
+                            // );
+                            isInitialResumePending = false;
+                            isLoading = false;
+                            if (loader) {
+                                loader.classList.add("hidden");
+                                loader.style.background = "";
+                            }
+                            var container = document.getElementById("avplay-container");
+                            if (container) makeParentsTransparent(container);
+                        }
+                    }
+
                     if (seekBar) seekBar.value = ms;
                     if (currentTimeEl) currentTimeEl.textContent = formatTime(ms);
                     var duration = avplay.getDuration();
@@ -1855,6 +2095,48 @@ function AvPlayer() {
                 },
             });
 
+            // [NEW] - Detect resume time early to prevent flicker
+            if (!isLive) {
+                var matched = null;
+                var currentPlaylist = typeof getCurrentPlaylist === "function" ? getCurrentPlaylist() : null;
+
+                if (currentPlaylist) {
+                    var isMovieContent = fromValue === "movie" || (!playingItemData.season && fromValue !== "series");
+                    if (isMovieContent) {
+                        var movieTargetId = playingItemData.id || playingItemData.stream_id || playingItemData.itemId || localStorage.getItem("selectedMovieId");
+                        var movieTargetIdStr = movieTargetId ? String(movieTargetId) : null;
+                        var movieCVData = currentPlaylist.continueWatchingMovies || [];
+                        for (var i = 0; i < movieCVData.length; i++) {
+                            if (movieCVData[i].itemId && String(movieCVData[i].itemId) === movieTargetIdStr) {
+                                matched = movieCVData[i];
+                                break;
+                            }
+                        }
+                    } else {
+                        var seriesEpId = playingItemData.id || playingItemData.episode_id || localStorage.getItem("selectedEpisodeId");
+                        var seriesEpIdStr = seriesEpId ? String(seriesEpId) : null;
+                        var seriesCVData = currentPlaylist.continueWatchingSeries || [];
+                        for (var j = 0; j < seriesCVData.length; j++) {
+                            if (seriesCVData[j].episodeId && String(seriesCVData[j].episodeId) === seriesEpIdStr) {
+                                matched = seriesCVData[j];
+                                break;
+                            }
+                        }
+                    }
+                }
+
+                if (matched && matched.resumeTime) {
+                    pendingResumeTimeMs = matched.resumeTime * 1000;
+                    targetResumeTimeMs = pendingResumeTimeMs;
+                    isInitialResumePending = true;
+                    // console.log("[AvPlayer] Early resume detection:", matched.resumeTime, "s");
+                    if (loader) {
+                        loader.classList.remove("hidden");
+                        loader.style.background = "black";
+                    }
+                }
+            }
+
             avplay.prepareAsync(function() {
                 var duration = avplay.getDuration();
                 if (seekBar) {
@@ -1865,40 +2147,14 @@ function AvPlayer() {
 
                 fetchTrackInfo();
 
-                // Handle resume time
-                var resumeTimeMs = 0;
-                if (!isLive) {
-                    var matched = null;
-                    var currentPlaylist =
-                        typeof getCurrentPlaylist === "function" ?
-                        getCurrentPlaylist() :
-                        null;
-                    var cvData =
-                        fromValue === "movie" ?
-                        currentPlaylist.continueWatchingMovies || [] :
-                        currentPlaylist.continueWatchingSeries || [];
-                    var targetId =
-                        fromValue === "movie" ?
-                        localStorage.getItem("selectedMovieId") :
-                        localStorage.getItem("selectedSeriesId");
-                    var epId = localStorage.getItem("selectedEpisodeId");
-
-                    for (var i = 0; i < cvData.length; i++) {
-                        var item = cvData[i];
-                        if (
-                            item.itemId === targetId &&
-                            (!item.episodeId || item.episodeId === epId)
-                        ) {
-                            matched = item;
-                            break;
-                        }
+                // Handle resume time application
+                if (pendingResumeTimeMs > 0 && pendingResumeTimeMs < duration) {
+                    if (!applyResumeTimeToPlayback()) {
+                        scheduleResumeSeekRetry();
                     }
-                    if (matched && matched.resumeTime)
-                        resumeTimeMs = matched.resumeTime * 1000;
-                }
-
-                if (resumeTimeMs > 0 && resumeTimeMs < duration) {
-                    avplay.seekTo(resumeTimeMs);
+                } else {
+                    // No resume or invalid resume time, clear flag
+                    isInitialResumePending = false;
                 }
 
                 // Handle show/hide title on start
@@ -1917,14 +2173,14 @@ function AvPlayer() {
                     try {
                         if (!avplay || errorActive) return;
                         var state = avplay.getState();
-                        console.log("Pre-play state check:", state);
+                        // console.log("Pre-play state check:", state);
                         if (state !== "READY" && state !== "PAUSED") {
                             console.warn("Cannot play: unexpected state", state);
                             return;
                         }
 
                         var container = document.getElementById("avplay-container");
-                        if (container) makeParentsTransparent(container);
+                        if (container && !isInitialResumePending) makeParentsTransparent(container);
 
                         avplay.play();
                         hasStartedPlayingOnce = true;
@@ -2012,9 +2268,10 @@ function AvPlayer() {
                         e.preventDefault();
                         return;
                     default:
-                        if (backKeysCodes.includes(e.keyCode)) {
+                        if (isBackNavigationKey(e)) {
                             closeSidebar();
                             e.preventDefault();
+                            e.stopImmediatePropagation();
                             return;
                         }
                         break;
@@ -2025,7 +2282,7 @@ function AvPlayer() {
             if (errorActive) {
                 if (e.keyCode === 13) {
                     retryPlayback();
-                } else if (backKeysCodes.includes(e.keyCode)) {
+                } else if (isBackNavigationKey(e)) {
                     e.preventDefault();
                     goBack();
                 }
@@ -2109,12 +2366,9 @@ function AvPlayer() {
                         else focusPlayPause();
                         e.preventDefault();
                         break;
-                    case 39:
-                        // Audio/subtitle buttons hidden — stay on aspect ratio
-                        e.preventDefault();
-                        break;
                     case 37:
-                        // Audio/subtitle buttons hidden — stay on aspect ratio
+                        if (!isLive) focusSeekBar();
+                        else focusPlayPause();
                         e.preventDefault();
                         break;
                     case 13:
@@ -2122,48 +2376,11 @@ function AvPlayer() {
                         e.preventDefault();
                         break;
                 }
-            } else if (isAudioFocused) {
-                switch (e.keyCode) {
-                    case 38:
-                        if (!isLive) focusSeekBar();
-                        else focusPlayPause();
-                        e.preventDefault();
-                        break;
-                    case 37:
-                        focusAspectRatio();
-                        e.preventDefault();
-                        break;
-                    case 39:
-                        focusSubtitle();
-                        e.preventDefault();
-                        break;
-                    case 13:
-                        openAudioSidebar();
-                        e.preventDefault();
-                        return;
-                }
-            } else if (isSubtitleFocused) {
-                switch (e.keyCode) {
-                    case 38:
-                        if (!isLive) focusSeekBar();
-                        else focusPlayPause();
-                        e.preventDefault();
-                        break;
-                    case 37:
-                        focusAudio();
-                        e.preventDefault();
-                        break;
-                    case 13:
-                        // Let openSubtitleSidebar handle fetchTrackInfo - it has retry logic
-                        openSubtitleSidebar();
-                        e.preventDefault();
-                        return;
-                }
             }
 
             switch (e.keyCode) {
                 default:
-                    if (backKeysCodes.includes(e.keyCode)) {
+                    if (isBackNavigationKey(e)) {
                         e.preventDefault();
                         goBack();
                     }
@@ -2203,13 +2420,69 @@ function AvPlayer() {
                 clearTimeout(sidebarOpenTimeout);
                 sidebarOpenTimeout = null;
             }
+            // Clear resume time retries
+            clearResumeSeekRetry();
+            pendingResumeTimeMs = 0;
+            resumeTimeApplied = false;
+            
+            // Reset all player state for fresh restart
+            isSidebarOpen = false;
+            sidebarType = "";
+            sidebarFocusIndex = 0;
+            isPlayPauseFocused = true;
+            isSeekBarFocused = false;
+            isAspectRatioFocused = false;
+            audioTracks = [];
+            subtitleTracks = [];
+            selectedAudioTrackIndex = -1;
+            selectedSubtitleTrackIndex = -1;
+            isSelectionPending = false;
+            isLoading = true;
+            errorActive = false;
+            hasStartedPlayingOnce = false;
+            accumulatedSeekOffset = 0;
+            
+            // Close and clear sidebars
+            var audioSb = document.getElementById("av-audio-sidebar");
+            var subtitleSb = document.getElementById("av-subtitle-sidebar");
+            if (audioSb) {
+                audioSb.classList.remove("open");
+                audioSb.style.display = "none";
+                audioSb.innerHTML = "";
+            }
+            if (subtitleSb) {
+                subtitleSb.classList.remove("open");
+                subtitleSb.style.display = "none";
+                subtitleSb.innerHTML = "";
+            }
+            
+            // Hide subtitle display
+            var subtitleDisplay = document.getElementById("av-subtitle-display");
+            if (subtitleDisplay) {
+                subtitleDisplay.innerHTML = "";
+                subtitleDisplay.style.display = "none";
+            }
+            
+            // Ensure player is fully stopped
             try {
                 if (avplay) {
+                    // Try to stop subtitle rendering first
+                    try { avplay.setSilentSubtitle(true); } catch(e) {}
                     avplay.stop();
                     avplay.close();
                 }
             } catch (e) {}
-            // Subtitle display is now inside avplay-container, so it's cleaned up naturally with innerHTML
+            
+            // Reset avplay reference
+            avplay = null;
+            player = null;
+            
+            // Clear error display
+            var errorDisplay = document.querySelector(".av-error-display");
+            if (errorDisplay) {
+                errorDisplay.parentElement && errorDisplay.parentElement.remove();
+            }
+            
             AvPlayer.cleanup = null;
         };
 
@@ -2251,16 +2524,7 @@ function AvPlayer() {
             '<div class="av-live-badge" style="color:red; font-weight:bold; font-size:24px; margin-bottom:10px;">LIVE</div>') +
         '<div class="av-buttons-row">' +
         '<button id="av-ar-btn" class="av-control-btn">' +
-        '<i class="fa-solid fa-expand"></i> ' +
-        window.i18n.t("aspectRatio") +
-        "</button>" +
-        '<button id="av-audio-btn" class="av-control-btn" style="display:none;">' +
-        '<i class="fa-solid fa-music"></i> ' +
-        window.i18n.t("audio") +
-        "</button>" +
-        '<button id="av-subtitle-btn" class="av-control-btn" style="display:none;">' +
-        '<i class="fa-solid fa-closed-captioning"></i> ' +
-        window.i18n.t("subtitles") +
+        '<i class="fa-solid fa-expand"></i> Aspect Ratio' +
         "</button>" +
         "</div>" +
         "</div>" +

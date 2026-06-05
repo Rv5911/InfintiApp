@@ -3,8 +3,8 @@
     --gold: #ffd700;
     --dark-gold: #fdbd0f;
     --app-blue: #60aaf8;
-    --app-gradient: linear-gradient(135deg, #4f7ea6 0%, #3f5f86 22%, #4a4678 42%, #6a3b7f 65%, #7a3a8c 82%, #6a2f7b 100%);
-    --light-gradient: linear-gradient(101.11deg, #e761c8 35.92%, #60aaf8 99.39%);
+    --app-gradient: #60aaf8;
+    --light-gradient: #60aaf8;
 }
 
 #avplay-container {

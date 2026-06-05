@@ -15,12 +15,12 @@ let isWebos =
   (typeof window.webOS !== "undefined" ||
    typeof window.PalmSystem !== "undefined");
   //  Register remote keys (Tizen TV)
-  if (typeof tizen !== "undefined" && tizen.tvinputdevice) {
-    const keys = tizen.tvinputdevice.getSupportedKeys();
-    keys.forEach((key) => {
-      tizen.tvinputdevice.registerKey(key.name);
-    });
-  }
+  // if (typeof tizen !== "undefined" && tizen.tvinputdevice) {
+  //   const keys = tizen.tvinputdevice.getSupportedKeys();
+  //   keys.forEach((key) => {
+  //     tizen.tvinputdevice.registerKey(key.name);
+  //   });
+  // }
 
   document.addEventListener("keydown", (e) => {
     if (localStorage.getItem("currentPage") !== "dashboard") {
@@ -78,8 +78,8 @@ if(!isWebos){
 function showSplashScreen() {
   const splashPage = document.getElementById("splash-page");
   splashPage.innerHTML = `
-    <div class="splash-page-container" style="background-image: url('/assets/bg-img.webp');">
-      <img src="./assets/app-logo.png" alt="Logo" class="logo" />
+    <div class="splash-page-container" style="background-image: url('splash-screen.jpg');">
+
     </div>
   `;
   splashPage.style.display = "block";

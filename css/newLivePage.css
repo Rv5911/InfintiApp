@@ -11,7 +11,7 @@
     box-sizing: border-box;
     color: white;
     background-image: url("../assets/bg-img.webp");
-    animation: fadeInOut 1s ease-in-out;
+    /* animation: fadeInOut 1s ease-in-out; */
     display: flex;
     flex-direction: column;
 }
@@ -29,6 +29,48 @@
 
 .lp-main-container * {
     box-sizing: border-box;
+}
+
+.lp-main-container.lp-fullscreen-active {
+    padding: 0 !important;
+    background: #000 !important;
+}
+
+.lp-main-container.lp-fullscreen-active .live-header,
+.lp-main-container.lp-fullscreen-active .lp-sidebar,
+.lp-main-container.lp-fullscreen-active .lp-channels-section,
+.lp-main-container.lp-fullscreen-active .lp-epg-container {
+    display: none !important;
+}
+
+.lp-main-container.lp-fullscreen-active .lp-body-wrapper,
+.lp-main-container.lp-fullscreen-active .lp-content,
+.lp-main-container.lp-fullscreen-active .lp-top-section {
+    position: fixed !important;
+    inset: 0 !important;
+    width: 100vw !important;
+    height: 100vh !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: hidden !important;
+    background: #000 !important;
+    z-index: 2147483000 !important;
+}
+
+.lp-main-container.lp-fullscreen-active #lp-player-container.lp-avplay-fullscreen {
+    position: fixed !important;
+    inset: 0 !important;
+    width: 100vw !important;
+    height: 100vh !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    overflow: hidden !important;
+    background: #000 !important;
+    transform: translateZ(0);
+    will-change: transform;
+    z-index: 2147483647 !important;
 }
 
 /* Sidebar */

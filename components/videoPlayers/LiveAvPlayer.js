@@ -28,6 +28,28 @@ function LiveAvPlayer(
     var isSidebarOpen = false;
     var sidebarType = "";
     var sidebarFocusIndex = 0;
+    var i18nFallbacks = {
+        aspectRatio: "Aspect Ratio",
+        audio: "Audio",
+        audioTracks: "Audio Tracks",
+        cannotSwitchTrackWhilePlayerIs: "Cannot switch track while player is",
+        noAudioFound: "No audio found",
+        noSubtitlesFound: "No subtitles found",
+        noTrackFoundForThisSelection: "No track found for this selection",
+        off: "Off",
+        subtitles: "Subtitles",
+        trackSwitchFailed: "Track switch failed",
+    };
+
+    function t(key) {
+        if (
+            window.i18n &&
+            typeof window.i18n.t === "function"
+        ) {
+            return window.i18n.t(key);
+        }
+        return i18nFallbacks[key] || key;
+    }
 
     // Helpers to get array position from stored AVPlay index (Mirroring AvPlayer.js)
     function getAudioArrayPos() {
@@ -722,6 +744,13 @@ function LiveAvPlayer(
         var isFsFocused = isFs ?
             focusedControl === "fullscreen-toggle" :
             fFocusedExt;
+        var isBrowsingLiveItems =
+            !isFs &&
+            !!document.querySelector(
+                ".lp-channel-card.lp-focused, .lp-epg-item.lp-focused, #lp-epg-fav-btn.lp-focused"
+            );
+        var shouldShowInlineControls =
+            isPpFocused || isFsFocused || isBrowsingLiveItems;
 
         if (areControlsVisible) {
             // SHOW ALL SYNCHRONOUSLY (Except strict icons)
@@ -756,7 +785,7 @@ function LiveAvPlayer(
         if (c) {
             if (!isFs) {
                 // Non-fullscreen: Show both if either is focused, ALWAYS show if paused
-                if (isPpFocused || isFsFocused || isPaused)
+                if (shouldShowInlineControls || isPaused)
                     c.classList.remove("hidden");
                 else c.classList.add("hidden");
             } else {
@@ -769,7 +798,7 @@ function LiveAvPlayer(
         // Fullscreen icon: Show only on non-fullscreen
         if (f) {
             if (!isFs) {
-                if (isPpFocused || isFsFocused) f.classList.remove("hidden");
+                if (shouldShowInlineControls) f.classList.remove("hidden");
                 else f.classList.add("hidden");
             } else {
                 f.classList.add("hidden");
@@ -860,21 +889,15 @@ function LiveAvPlayer(
             } else if (dir === "up") {
                 if (
                     focusedControl === "ar" ||
-                    focusedControl === "audio" ||
-                    focusedControl === "subtitle" ||
                     focusedControl === "fullscreen-toggle"
                 )
                     focusedControl = "play-pause";
             } else if (dir === "left") {
                 if (focusedControl === "fullscreen-toggle")
                     focusedControl = "play-pause";
-                else if (focusedControl === "audio") focusedControl = "ar";
-                else if (focusedControl === "subtitle") focusedControl = "audio";
             } else if (dir === "right") {
                 if (focusedControl === "play-pause")
                     focusedControl = "fullscreen-toggle";
-                else if (focusedControl === "ar") focusedControl = "audio";
-                else if (focusedControl === "audio") focusedControl = "subtitle";
             }
         }
         updateFocusUI();
@@ -885,8 +908,6 @@ function LiveAvPlayer(
         if (focusedControl === "play-pause") togglePlayPause();
         else if (focusedControl === "fullscreen-toggle") toggleFullscreenMode();
         else if (focusedControl === "ar") cycleAspectRatio();
-        else if (focusedControl === "audio") openSidebar("audio");
-        else if (focusedControl === "subtitle") openSidebar("subtitle");
     }
 
     function cycleAspectRatio() {
@@ -895,7 +916,7 @@ function LiveAvPlayer(
         var labels = ["16:9", "4:3", "2.35:1"];
         syncDisplayRect();
         if (window.Toaster)
-            window.Toaster.showToast("info", window.i18n.t("aspectRatio") + ": " + labels[arIndex]);
+            window.Toaster.showToast("info", t("aspectRatio") + ": " + labels[arIndex]);
     }
 
     function openSidebar(type) {
@@ -908,8 +929,8 @@ function LiveAvPlayer(
                 if (window.Toaster) {
                     var msg =
                         sidebarType === "audio"
-                            ? window.i18n.t("noAudioFound")
-                            : window.i18n.t("noSubtitlesFound");
+                            ? t("noAudioFound")
+                            : t("noSubtitlesFound");
                     window.Toaster.showToast("error", msg);
                 }
                 return;
@@ -956,8 +977,8 @@ function LiveAvPlayer(
         var html =
             '<div class="av-live-sidebar-title">' +
             (sidebarType === "audio"
-              ? window.i18n.t("audioTracks")
-              : window.i18n.t("subtitles")) +
+              ? t("audioTracks")
+              : t("subtitles")) +
             "</div>";
         html += '<div class="av-live-sidebar-list">';
 
@@ -967,7 +988,7 @@ function LiveAvPlayer(
                 (sidebarFocusIndex === 0 ? " focused" : "") +
                 (selectedSubtitleTrackIndex === -1 ? " active" : "") +
                 '">' +
-                window.i18n.t("off") +
+                t("off") +
                 "</div>";
         }
 
@@ -1020,7 +1041,7 @@ function LiveAvPlayer(
                 if (window.Toaster) {
                     window.Toaster.showToast(
                         "error",
-                        window.i18n.t("noTrackFoundForThisSelection"),
+                        t("noTrackFoundForThisSelection"),
                     );
                 }
                 return;
@@ -1103,14 +1124,14 @@ function LiveAvPlayer(
                         if (window.Toaster) {
                             window.Toaster.showToast(
                                 "error",
-                                window.i18n.t("cannotSwitchTrackWhilePlayerIs") + " " + playerState,
+                                t("cannotSwitchTrackWhilePlayerIs") + " " + playerState,
                             );
                         }
                     }
                 } catch (e) {
                     console.error("[LiveAvPlayer] setSelectTrack failed", e);
                     if (window.Toaster)
-                        window.Toaster.showToast("error", window.i18n.t("trackSwitchFailed"));
+                        window.Toaster.showToast("error", t("trackSwitchFailed"));
                 }
             }, 120);
         }
@@ -1196,9 +1217,7 @@ function LiveAvPlayer(
 
         if (
             !isFs &&
-            (focusedControl === "ar" ||
-                focusedControl === "audio" ||
-                focusedControl === "subtitle")
+            focusedControl === "ar"
         ) {
             focusedControl = "play-pause";
         }
@@ -1337,13 +1356,7 @@ function LiveAvPlayer(
         "</div>" +
         '<div class="av-live-btns-row">' +
         '<div id="lp-tizen-aspect-ratio-btn" class="av-live-opt av-live-nav-btn" data-id="ar" onclick="if(window.livePlayer && window.livePlayer.cycleAspectRatio) window.livePlayer.cycleAspectRatio()"><i class="fa-solid fa-rectangle-list"></i> ' +
-        window.i18n.t("aspectRatio") +
-        '</div>' +
-        '<div id="lp-tizen-audio-btn" class="av-live-opt av-live-nav-btn" data-id="audio"><i class="fa-solid fa-music"></i> ' +
-        window.i18n.t("audio") +
-        '</div>' +
-        '<div id="lp-tizen-subtitle-btn" class="av-live-opt av-live-nav-btn" data-id="subtitle"><i class="fa-solid fa-closed-captioning"></i> ' +
-        window.i18n.t("subtitles") +
+        t("aspectRatio") +
         '</div>' +
         "</div>" +
         "</div>" +
