@@ -61,6 +61,59 @@ function LoginPage() {
 
     // Cached toggle icon element for quick access
     const mainToggleIcon = toggleIcons.length > 0 ? toggleIcons[0] : null;
+    let backPressedOnce = false;
+    let backPressTimer = null;
+
+    function resetBackPressState() {
+      backPressedOnce = false;
+      if (backPressTimer) {
+        clearTimeout(backPressTimer);
+        backPressTimer = null;
+      }
+    }
+
+    function exitApp() {
+      try {
+        const tizenApi =
+          typeof tizen !== "undefined"
+            ? tizen
+            : typeof window !== "undefined"
+              ? window.tizen
+              : null;
+
+        if (tizenApi && tizenApi.application) {
+          const app = tizenApi.application.getCurrentApplication();
+          if (app && typeof app.exit === "function") {
+            app.exit();
+            return;
+          }
+        }
+
+        if (
+          typeof window !== "undefined" &&
+          window.webOS &&
+          typeof window.webOS.platformBack === "function"
+        ) {
+          window.webOS.platformBack();
+          return;
+        }
+
+        if (
+          typeof window !== "undefined" &&
+          window.PalmSystem &&
+          typeof window.PalmSystem.platformBack === "function"
+        ) {
+          window.PalmSystem.platformBack();
+          return;
+        }
+
+        if (typeof window !== "undefined" && typeof window.close === "function") {
+          window.close();
+        }
+      } catch (err) {
+        Toaster.showToast("error", "Failed to exit app");
+      }
+    }
 
     // focus styles helpers - Optimized to separate concerns
     function setFocusState(item, isFocused) {
@@ -179,6 +232,22 @@ function LoginPage() {
     }
 
     function handleKeydown(e) {
+      if (typeof isBackKey === "function" && isBackKey(e)) {
+        e.preventDefault();
+        e.stopPropagation();
+
+        if (backPressedOnce) {
+          resetBackPressState();
+          exitApp();
+          return;
+        }
+
+        backPressedOnce = true;
+        Toaster.showToast("info", "Please press Back again to exit the app");
+        backPressTimer = setTimeout(resetBackPressState, 2000);
+        return;
+      }
+
       const currentItem = focusableItems[focusIndex];
       const len = focusableItems.length;
 
@@ -258,6 +327,7 @@ function LoginPage() {
     document.addEventListener("keydown", handleKeydown);
 
     LoginPage.cleanup = function () {
+      resetBackPressState();
       document.removeEventListener("click", handleClick);
       document.removeEventListener("keydown", handleKeydown);
     };
