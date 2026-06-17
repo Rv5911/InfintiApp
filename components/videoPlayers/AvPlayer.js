@@ -1317,37 +1317,53 @@ function AvPlayer() {
         }
     }
 
-    function setAspectRatio169() {
+    function setAvplayDisplayMode(mode) {
         if (!avplay) return;
         try {
-            avplay.setDisplayMethod("PLAYER_DISPLAY_MODE_LETTER_BOX");
+            avplay.setDisplayMethod(mode);
+        } catch (e) {
+            if (mode !== "PLAYER_DISPLAY_MODE_LETTER_BOX") {
+                try {
+                    avplay.setDisplayMethod("PLAYER_DISPLAY_MODE_LETTER_BOX");
+                } catch (fallbackErr) {}
+            } else {
+                throw e;
+            }
+        }
+    }
+
+    function applyAspectDisplayMode(mode, label) {
+        if (!avplay) return;
+        try {
             avplay.setDisplayRect(0, 0, 1920, 1080);
-            showAspectOverlay("16:9");
+            setAvplayDisplayMode(mode);
+            setTimeout(function() {
+                try {
+                    if (avplay) {
+                        avplay.setDisplayRect(0, 0, 1920, 1080);
+                        setAvplayDisplayMode(mode);
+                    }
+                } catch (retryErr) {}
+            }, 120);
+            showAspectOverlay(label);
         } catch (e) {
-            console.error("16:9 failed", e);
+            console.error(label + " failed", e);
         }
     }
 
-    function setAspectRatio43() {
-        if (!avplay) return;
-        try {
-            avplay.setDisplayMethod("PLAYER_DISPLAY_MODE_LETTER_BOX");
-            avplay.setDisplayRect(240, 0, 1440, 1080);
-            showAspectOverlay("4:3");
-        } catch (e) {
-            console.error("4:3 failed", e);
-        }
+    function setAspectRatioLetterBox() {
+        applyAspectDisplayMode("PLAYER_DISPLAY_MODE_LETTER_BOX", "Letter Box");
     }
 
-    function setAspectRatio235() {
-        if (!avplay) return;
-        try {
-            avplay.setDisplayMethod("PLAYER_DISPLAY_MODE_LETTER_BOX");
-            avplay.setDisplayRect(0, 131, 1920, 817);
-            showAspectOverlay("2.35:1");
-        } catch (e) {
-            console.error("2.35:1 failed", e);
-        }
+    function setAspectRatioFullScreen() {
+        applyAspectDisplayMode("PLAYER_DISPLAY_MODE_FULL_SCREEN", "Full Screen");
+    }
+
+    function setAspectRatioAuto() {
+        applyAspectDisplayMode(
+            "PLAYER_DISPLAY_MODE_AUTO_ASPECT_RATIO",
+            "Auto Aspect"
+        );
     }
 
     function cycleAspectRatio() {
@@ -1357,13 +1373,13 @@ function AvPlayer() {
 
         switch (window._avAspectRatioIndex) {
             case 0:
-                setAspectRatio169();
+                setAspectRatioLetterBox();
                 break;
             case 1:
-                setAspectRatio43();
+                setAspectRatioFullScreen();
                 break;
             case 2:
-                setAspectRatio235();
+                setAspectRatioAuto();
                 break;
         }
     }
@@ -1866,7 +1882,7 @@ function AvPlayer() {
             }
 
             window._avAspectRatioIndex = 0; // Reset aspect ratio on open
-            avplay.setDisplayMethod("PLAYER_DISPLAY_MODE_LETTER_BOX");
+            setAvplayDisplayMode("PLAYER_DISPLAY_MODE_LETTER_BOX");
             avplay.setDisplayRect(0, 0, 1920, 1080);
             avplay.setListener({
                 onbufferingstart: function() {

@@ -72,14 +72,7 @@ async function MovieDetailPage() {
     movieDetailData.info && movieDetailData.info.tmdb_id
       ? movieDetailData.info.tmdb_id
       : 0;
-  var getMovieCastData = await getMovieCast(tmdbId);
-  // var getMovieCastData = [];
-
-  // Check again if navigation was interrupted during second await
-  if (navigationInterrupted) {
-    document.removeEventListener("keydown", handleBackNavigationDuringLoading);
-    return;
-  }
+  var getMovieCastData = null;
 
   // Remove the loading navigation handler since we're done loading
   document.removeEventListener("keydown", handleBackNavigationDuringLoading);
@@ -198,6 +191,52 @@ async function MovieDetailPage() {
   }
 
   setTimeout(initFocus, 0);
+
+  function rebuildMovieFocusableEls() {
+    var activeEl = document.activeElement;
+    var fromStartBtn = document.querySelector(
+      ".movie-detail-from-start-button",
+    );
+
+    focusableEls = [
+      document.querySelector(".movie-detail-play-button"),
+      fromStartBtn,
+      document.querySelector(".movie-detail-more-info-button"),
+      document.querySelector(".movie-detail-fav-button"),
+      document.querySelector(".movie-detail-page-header-menu"),
+    ];
+
+    var castEls = document.querySelectorAll(".movie-cast-item-image");
+    if (castEls && castEls.length > 0) {
+      for (var j = 0; j < castEls.length; j++) {
+        focusableEls.push(castEls[j]);
+      }
+    }
+
+    focusableEls = focusableEls.filter(Boolean);
+    currentFocusIndex = focusableEls.indexOf(activeEl);
+    if (currentFocusIndex < 0) currentFocusIndex = 0;
+  }
+
+  async function loadMovieCastData() {
+    try {
+      if (!tmdbId) {
+        getMovieCastData = { cast: [] };
+      } else {
+        getMovieCastData = (await getMovieCast(tmdbId)) || { cast: [] };
+      }
+    } catch (err) {
+      console.log("❌ Failed to load movie cast on detail page:", err);
+      getMovieCastData = { cast: [] };
+    }
+
+    if (localStorage.getItem("currentPage") !== "moviesDetailPage") return;
+
+    updateMovieCastArea();
+    rebuildMovieFocusableEls();
+  }
+
+  loadMovieCastData();
 
   // --- Reset Resume Time ---
   function resetResumeTime(movieId) {
@@ -454,33 +493,7 @@ async function MovieDetailPage() {
     var poster =
       data.info && data.info.movie_image ? data.info.movie_image : "";
 
-    var castHtml = "";
-    if (
-      getMovieCastData &&
-      getMovieCastData.cast &&
-      getMovieCastData.cast.length > 0
-    ) {
-      for (var i = 0; i < getMovieCastData.cast.length; i++) {
-        var item = getMovieCastData.cast[i];
-        var profile = item.profile_path
-          ? castImageUrl + item.profile_path
-          : "./assets/placeholder-img.png";
-        var name = item.name ? item.name : "";
-
-        castHtml +=
-          '<div class="movie-cast-item" tabindex="0">' +
-          '<img src="' +
-          profile +
-          '" alt="' +
-          name +
-          '" class="movie-cast-item-image" ' +
-          "onerror=\"this.src='/assets/placeholder-img.png'\" />" +
-          '<p class="movie-cast-item-name">' +
-          name +
-          "</p>" +
-          "</div>";
-      }
-    }
+    var castHtml = buildMovieCastHtml();
 
     document.querySelector("#movies-detail-page").innerHTML = `
 <div class="movie-detail-page-container" style="background-image:linear-gradient(290.14deg, rgba(5, 113, 155, 0.7) -93.41%, #010E26 98.1%), url('${backdrop}')">
@@ -562,9 +575,7 @@ async function MovieDetailPage() {
 
     <div class="cast-section-container">
       <p class="cast-section-title">Cast & Crew</p>
-      <div class="movie-detail-cast">${
-        castHtml || '<p class="no-cast-found">No Cast and Crew Found</p>'
-      }</div>
+      <div class="movie-detail-cast">${castHtml}</div>
     </div>
   </div>
 </div>
@@ -598,6 +609,60 @@ async function MovieDetailPage() {
       var loader = document.querySelector("#loading-progress");
       if (loader) loader.style.display = "none";
       Router.showPage("movieDetail");
+    }
+  }
+
+  function buildMovieCastHtml() {
+    if (getMovieCastData === null) {
+      return '<p class="no-cast-found">Loading...</p>';
+    }
+
+    var castHtml = "";
+    if (
+      getMovieCastData &&
+      getMovieCastData.cast &&
+      getMovieCastData.cast.length > 0
+    ) {
+      for (var i = 0; i < getMovieCastData.cast.length; i++) {
+        var item = getMovieCastData.cast[i];
+        var profile = item.profile_path
+          ? castImageUrl + item.profile_path
+          : "./assets/placeholder-img.png";
+        var name = item.name ? item.name : "";
+
+        castHtml +=
+          '<div class="movie-cast-item" tabindex="0">' +
+          '<img src="' +
+          profile +
+          '" alt="' +
+          name +
+          '" class="movie-cast-item-image" ' +
+          "onerror=\"this.src='/assets/placeholder-img.png'\" />" +
+          '<p class="movie-cast-item-name">' +
+          name +
+          "</p>" +
+          "</div>";
+      }
+    }
+
+    return castHtml || '<p class="no-cast-found">No Cast and Crew Found</p>';
+  }
+
+  function updateMovieCastArea() {
+    var castContainer = document.querySelector(".movie-detail-cast");
+    if (!castContainer) return;
+
+    var castHtml = buildMovieCastHtml();
+    castContainer.innerHTML = castHtml;
+
+    var movieContentContainer = document.querySelector(
+      ".movie-detail-page-content-container",
+    );
+    if (movieContentContainer) {
+      movieContentContainer.style.height =
+        getMovieCastData && getMovieCastData.cast && getMovieCastData.cast.length
+          ? "auto"
+          : "140vh";
     }
   }
 }

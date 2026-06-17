@@ -10,6 +10,8 @@ function SeriesDetailPage() {
     let castList = [];
     let getAllSeriesCastResults = [];
     let getSerieByName = [];
+    let getSeriesCastData = null;
+    let isSeriesCastLoading = true;
     let selectedSeason = 1;
     let lastFocused = null;
     let focusableEls = [];
@@ -148,23 +150,6 @@ function SeriesDetailPage() {
 
       continueWatchingMap[seasonKey][episodeKey] = progress;
     });
-
-    let getSeriesCastData = [];
-    if (getSerieByName && getSerieByName.id) {
-      // const seriesCast = await getSeriesCast(getSerieByName.id);
-      const seriesCast = [];
-
-      getSeriesCastData = seriesCast || [];
-      if (navigationInterrupted) {
-        document.removeEventListener(
-          "keydown",
-          handleBackNavigationDuringLoading,
-        );
-        return;
-      }
-    } else {
-      getSeriesCastData = [];
-    }
 
     document.removeEventListener("keydown", handleBackNavigationDuringLoading);
 
@@ -649,6 +634,13 @@ function SeriesDetailPage() {
 
     const showCast = () => {
       const container = document.querySelector(".series-detail-cast");
+      if (!container) return;
+
+      if (isSeriesCastLoading) {
+        container.innerHTML = '<p class="no-cast-found">Loading...</p>';
+        rebuildFocusable();
+        return;
+      }
 
       castList = Array.isArray(getSeriesCastData)
         ? getSeriesCastData
@@ -690,6 +682,51 @@ function SeriesDetailPage() {
       const castBtn = document.querySelector("#cast-button");
       currentFocusIndex = focusableEls.indexOf(castBtn);
       setFocus(focusableEls[currentFocusIndex]);
+    };
+
+    const loadSeriesCastData = async () => {
+      try {
+        const tmdbId =
+          seriesDetailData.info && seriesDetailData.info.tmdb_id
+            ? seriesDetailData.info.tmdb_id
+            : 0;
+        let seriesTmdbId = tmdbId;
+
+        if (
+          !seriesTmdbId &&
+          seriesDetailData.info &&
+          seriesDetailData.info.name
+        ) {
+          const seriesName = seriesDetailData.info.name.trim();
+          const searchResults = await getSeriesTmbdId(seriesName);
+          const matchedSeries =
+            searchResults &&
+            searchResults.results &&
+            searchResults.results.find(
+              (s) => s.original_name === seriesName || s.name === seriesName,
+            );
+
+          seriesTmdbId = matchedSeries && matchedSeries.id ? matchedSeries.id : 0;
+        }
+
+        getSeriesCastData = seriesTmdbId
+          ? (await getSeriesCast(seriesTmdbId)) || { cast: [] }
+          : { cast: [] };
+      } catch (err) {
+        console.log("❌ Failed to load series cast on detail page:", err);
+        getSeriesCastData = { cast: [] };
+      }
+
+      isSeriesCastLoading = false;
+
+      if (localStorage.getItem("currentPage") !== "seriesDetailPage") return;
+
+      const container = document.querySelector(".series-detail-cast");
+      const hasEpisodeItems =
+        container &&
+        container.querySelectorAll(".seasons-episodes-item").length > 0;
+
+      if (container && !hasEpisodeItems) showCast();
     };
 
     const playEpisode = (
@@ -1426,6 +1463,8 @@ function SeriesDetailPage() {
     var htmlContent = renderSeriesDetailPage(seriesDetailData);
     const container = document.getElementById("series-detail-page");
     if (container) container.innerHTML = htmlContent;
+
+    loadSeriesCastData();
 
     function removeItemfromContiueWatchingSerie() {
       removeItemFromHistoryById(

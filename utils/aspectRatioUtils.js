@@ -13,7 +13,7 @@ window.VideoAspectRatio = (function () {
       value: "16:9",
       style: {
         width: "100%",
-        height: "100%",
+        height: "100vh",
         top: "0",
         bottom: "0",
         left: "0",
@@ -32,7 +32,7 @@ window.VideoAspectRatio = (function () {
       value: "4:3",
       style: {
         width: "75%",
-        height: "100%",
+        height: "100vh",
         top: "0",
         bottom: "0",
         left: "12.5%",
