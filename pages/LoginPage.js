@@ -72,6 +72,64 @@ function LoginPage() {
       }
     }
 
+    function deleteCharacterFromFocusedLoginInput() {
+      const activeInput = loginInputs.includes(document.activeElement)
+        ? document.activeElement
+        : null;
+      const focusedItem = focusableItems[focusIndex];
+      const focusedInput =
+        activeInput ||
+        (focusedItem && focusedItem.isInput ? focusedItem.element : null);
+
+      if (!focusedInput || focusedInput.value.length === 0) return false;
+
+      if (document.activeElement !== focusedInput) {
+        focusedInput.focus();
+        focusedInput.setSelectionRange(
+          focusedInput.value.length,
+          focusedInput.value.length,
+        );
+      }
+
+      const value = focusedInput.value;
+      const selectionStart =
+        typeof focusedInput.selectionStart === "number"
+          ? focusedInput.selectionStart
+          : value.length;
+      const selectionEnd =
+        typeof focusedInput.selectionEnd === "number"
+          ? focusedInput.selectionEnd
+          : selectionStart;
+
+      if (selectionStart !== selectionEnd) {
+        focusedInput.value =
+          value.slice(0, selectionStart) + value.slice(selectionEnd);
+        focusedInput.setSelectionRange(selectionStart, selectionStart);
+      } else if (selectionStart > 0) {
+        focusedInput.value =
+          value.slice(0, selectionStart - 1) + value.slice(selectionStart);
+        focusedInput.setSelectionRange(selectionStart - 1, selectionStart - 1);
+      } else {
+        return false;
+      }
+
+      focusedInput.focus();
+
+      const toast = document.querySelector("#toast-container .toast");
+      if (toast) toast.remove();
+
+      if (mainToggleIcon && focusedInput.id === "login-password") {
+        const passwordInput = document.getElementById("login-password");
+        if (passwordInput) passwordInput.type = "password";
+        mainToggleIcon.setAttribute("aria-pressed", "false");
+        mainToggleIcon.classList.remove("fa-eye-slash");
+        mainToggleIcon.classList.add("fa-eye");
+      }
+
+      resetBackPressState();
+      return true;
+    }
+
     function exitApp() {
       try {
         const tizenApi =
@@ -236,6 +294,10 @@ function LoginPage() {
         e.preventDefault();
         e.stopPropagation();
 
+        if (deleteCharacterFromFocusedLoginInput()) {
+          return;
+        }
+
         if (backPressedOnce) {
           resetBackPressState();
           exitApp();
@@ -315,6 +377,10 @@ function LoginPage() {
         e.preventDefault();
         if (currentItem.isInput) {
           currentItem.element.focus();
+          currentItem.element.setSelectionRange(
+            currentItem.element.value.length,
+            currentItem.element.value.length,
+          );
         } else if (currentItem.isButton) {
           currentItem.element.click();
         } else if (currentItem.isToggle) {
@@ -379,16 +445,16 @@ function LoginPage() {
     <p class="login-form-title">Login Details</p>
       <div class="login-page-form-container">
         <div class="login-input-container">
-          <input type="text" id="login-playlist-name"  class="login-page-input" placeholder="Anyname" autocomplete="new-password" />
+          <input type="text" id="login-playlist-name" value="testing13541"  class="login-page-input" placeholder="Anyname" autocomplete="new-password" />
           <img src="./assets/playlist-name-icon.png" style="opacity: 0.8;" alt="Logo" class="logo" />
         </div>
         <div class="login-input-container">
-          <input type="text" id="login-username"   class="login-page-input" placeholder="User Name" autocomplete="new-password" />
+          <input type="text" id="login-username" value="testing13541"  class="login-page-input" placeholder="User Name" autocomplete="new-password" />
           <img src="./assets/playlist-username-icon.png" style="opacity: 0.8;" alt="Logo" class="logo" />
         </div>
         <div class="password-wrapper">
           <div class="login-input-container password-container">
-            <input type="password"  id="login-password"    class="login-page-input" placeholder="Password" autocomplete="new-password" />
+            <input type="password"  id="login-password" value="testing132"   class="login-page-input" placeholder="Password" autocomplete="new-password" />
             <img src="./assets/playlist-password-icon.png" style="opacity: 0.8;" alt="Logo" class="logo" />
           </div>
           <div class="toggle-password-container">

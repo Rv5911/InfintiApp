@@ -94,7 +94,7 @@ async function loginApi(
   fromPlaylist = false,
   playlistUrl = "",
 ) {
-  const defaultDns = "http://142.93.220.28:25461/";
+  const defaultDns = "https://inthezone.pro/";
   // let alldns = JSON.parse(localStorage.getItem("all_dns")) || [];
   let alldns = [];
 
@@ -411,6 +411,7 @@ async function loginApi(
     console.log("❌ Login failed:", error);
     updateLoadingPercentage(100, "Login failed");
 
+    const isPreLoginPage = localStorage.getItem("currentPage") === "preLoginPage";
     // Check if it's an "Invalid Playlist Data" error
     const isInvalidPlaylistError =
       error.message && error.message.includes("Invalid Playlist Data");
@@ -420,9 +421,9 @@ async function loginApi(
       disableKeyBlock();
       resetLoadingPercentage();
 
-      // If Invalid Playlist Data error, clear session and navigate to login
-      if (isInvalidPlaylistError) {
-        console.log("🔄 Invalid Playlist Data detected - redirecting to login");
+      // If pre-login refresh fails, clear session and navigate to login.
+      if (isPreLoginPage || isInvalidPlaylistError) {
+        console.log("🔄 Login refresh failed - redirecting to login");
 
         // Clear login state
         localStorage.removeItem("isLogin");
@@ -432,11 +433,11 @@ async function loginApi(
         // Navigate to login page
         localStorage.setItem("navigationFocus", "navbar");
         localStorage.setItem("currentPage", "loginPage");
-        Router.showPage("loginPage");
+        Router.showPage("login");
 
         Toaster.showToast(
           "error",
-          "Invalid Playlist Data. Please login again.",
+          error.message || "Login failed. Please login again.",
         );
       } else {
         // Show normal error toast
