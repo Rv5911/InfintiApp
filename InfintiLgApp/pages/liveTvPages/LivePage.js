@@ -1267,22 +1267,7 @@ function LivePage() {
           window.livePlayer = null;
         }
 
-        const currentPlaylist = getCurrentPlaylist();
-        const isTs =
-          (currentPlaylist.streamFormat
-            ? currentPlaylist.streamFormat
-            : ""
-          ).toLowerCase() === "ts";
-
-        if (isTs && typeof FlowLivePlayerComponent === "function") {
-          videoWrapper.innerHTML = FlowLivePlayerComponent(
-            stream.stream_id,
-            liveVideoUrl,
-            stream.stream_icon,
-            "100%",
-            stream.name || "",
-          );
-        } else if (typeof LiveVideoJsComponent === "function") {
+        if (typeof LiveVideoJsComponent === "function") {
           videoWrapper.innerHTML = LiveVideoJsComponent(
             stream.stream_id,
             liveVideoUrl,

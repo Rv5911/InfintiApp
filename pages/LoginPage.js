@@ -445,16 +445,16 @@ function LoginPage() {
     <p class="login-form-title">Login Details</p>
       <div class="login-page-form-container">
         <div class="login-input-container">
-          <input type="text" id="login-playlist-name" value="testing13541"  class="login-page-input" placeholder="Anyname" autocomplete="new-password" />
+          <input type="text" id="login-playlist-name" class="login-page-input" placeholder="Anyname" autocomplete="new-password" />
           <img src="./assets/playlist-name-icon.png" style="opacity: 0.8;" alt="Logo" class="logo" />
         </div>
         <div class="login-input-container">
-          <input type="text" id="login-username" value="testing13541"  class="login-page-input" placeholder="User Name" autocomplete="new-password" />
+          <input type="text" id="login-username" class="login-page-input" placeholder="User Name" autocomplete="new-password" />
           <img src="./assets/playlist-username-icon.png" style="opacity: 0.8;" alt="Logo" class="logo" />
         </div>
         <div class="password-wrapper">
           <div class="login-input-container password-container">
-            <input type="password"  id="login-password" value="testing132"   class="login-page-input" placeholder="Password" autocomplete="new-password" />
+            <input type="password"  id="login-password"  class="login-page-input" placeholder="Password" autocomplete="new-password" />
             <img src="./assets/playlist-password-icon.png" style="opacity: 0.8;" alt="Logo" class="logo" />
           </div>
           <div class="toggle-password-container">
