@@ -207,6 +207,36 @@ function LivePage() {
     }
   };
 
+  const getSelectedLiveStreamFormat = () => {
+    try {
+      const selectedPlaylist = JSON.parse(
+        localStorage.getItem("selectedPlaylist") || "{}",
+      );
+      const currentPlaylist = getCurrentPlaylist();
+      return String(
+        (currentPlaylist && currentPlaylist.streamFormat) ||
+          selectedPlaylist.streamFormat ||
+          "m3u8",
+      ).toLowerCase();
+    } catch (e) {
+      return "m3u8";
+    }
+  };
+
+  const renderPlayerError = (message) => {
+    const videoWrapper = document.querySelector(".lp-video-wrapper");
+    if (!videoWrapper) return;
+
+    delete videoWrapper.dataset.streamId;
+    delete videoWrapper.dataset.playerType;
+    videoWrapper.innerHTML = `
+      <div style="width:100%; height:100%; background:black; display:flex; align-items:center; justify-content:center; flex-direction:column; color:#fff; text-align:center; padding:20px;">
+        <i class="fas fa-exclamation-triangle" style="font-size: 46px; margin-bottom:12px; color:#ffb020;"></i>
+        <p style="margin:0; font-size:20px;">${message}</p>
+      </div>
+    `;
+  };
+
   const cleanupActiveLivePlayer = () => {
     if (
       typeof LiveVideoJsComponent !== "undefined" &&
@@ -214,6 +244,15 @@ function LivePage() {
     ) {
       try {
         LiveVideoJsComponent.cleanup();
+      } catch (err) {}
+    }
+
+    if (
+      typeof FlowLivePlayerComponent !== "undefined" &&
+      typeof FlowLivePlayerComponent.cleanup === "function"
+    ) {
+      try {
+        FlowLivePlayerComponent.cleanup();
       } catch (err) {}
     }
 
@@ -240,7 +279,15 @@ function LivePage() {
       desiredPlayerType === "avplay" &&
       isTizenDevice() &&
       typeof LiveAvPlayer === "function";
-    const playerType = canUseAvplay ? "avplay" : "videojs";
+    const canUseFlowPlayer =
+      !canUseAvplay &&
+      getSelectedLiveStreamFormat() === "ts" &&
+      typeof FlowLivePlayerComponent === "function";
+    const playerType = canUseAvplay
+      ? "avplay"
+      : canUseFlowPlayer
+        ? "avplay"
+        : "videojs";
     const currentStreamId = videoWrapper.dataset.streamId || null;
     const currentPlayerType = videoWrapper.dataset.playerType || null;
 
@@ -259,7 +306,15 @@ function LivePage() {
 
     const playerMarkup =
       playerType === "avplay"
-        ? LiveVideoJsComponent(
+        ? LiveAvPlayer(
+              stream.stream_id,
+              liveVideoUrl,
+              stream.stream_icon,
+              "100%",
+              stream.name || "",
+            )
+        : playerType === "flow"
+          ? FlowLivePlayerComponent(
               stream.stream_id,
               liveVideoUrl,
               stream.stream_icon,
@@ -1538,7 +1593,13 @@ function LivePage() {
       if (!videoWrapper) return;
 
       const desiredPlayerType = isTizenDevice() ? "avplay" : "videojs";
-      if (!renderLivePlayerForMode(stream, desiredPlayerType)) return;
+      if (!renderLivePlayerForMode(stream, desiredPlayerType)) {
+        currentPlayingStream = null;
+        renderPlayerError("Unable to load this channel.");
+        return;
+      }
+
+      currentPlayingStream = stream;
 
       document.querySelectorAll(".lp-channel-card").forEach((c) => {
         c.classList.remove("lp-channel-card-playing");
@@ -1553,7 +1614,7 @@ function LivePage() {
 
       // Prevent adding to history if it's an adult channel
       const category = (window.liveCategories || []).find(
-        (c) => c.category_id === stream.category_id,
+        (c) => String(c.category_id) === String(stream.category_id),
       );
       const isAdultChannel = category
         ? isLiveAdultCategory(category.category_name)

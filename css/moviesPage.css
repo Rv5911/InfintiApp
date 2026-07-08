@@ -306,7 +306,7 @@
     animation: none;
 }
 
-.movies-card-title span::after {
+.movies-card-title span.marquee::after {
     content: attr(data-title);
     padding-left: 50px;
     /* Gap between loop iterations */

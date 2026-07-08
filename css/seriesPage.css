@@ -304,7 +304,7 @@
     animation: none;
 }
 
-.series-card-title span::after {
+.series-card-title span.marquee::after {
     content: attr(data-title);
     padding-left: 50px;
     /* Gap between loop iterations */

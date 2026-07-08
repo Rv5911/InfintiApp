@@ -56,7 +56,6 @@ function AvPlayer() {
     // Focus states
     var isPlayPauseFocused = true;
     var isSeekBarFocused = false;
-    var isAspectRatioFocused = false;
 
     // Seeking variables
     var accumulatedSeekOffset = 0;
@@ -86,6 +85,7 @@ function AvPlayer() {
     var selectedAudioTrackIndex = -1; // -1 = not yet selected (use default)
     var selectedSubtitleTrackIndex = -1; // -1 = OFF (subtitles off by default on first play)
     var isSelectionPending = false; // Flag to prevent sync overwrites
+    var avAspectRatioIndex = 0; // 0: 16:9, 1: 4:3, 2: 2.35:1
 
     // Helpers to get array position from stored AVPlay index
     function getAudioArrayPos(tracks) {
@@ -490,18 +490,9 @@ function AvPlayer() {
         showControls();
     }
 
-    function focusAspectRatio() {
-        unfocusAll();
-        isAspectRatioFocused = true;
-        var btn = document.getElementById("av-ar-btn");
-        if (btn) btn.classList.add("focused");
-        showControls();
-    }
-
     function unfocusAll() {
         isPlayPauseFocused = false;
         isSeekBarFocused = false;
-        isAspectRatioFocused = false;
 
         var focusedEls = document.querySelectorAll(".focused");
         for (var i = 0; i < focusedEls.length; i++) {
@@ -945,7 +936,7 @@ function AvPlayer() {
         //   • User picks a track → setSilentSubtitle(false) + setSelectTrack → subtitles ON
         //   • User picks Off     → setSilentSubtitle(true)                  → subtitles OFF
         // Opening/closing the sidebar must never interfere with that state.
-        focusAspectRatio();
+        focusPlayPause();
     }
 
     function selectTrackFromSidebar() {
@@ -1332,56 +1323,100 @@ function AvPlayer() {
         }
     }
 
-    function applyAspectDisplayMode(mode, label) {
+    function getAspectRatioConfig(index) {
+        if (index === 1) {
+            return {
+                label: "4:3",
+                aspect: 4 / 3,
+            };
+        }
+        if (index === 2) {
+            return {
+                label: "2.35:1",
+                aspect: 2.35,
+            };
+        }
+        return {
+            label: "16:9",
+            aspect: null,
+        };
+    }
+
+    function getAvplayDisplayBounds() {
+        var container = document.getElementById("avplay-container");
+        var bounds = null;
+
+        if (container && typeof container.getBoundingClientRect === "function") {
+            bounds = container.getBoundingClientRect();
+        }
+
+        var width =
+            bounds && bounds.width > 0 ?
+            bounds.width :
+            window.innerWidth || document.documentElement.clientWidth || 1920;
+        var height =
+            bounds && bounds.height > 0 ?
+            bounds.height :
+            window.innerHeight || document.documentElement.clientHeight || 1080;
+        var left = bounds && bounds.width > 0 ? bounds.left : 0;
+        var top = bounds && bounds.height > 0 ? bounds.top : 0;
+
+        return {
+            x: Math.round(left),
+            y: Math.round(top),
+            width: Math.round(width),
+            height: Math.round(height),
+        };
+    }
+
+    function getCenteredDisplayRect(config) {
+        var bounds = getAvplayDisplayBounds();
+        if (!config.aspect) return bounds;
+
+        var width = bounds.width;
+        var height = Math.round(width / config.aspect);
+
+        if (height > bounds.height) {
+            height = bounds.height;
+            width = Math.round(height * config.aspect);
+        }
+
+        return {
+            x: Math.round(bounds.x + (bounds.width - width) / 2),
+            y: Math.round(bounds.y + (bounds.height - height) / 2),
+            width: width,
+            height: height,
+        };
+    }
+
+    function applyNativeAspectRatio(showOverlayLabel) {
         if (!avplay) return;
+        var config = getAspectRatioConfig(avAspectRatioIndex);
+        var rect = getCenteredDisplayRect(config);
         try {
-            avplay.setDisplayRect(0, 0, 1920, 1080);
-            setAvplayDisplayMode(mode);
+            setAvplayDisplayMode("PLAYER_DISPLAY_MODE_LETTER_BOX");
+            avplay.setDisplayRect(rect.x, rect.y, rect.width, rect.height);
             setTimeout(function() {
                 try {
                     if (avplay) {
-                        avplay.setDisplayRect(0, 0, 1920, 1080);
-                        setAvplayDisplayMode(mode);
+                        rect = getCenteredDisplayRect(config);
+                        setAvplayDisplayMode("PLAYER_DISPLAY_MODE_LETTER_BOX");
+                        avplay.setDisplayRect(rect.x, rect.y, rect.width, rect.height);
                     }
                 } catch (retryErr) {}
             }, 120);
-            showAspectOverlay(label);
+            if (showOverlayLabel) showAspectOverlay(config.label);
         } catch (e) {
-            console.error(label + " failed", e);
+            console.error("Aspect ratio " + config.label + " failed", e);
         }
-    }
-
-    function setAspectRatioLetterBox() {
-        applyAspectDisplayMode("PLAYER_DISPLAY_MODE_LETTER_BOX", "Letter Box");
-    }
-
-    function setAspectRatioFullScreen() {
-        applyAspectDisplayMode("PLAYER_DISPLAY_MODE_FULL_SCREEN", "Full Screen");
-    }
-
-    function setAspectRatioAuto() {
-        applyAspectDisplayMode(
-            "PLAYER_DISPLAY_MODE_AUTO_ASPECT_RATIO",
-            "Auto Aspect"
-        );
     }
 
     function cycleAspectRatio() {
         if (!avplay || errorActive || isLoading) return;
 
-        window._avAspectRatioIndex = ((window._avAspectRatioIndex || 0) + 1) % 3;
-
-        switch (window._avAspectRatioIndex) {
-            case 0:
-                setAspectRatioLetterBox();
-                break;
-            case 1:
-                setAspectRatioFullScreen();
-                break;
-            case 2:
-                setAspectRatioAuto();
-                break;
-        }
+        avAspectRatioIndex = (avAspectRatioIndex + 1) % 3;
+        window._avAspectRatioIndex = avAspectRatioIndex;
+        applyNativeAspectRatio(true);
     }
 
     function fetchTrackInfo() {
@@ -1881,9 +1916,9 @@ function AvPlayer() {
                 console.warn("setStreamingProperty failed", ae);
             }
 
-            window._avAspectRatioIndex = 0; // Reset aspect ratio on open
-            setAvplayDisplayMode("PLAYER_DISPLAY_MODE_LETTER_BOX");
-            avplay.setDisplayRect(0, 0, 1920, 1080);
+            avAspectRatioIndex = 0; // Reset aspect ratio on open
+            window._avAspectRatioIndex = avAspectRatioIndex;
+            applyNativeAspectRatio(false);
             avplay.setListener({
                 onbufferingstart: function() {
                     if (!avplay) return;
@@ -1915,6 +1950,7 @@ function AvPlayer() {
                         loader.classList.add("hidden");
                         loader.style.backgroundColor = "";
                     }
+                    applyNativeAspectRatio(false);
                     // Re-enforce visibility on buff complete
                     var container = document.getElementById("avplay-container");
                     if (container) makeParentsTransparent(container);
@@ -2200,6 +2236,7 @@ function AvPlayer() {
 
                         avplay.play();
                         hasStartedPlayingOnce = true;
+                        applyNativeAspectRatio(false);
 
                         // Subtitles default to OFF — suppress native rendering on startup.
                         // User must manually select a subtitle track from the sidebar.
@@ -2328,7 +2365,7 @@ function AvPlayer() {
                 switch (e.keyCode) {
                     case 40:
                         if (!isLive) focusSeekBar();
-                        else focusAspectRatio();
+                        else focusPlayPause();
                         e.preventDefault();
                         break;
                     case 13:
@@ -2359,7 +2396,7 @@ function AvPlayer() {
                         e.preventDefault();
                         break;
                     case 40:
-                        focusAspectRatio();
+                        focusSeekBar();
                         e.preventDefault();
                         break;
                     case 37:
@@ -2372,23 +2409,6 @@ function AvPlayer() {
                         break;
                     case 13:
                         focusPlayPause();
-                        e.preventDefault();
-                        break;
-                }
-            } else if (isAspectRatioFocused) {
-                switch (e.keyCode) {
-                    case 38:
-                        if (!isLive) focusSeekBar();
-                        else focusPlayPause();
-                        e.preventDefault();
-                        break;
-                    case 37:
-                        if (!isLive) focusSeekBar();
-                        else focusPlayPause();
-                        e.preventDefault();
-                        break;
-                    case 13:
-                        cycleAspectRatio();
                         e.preventDefault();
                         break;
                 }
@@ -2447,7 +2467,6 @@ function AvPlayer() {
             sidebarFocusIndex = 0;
             isPlayPauseFocused = true;
             isSeekBarFocused = false;
-            isAspectRatioFocused = false;
             audioTracks = [];
             subtitleTracks = [];
             selectedAudioTrackIndex = -1;
@@ -2538,11 +2557,6 @@ function AvPlayer() {
             '<span id="av-total-time" class="av-time-display">0:00</span>' +
             "</div>" :
             '<div class="av-live-badge" style="color:red; font-weight:bold; font-size:24px; margin-bottom:10px;">LIVE</div>') +
-        '<div class="av-buttons-row">' +
-        '<button id="av-ar-btn" class="av-control-btn">' +
-        '<i class="fa-solid fa-expand"></i> Aspect Ratio' +
-        "</button>" +
-        "</div>" +
         "</div>" +
         '<div id="av-audio-sidebar" class="av-sidebar av-audio-sidebar"></div>' +
         '<div id="av-subtitle-sidebar" class="av-sidebar av-subtitle-sidebar"></div>' +
