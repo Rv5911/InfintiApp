@@ -71,19 +71,61 @@ function LivePage() {
   const getAspectRatioButton = () => {
     return (
       document.getElementById("videojs-aspect-ratio") ||
-      document.getElementById("flow-aspect-ratio") ||
-      document.getElementById("lp-tizen-aspect-ratio-btn")
+      document.getElementById("flow-aspect-ratio")
     );
   };
 
   const hasAspectRatioAction = () => {
-    return (
-      !!getAspectRatioButton() ||
-      !!(
-        window.livePlayer &&
-        typeof window.livePlayer.cycleAspectRatio === "function"
-      )
-    );
+    return !!getAspectRatioButton();
+  };
+
+  const getRemotePlaybackAction = (e) => {
+    const keyCode = e.keyCode || e.which;
+    const keyName = e.key;
+    const keyCodeName = e.code;
+
+    const forwardKeys = [
+      417,
+      10233,
+      "MediaFastForward",
+      "FastForward",
+      "MediaTrackNext",
+      "Next",
+      "XF86AudioForward",
+    ];
+    const backwardKeys = [
+      412,
+      10232,
+      "MediaRewind",
+      "Rewind",
+      "MediaTrackPrevious",
+      "Previous",
+      "XF86AudioRewind",
+    ];
+    const playPauseKeys = [10252, 179, "MediaPlayPause", "PlayPause"];
+    const playKeys = [415, "MediaPlay", "Play", "XF86AudioPlay"];
+    const pauseKeys = [19, "MediaPause", "Pause", "XF86AudioPause"];
+    const stopKeys = [413, "MediaStop", "Stop", "XF86AudioStop"];
+    const recordKeys = [416, "MediaRecord", "Record"];
+    const previousKeys = [10232, "MediaTrackPrevious", "Previous"];
+    const nextKeys = [10233, "MediaTrackNext", "Next"];
+
+    const matches = (keys) =>
+      keys.includes(keyCode) ||
+      keys.includes(keyName) ||
+      keys.includes(keyCodeName);
+
+    if (matches(forwardKeys)) return "forward";
+    if (matches(backwardKeys)) return "backward";
+    if (matches(playPauseKeys)) return "toggle";
+    if (matches(playKeys)) return "play";
+    if (matches(pauseKeys)) return "pause";
+    if (matches(stopKeys)) return "stop";
+    if (matches(recordKeys)) return "record";
+    if (matches(previousKeys)) return "previous";
+    if (matches(nextKeys)) return "next";
+
+    return null;
   };
 
   const isTizenDevice = () => {
@@ -194,11 +236,7 @@ function LivePage() {
         return "";
       }
 
-      return `${
-        currentPlaylistData.server_info.server_protocol
-      }://${currentPlaylistData.server_info.url}:${
-        currentPlaylistData.server_info.port
-      }/live/${currentPlaylistData.user_info.username}/${
+      return `${localStorage.getItem("loginDns")}/live/${currentPlaylistData.user_info.username}/${
         currentPlaylistData.user_info.password
       }/${stream.stream_id}.${playlistLiveExtension.streamFormat || "m3u8"}`;
     } catch (e) {
@@ -528,6 +566,12 @@ function LivePage() {
     pendingFocusItemWork = null;
     pendingArrowFrame = null;
     pendingScrollFrame = null;
+    if (window.liveTvPlayNextChannel === playNextChannel) {
+      window.liveTvPlayNextChannel = null;
+    }
+    if (window.liveTvPlayPreviousChannel === playPreviousChannel) {
+      window.liveTvPlayPreviousChannel = null;
+    }
 
     const grid = document.getElementById("lp-channels-grid");
     if (grid) {
@@ -1672,6 +1716,9 @@ function LivePage() {
     checkLockAndPlay(prevStream);
   };
 
+  window.liveTvPlayNextChannel = playNextChannel;
+  window.liveTvPlayPreviousChannel = playPreviousChannel;
+
   const checkLockAndPlay = (stream) => {
     if (!stream) return;
 
@@ -2035,6 +2082,41 @@ function LivePage() {
       return; // Don't process keydown events until user navigates into the page
     }
 
+    const remotePlaybackAction = getRemotePlaybackAction(e);
+    if (remotePlaybackAction) {
+      e.preventDefault();
+      e.stopImmediatePropagation();
+
+      if (
+        remotePlaybackAction === "forward" ||
+        remotePlaybackAction === "next"
+      ) {
+        playNextChannel();
+      } else if (
+        remotePlaybackAction === "backward" ||
+        remotePlaybackAction === "previous"
+      ) {
+        playPreviousChannel();
+      } else if (remotePlaybackAction === "toggle") {
+        togglePlayPauseGlobal();
+      } else if (
+        remotePlaybackAction === "play" &&
+        window.livePlayer &&
+        typeof window.livePlayer.play === "function"
+      ) {
+        window.livePlayer.play();
+      } else if (
+        (remotePlaybackAction === "pause" || remotePlaybackAction === "stop") &&
+        window.livePlayer &&
+        typeof window.livePlayer.pause === "function"
+      ) {
+        window.livePlayer.pause();
+      }
+
+      resetControlsTimer();
+      return;
+    }
+
     // Cross-browser fullscreen detection
     const isFullscreen = checkIsFullscreen();
 
@@ -2104,12 +2186,6 @@ function LivePage() {
       if (playerSubFocus === 2) {
         const btn = getAspectRatioButton();
         if (btn) btn.click();
-        else if (
-          window.livePlayer &&
-          typeof window.livePlayer.cycleAspectRatio === "function"
-        ) {
-          window.livePlayer.cycleAspectRatio();
-        }
         if (hasAspectRatioAction()) {
           resetControlsTimer();
           return;

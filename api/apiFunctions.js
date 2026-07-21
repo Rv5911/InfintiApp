@@ -87,6 +87,25 @@ function buildLoginUrl(dns, username, password) {
   return `${dns}player_api.php?username=${username}&password=${password}`;
 }
 
+function getLoginDnsFromPlaylistUrl(playlistUrl) {
+  try {
+    const url = new URL(playlistUrl);
+    const basePath = url.pathname
+      .replace(/\/?player_api\.php$/, "")
+      .replace(/\/+$/, "");
+    return `${url.origin}${basePath}`.replace(/\/+$/, "");
+  } catch (error) {
+    return playlistUrl.split("player_api.php")[0].replace(/\/+$/, "");
+  }
+}
+
+function saveLoginDnsFromPlaylistUrl(playlistUrl) {
+  const loginDns = getLoginDnsFromPlaylistUrl(playlistUrl);
+  if (loginDns) {
+    localStorage.setItem("loginDns", loginDns);
+  }
+}
+
 async function loginApi(
   username,
   password,
@@ -94,9 +113,9 @@ async function loginApi(
   fromPlaylist = false,
   playlistUrl = "",
 ) {
-  const defaultDns = "https://inthezone.pro/";
-  // let alldns = JSON.parse(localStorage.getItem("all_dns")) || [];
-  let alldns = [];
+  const defaultDns = "https://demo-app.techsmarters.com:25463/";
+  let alldns = JSON.parse(localStorage.getItem("all_dns")) || [];
+  // let alldns = [];
 
   if (alldns.length === 0) {
     alldns = [defaultDns];
@@ -231,6 +250,7 @@ async function loginApi(
             window.liveCategories = liveCategories;
 
             updateLoadingPercentage(100, "Login successful!");
+            saveLoginDnsFromPlaylistUrl(playlistUrl);
 
             if (!fromPlaylist) {
               existingPlaylists.push(newPlaylist);
@@ -376,6 +396,7 @@ async function loginApi(
             }
 
             updateLoadingPercentage(100, "Login successful!");
+            saveLoginDnsFromPlaylistUrl(apiUrl);
             success = true;
 
             setTimeout(() => {

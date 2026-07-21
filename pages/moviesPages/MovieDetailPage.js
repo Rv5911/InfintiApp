@@ -307,11 +307,7 @@ async function MovieDetailPage() {
           movieDetailData.movie_data.container_extension
         ) {
           movieVideoUrl =
-            currentPlaylistData.server_info.server_protocol +
-            "://" +
-            currentPlaylistData.server_info.url +
-            ":" +
-            currentPlaylistData.server_info.port +
+          localStorage.getItem("loginDns") +
             "/movie/" +
             currentPlaylistData.user_info.username +
             "/" +

@@ -51,6 +51,58 @@ function LiveAvPlayer(
         return i18nFallbacks[key] || key;
     }
 
+    function getRemotePlaybackAction(e) {
+        var keyCode = e.keyCode || e.which;
+        var keyName = e.key;
+        var keyCodeName = e.code;
+
+        var forwardKeys = [
+            417,
+            10233,
+            "MediaFastForward",
+            "FastForward",
+            "MediaTrackNext",
+            "Next",
+            "XF86AudioForward",
+        ];
+        var backwardKeys = [
+            412,
+            10232,
+            "MediaRewind",
+            "Rewind",
+            "MediaTrackPrevious",
+            "Previous",
+            "XF86AudioRewind",
+        ];
+        var playPauseKeys = [10252, 179, "MediaPlayPause", "PlayPause"];
+        var playKeys = [415, "MediaPlay", "Play", "XF86AudioPlay"];
+        var pauseKeys = [19, "MediaPause", "Pause", "XF86AudioPause"];
+        var stopKeys = [413, "MediaStop", "Stop", "XF86AudioStop"];
+        var recordKeys = [416, "MediaRecord", "Record"];
+        var previousKeys = [10232, "MediaTrackPrevious", "Previous"];
+        var nextKeys = [10233, "MediaTrackNext", "Next"];
+
+        function matches(keys) {
+            return (
+                keys.indexOf(keyCode) !== -1 ||
+                keys.indexOf(keyName) !== -1 ||
+                keys.indexOf(keyCodeName) !== -1
+            );
+        }
+
+        if (matches(forwardKeys)) return "forward";
+        if (matches(backwardKeys)) return "backward";
+        if (matches(playPauseKeys)) return "toggle";
+        if (matches(playKeys)) return "play";
+        if (matches(pauseKeys)) return "pause";
+        if (matches(stopKeys)) return "stop";
+        if (matches(recordKeys)) return "record";
+        if (matches(previousKeys)) return "previous";
+        if (matches(nextKeys)) return "next";
+
+        return null;
+    }
+
     // Helpers to get array position from stored AVPlay index (Mirroring AvPlayer.js)
     function getAudioArrayPos() {
         if (selectedAudioTrackIndex === -1 && audioTracks.length > 0) return 0;
@@ -700,6 +752,45 @@ function LiveAvPlayer(
         showControls();
     }
 
+    function handleRemotePlaybackAction(action) {
+        if (!action || !avplay || errorActive) return false;
+
+        if (action === "record") return true;
+
+        if (action === "forward" || action === "next") {
+            if (typeof window.liveTvPlayNextChannel === "function") {
+                window.liveTvPlayNextChannel();
+            }
+        } else if (action === "backward" || action === "previous") {
+            if (typeof window.liveTvPlayPreviousChannel === "function") {
+                window.liveTvPlayPreviousChannel();
+            }
+        } else if (action === "toggle") {
+            togglePlayPause();
+        } else if (action === "play") {
+            try {
+                if (avplay.getState() !== "PLAYING") avplay.play();
+                var playIcon = document.querySelector("#live-play-pause-btn i");
+                if (playIcon) playIcon.className = "fa-solid fa-pause";
+                showControls();
+            } catch (e) {
+                console.warn("[LiveAvPlayer] Remote play failed:", e);
+            }
+        } else if (action === "pause" || action === "stop") {
+            try {
+                var state = avplay.getState();
+                if (state === "PLAYING" || state === "READY") avplay.pause();
+                var pauseIcon = document.querySelector("#live-play-pause-btn i");
+                if (pauseIcon) pauseIcon.className = "fa-solid fa-play";
+                showControls();
+            } catch (e) {
+                console.warn("[LiveAvPlayer] Remote pause failed:", e);
+            }
+        }
+
+        return true;
+    }
+
     function toggleFullscreenMode() {
         if (typeof window.toggleFullscreen === "function") {
             window.toggleFullscreen();
@@ -884,17 +975,8 @@ function LiveAvPlayer(
             else if (dir === "up") focusedControl = "play-pause";
             else if (dir === "down") focusedControl = "play-pause";
         } else {
-            if (dir === "down") {
-                if (
-                    focusedControl === "play-pause" ||
-                    focusedControl === "fullscreen-toggle"
-                )
-                    focusedControl = "ar";
-            } else if (dir === "up") {
-                if (
-                    focusedControl === "ar" ||
-                    focusedControl === "fullscreen-toggle"
-                )
+            if (dir === "up") {
+                if (focusedControl === "fullscreen-toggle")
                     focusedControl = "play-pause";
             } else if (dir === "left") {
                 if (focusedControl === "fullscreen-toggle")
@@ -911,7 +993,6 @@ function LiveAvPlayer(
         showControls();
         if (focusedControl === "play-pause") togglePlayPause();
         else if (focusedControl === "fullscreen-toggle") toggleFullscreenMode();
-        else if (focusedControl === "ar") cycleAspectRatio();
     }
 
     function cycleAspectRatio() {
@@ -1283,6 +1364,19 @@ function LiveAvPlayer(
         play: function() {
             if (!avplay) return;
             try {
+                var state = avplay.getState();
+                if (state === "PLAYING") return;
+                if (state === "PAUSED" || state === "READY") {
+                    avplay.play();
+                    isLoading = false;
+                    var icon = document.querySelector("#live-play-pause-btn i");
+                    if (icon) icon.className = "fa-solid fa-pause";
+                    var readyLoader = document.getElementById("av-live-loader");
+                    if (readyLoader) readyLoader.classList.add("hidden");
+                    showControls();
+                    return;
+                }
+
                 avplay.prepareAsync(
                     function() {
                         avplay.play();
@@ -1306,6 +1400,20 @@ function LiveAvPlayer(
                 );
             } catch (e) {
                 console.error("[LiveAvPlayer] Appending fast-swap play error: ", e);
+            }
+        },
+        pause: function() {
+            if (!avplay || errorActive) return;
+            try {
+                var state = avplay.getState();
+                if (state === "PLAYING" || state === "READY") {
+                    avplay.pause();
+                    var icon = document.querySelector("#live-play-pause-btn i");
+                    if (icon) icon.className = "fa-solid fa-play";
+                    showControls();
+                }
+            } catch (e) {
+                console.warn("[LiveAvPlayer] Pause failed:", e);
             }
         },
         togglePlayPause: togglePlayPause,
@@ -1357,11 +1465,6 @@ function LiveAvPlayer(
         '<span id="av-live-curr-time" class="av-live-t">0:00</span>' +
         '<div class="av-live-seek-bg"><div id="av-live-progress-bar" class="av-live-seek-fill"></div></div>' +
         '<span class="av-live-t">LIVE</span>' +
-        "</div>" +
-        '<div class="av-live-btns-row">' +
-        '<div id="lp-tizen-aspect-ratio-btn" class="av-live-opt av-live-nav-btn" data-id="ar" onclick="if(window.livePlayer && window.livePlayer.cycleAspectRatio) window.livePlayer.cycleAspectRatio()"><i class="fa-solid fa-rectangle-list"></i> ' +
-        t("aspectRatio") +
-        '</div>' +
         "</div>" +
         "</div>" +
         '<div id="av-live-sub-display" class="av-live-subtitles"></div>' +
