@@ -749,7 +749,7 @@ function SeriesDetailPage() {
           localStorage.getItem("currentPlaylistData"),
         );
 
-        const seriesEpisodeVideoUrl = `${currentPlaylist.server_info.server_protocol}://${currentPlaylist.server_info.url}:${currentPlaylist.server_info.port}/series/${currentPlaylist.user_info.username}/${currentPlaylist.user_info.password}/${episodeId}.${episode.container_extension}`;
+        const seriesEpisodeVideoUrl = `${localStorage.getItem("loginDns")}/series/${currentPlaylist.user_info.username}/${currentPlaylist.user_info.password}/${episodeId}.${episode.container_extension}`;
 
         // Create a clean copy of the episode data
         const playingItemData = {

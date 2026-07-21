@@ -1,4 +1,6 @@
 function LoginPage() {
+  localStorage.removeItem("loginDns");
+
   setTimeout(() => {
     if (typeof logAllDnsEntries === "function") {
       logAllDnsEntries();

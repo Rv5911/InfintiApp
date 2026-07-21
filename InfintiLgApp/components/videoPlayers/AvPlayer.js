@@ -46,6 +46,90 @@ function AvPlayer() {
     var isLive = localStorage.getItem("isLive") === "true";
     var backKeysCodes = [10009, 461, 8, 27, 10079, 100079];
 
+    function getRemotePlaybackAction(e) {
+        var keyCode = e.keyCode || e.which;
+        var keyName = e.key;
+        var keyCodeName = e.code;
+
+        var forwardKeys = [
+            417,
+            10233,
+            "MediaFastForward",
+            "FastForward",
+            "MediaTrackNext",
+            "Next",
+            "XF86AudioForward",
+        ];
+        var backwardKeys = [
+            412,
+            10232,
+            "MediaRewind",
+            "Rewind",
+            "MediaTrackPrevious",
+            "Previous",
+            "XF86AudioRewind",
+        ];
+        var playPauseKeys = [10252, 179, "MediaPlayPause", "PlayPause"];
+        var playKeys = [415, "MediaPlay", "Play", "XF86AudioPlay"];
+        var pauseKeys = [19, "MediaPause", "Pause", "XF86AudioPause"];
+        var stopKeys = [413, "MediaStop", "Stop", "XF86AudioStop"];
+        var recordKeys = [416, "MediaRecord", "Record"];
+        var previousKeys = [10232, "MediaTrackPrevious", "Previous"];
+        var nextKeys = [10233, "MediaTrackNext", "Next"];
+
+        function matches(keys) {
+            return (
+                keys.indexOf(keyCode) !== -1 ||
+                keys.indexOf(keyName) !== -1 ||
+                keys.indexOf(keyCodeName) !== -1
+            );
+        }
+
+        if (matches(forwardKeys)) return "forward";
+        if (matches(backwardKeys)) return "backward";
+        if (matches(playPauseKeys)) return "toggle";
+        if (matches(playKeys)) return "play";
+        if (matches(pauseKeys)) return "pause";
+        if (matches(stopKeys)) return "stop";
+        if (matches(recordKeys)) return "record";
+        if (matches(previousKeys)) return "previous";
+        if (matches(nextKeys)) return "next";
+
+        return null;
+    }
+
+    function registerRemotePlaybackKeys() {
+        if (
+            typeof tizen === "undefined" ||
+            !tizen.tvinputdevice ||
+            typeof tizen.tvinputdevice.registerKey !== "function"
+        ) {
+            return;
+        }
+
+        var keyNames = [
+            "MediaFastForward",
+            "MediaRewind",
+            "MediaPlayPause",
+            "MediaPlay",
+            "MediaPause",
+            "MediaStop",
+            "MediaRecord",
+            "MediaTrackPrevious",
+            "MediaTrackNext",
+        ];
+
+        keyNames.forEach(function(name) {
+            try {
+                tizen.tvinputdevice.registerKey(name);
+            } catch (e) {
+                console.warn("[AvPlayer] Failed to register remote key:", name, e);
+            }
+        });
+    }
+
+    registerRemotePlaybackKeys();
+
     var avplay = null;
     var player = null;
     var controlsHideTimeout = null;
@@ -1293,6 +1377,45 @@ function AvPlayer() {
         }, 500);
     }
 
+    function handleRemotePlaybackAction(action) {
+        if (!action || !avplay || errorActive) return false;
+
+        if (action === "record") return true;
+
+        if (isLoading && action !== "play" && action !== "toggle") {
+            return true;
+        }
+
+        try {
+            if (action === "forward" || action === "next") {
+                debouncedSeek(10);
+            } else if (action === "backward" || action === "previous") {
+                debouncedSeek(-10);
+            } else if (action === "toggle") {
+                var state = avplay.getState();
+                if (state === "PLAYING") {
+                    avplay.pause();
+                    showOverlay("pause");
+                } else {
+                    avplay.play();
+                    showOverlay("play");
+                    hideControlsWithDelay(3000);
+                }
+            } else if (action === "play") {
+                avplay.play();
+                showOverlay("play");
+                hideControlsWithDelay(3000);
+            } else if (action === "pause" || action === "stop") {
+                avplay.pause();
+                showOverlay("pause");
+            }
+        } catch (e) {
+            console.warn("[AvPlayer] Remote playback action failed:", action, e);
+        }
+
+        return true;
+    }
+
     function showAspectOverlay(label) {
         var overlay = document.getElementById("av-aspect-overlay");
         if (overlay) {
@@ -2342,6 +2465,15 @@ function AvPlayer() {
                 return;
             }
 
+            var remotePlaybackAction = getRemotePlaybackAction(e);
+            if (remotePlaybackAction) {
+                handleRemotePlaybackAction(remotePlaybackAction);
+                e.preventDefault();
+                e.stopImmediatePropagation();
+                resetInactivityTimer();
+                return;
+            }
+
             // Guard controls access by isLoading
             if ([37, 38, 39, 40, 13].indexOf(e.keyCode) !== -1) {
                 if (isLoading && !errorActive) {
@@ -2444,11 +2576,11 @@ function AvPlayer() {
             hideControlsWithDelay(3000);
         };
 
-        document.addEventListener("keydown", avKeyHandler);
+        window.addEventListener("keydown", avKeyHandler, true);
 
         AvPlayer.cleanup = function() {
             isDestroyed = true; // Prevent any pending timeout callbacks from firing toasts
-            document.removeEventListener("keydown", avKeyHandler);
+            window.removeEventListener("keydown", avKeyHandler, true);
             if (pendingSeekTimeout) clearTimeout(pendingSeekTimeout);
             if (controlsHideTimeout) clearTimeout(controlsHideTimeout);
             if (inactivityTimeout) clearTimeout(inactivityTimeout);

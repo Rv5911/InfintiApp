@@ -148,11 +148,7 @@ function LiveTvPage() {
       localStorage.getItem("selectedPlaylist")
     );
 
-    const liveVideoUrl = `${
-      currentPlaylistData.server_info.server_protocol
-    }://${currentPlaylistData.server_info.url}:${
-      currentPlaylistData.server_info.port
-    }/live/${currentPlaylistData.user_info.username}/${
+    const liveVideoUrl = `${localStorage.getItem("loginDns")}/live/${currentPlaylistData.user_info.username}/${
       currentPlaylistData.user_info.password
     }/${streamId}.${
       playlistLiveExtension.streamFormat

@@ -62,7 +62,12 @@ const Router = (() => {
     },
     videoJsPlayer: {
       el: document.getElementById("videojs-player"),
-      render: VideoJsPlayer,
+      render:
+        typeof tizen !== "undefined" ||
+        (typeof window !== "undefined" && typeof window.tizen !== "undefined") ||
+        (typeof navigator !== "undefined" && /Tizen/i.test(navigator.userAgent))
+          ? AvPlayer
+          : VideoJsPlayer,
     },
     exitModal: {
       el: document.getElementById("exit-modal"),

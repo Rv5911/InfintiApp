@@ -5,9 +5,12 @@ function VideoJsPlayer(poster = "") {
     "";
 
   let isYouTube = srcUrl.includes("youtube.com") || srcUrl.includes("youtu.be");
-  const isWebOS = typeof webOS !== "undefined";
-  const useWebOSVideoTag = isWebOS;
-  const useWebOSNativePlayer = useWebOSVideoTag && !isYouTube;
+  const isTizenDevice =
+    typeof tizen !== "undefined" ||
+    (typeof window !== "undefined" && typeof window.tizen !== "undefined") ||
+    (typeof navigator !== "undefined" && /Tizen/i.test(navigator.userAgent));
+  const useWebOSVideoTag = !isTizenDevice && !isYouTube;
+  const useWebOSNativePlayer = useWebOSVideoTag;
 
   const previousCleanup = VideoJsPlayer.cleanup;
   if (previousCleanup) {
@@ -55,7 +58,6 @@ function VideoJsPlayer(poster = "") {
   // 🔴 Track focus states
   let isSeekBarFocused = false;
   let isPlayPauseFocused = true;
-  let isAspectRatioFocused = false;
 
   // 🔴 Track if user is actively dragging seek bar
   let isSeekBarDragging = false;
@@ -182,7 +184,7 @@ function VideoJsPlayer(poster = "") {
   }
 
   function hasAnyControlFocused() {
-    return isSeekBarFocused || isAspectRatioFocused;
+    return isSeekBarFocused;
   }
 
   function updateLastKnownPlaybackProgress() {
@@ -264,6 +266,50 @@ function VideoJsPlayer(poster = "") {
     hidePlaybackOverlays();
   }
 
+  function syncSeekBarUi() {
+    const seekBar = document.getElementById("customSeek");
+    if (!seekBar || !player || isLive || errorActive) return;
+
+    try {
+      const currentTime = Number(player.currentTime());
+      const duration = Number(player.duration());
+      if (!Number.isFinite(duration) || duration <= 0) return;
+
+      seekBar.max = String(duration);
+
+      if (!isSeekBarDragging && Number.isFinite(currentTime)) {
+        seekBar.value = String(Math.max(0, Math.min(duration, currentTime)));
+      }
+
+      if (currentTimeEl && Number.isFinite(currentTime)) {
+        currentTimeEl.textContent = formatTime(currentTime);
+      }
+      if (durationEl) {
+        durationEl.textContent = formatTime(duration);
+      }
+
+      const playedPercent = Math.max(
+        0,
+        Math.min(100, (Number(seekBar.value || currentTime) / duration) * 100),
+      );
+      let bufferedPercent = playedPercent;
+      const buffered = player.buffered && player.buffered();
+      if (buffered && buffered.length > 0) {
+        bufferedPercent = Math.max(
+          playedPercent,
+          Math.min(100, (buffered.end(buffered.length - 1) / duration) * 100),
+        );
+      }
+
+      seekBar.style.background = `linear-gradient(to right,
+        var(--gold) 0%, var(--gold) ${playedPercent}%,
+        rgba(255, 255, 255, 0.4) ${playedPercent}%, rgba(255, 255, 255, 0.4) ${bufferedPercent}%,
+        rgba(255, 255, 255, 0.15) ${bufferedPercent}%, rgba(255, 255, 255, 0.15) 100%)`;
+    } catch (err) {
+      console.warn("Seek bar sync failed:", err);
+    }
+  }
+
   function clearResumeSeekRetry() {
     if (resumeSeekRetryTimeout) {
       clearTimeout(resumeSeekRetryTimeout);
@@ -274,8 +320,7 @@ function VideoJsPlayer(poster = "") {
   function applyResumeTimeToPlayback() {
     if (!pendingResumeTime || resumeTimeApplied || errorActive) return false;
 
-    const playbackTarget =
-      useWebOSNativePlayer && playbackVideoElement ? playbackVideoElement : player;
+    const playbackTarget = player;
     if (!playbackTarget || typeof playbackTarget.currentTime !== "function") {
       return false;
     }
@@ -285,7 +330,11 @@ function VideoJsPlayer(poster = "") {
         ? Number(playbackTarget.duration())
         : Number(playbackTarget.duration);
     const targetReadyState =
-      playbackTarget.readyState != null ? playbackTarget.readyState : 0;
+      useWebOSNativePlayer && playbackVideoElement
+        ? playbackVideoElement.readyState
+        : playbackTarget.readyState != null
+          ? playbackTarget.readyState
+          : 0;
 
     if (
       useWebOSNativePlayer &&
@@ -685,12 +734,10 @@ function VideoJsPlayer(poster = "") {
   function focusPlayPause() {
     const playOverlay = document.querySelector(".video-action-overlay.center");
     const seekBar = document.getElementById("customSeek");
-    const aspectRatioButton = document.getElementById("aspectRatioButton");
 
     if (playOverlay) {
       isPlayPauseFocused = true;
       isSeekBarFocused = false;
-      isAspectRatioFocused = false;
 
       // Ensure it's visible and focused
       playOverlay.classList.remove("hidden");
@@ -705,13 +752,8 @@ function VideoJsPlayer(poster = "") {
         }
       }
 
-      // Remove focused class from seek bar and aspect ratio button
+      // Remove focused class from seek bar
       if (seekBar) seekBar.classList.remove("focused");
-      if (aspectRatioButton) {
-        aspectRatioButton.classList.remove("focused");
-        const icon = aspectRatioButton.querySelector("i");
-        if (icon) icon.style.color = "white";
-      }
     }
   }
 
@@ -719,47 +761,17 @@ function VideoJsPlayer(poster = "") {
   function focusSeekBar() {
     const seekBar = document.getElementById("customSeek");
     const playOverlay = document.querySelector(".video-action-overlay.center");
-    const aspectRatioButton = document.getElementById("aspectRatioButton");
 
     if (seekBar && playOverlay) {
       isSeekBarFocused = true;
       isPlayPauseFocused = false;
-      isAspectRatioFocused = false;
 
       // Add focused class to seek bar and ensure controls visible
       showControls();
       seekBar.classList.add("focused");
 
-      // Remove focused class from play overlay and aspect ratio button
+      // Remove focused class from play overlay
       playOverlay.classList.remove("focused");
-      if (aspectRatioButton) {
-        aspectRatioButton.classList.remove("focused");
-        const icon = aspectRatioButton.querySelector("i");
-        if (icon) icon.style.color = "white";
-      }
-    }
-  }
-
-  // 🔴 Function to focus on aspect ratio button
-  function focusAspectRatio() {
-    const aspectRatioButton = document.getElementById("aspectRatioButton");
-    const playOverlay = document.querySelector(".video-action-overlay.center");
-    const seekBar = document.getElementById("customSeek");
-
-    if (aspectRatioButton) {
-      isAspectRatioFocused = true;
-      isPlayPauseFocused = false;
-      isSeekBarFocused = false;
-
-      // Add focused class to aspect ratio button and ensure controls visible
-      showControls();
-      aspectRatioButton.classList.add("focused");
-      const icon = aspectRatioButton.querySelector("i");
-      if (icon) icon.style.color = "white";
-
-      // Remove focused class from play overlay and seek bar
-      if (playOverlay) playOverlay.classList.remove("focused");
-      if (seekBar) seekBar.classList.remove("focused");
     }
   }
 
@@ -767,11 +779,9 @@ function VideoJsPlayer(poster = "") {
   function unfocusAll() {
     isSeekBarFocused = false;
     isPlayPauseFocused = false;
-    isAspectRatioFocused = false;
 
     const seekBar = document.getElementById("customSeek");
     const playOverlay = document.querySelector(".video-action-overlay.center");
-    const aspectRatioButton = document.getElementById("aspectRatioButton");
 
     if (seekBar) seekBar.classList.remove("focused");
     if (playOverlay) {
@@ -780,11 +790,6 @@ function VideoJsPlayer(poster = "") {
       if (player && !player.paused()) {
         playOverlay.classList.add("hidden");
       }
-    }
-    if (aspectRatioButton) {
-      aspectRatioButton.classList.remove("focused");
-      const icon = aspectRatioButton.querySelector("i");
-      if (icon) icon.style.color = "white";
     }
   }
 
@@ -894,6 +899,7 @@ function VideoJsPlayer(poster = "") {
     player.on("seeked", () => {
       console.log("Seek completed");
       updateLastKnownPlaybackProgress();
+      syncSeekBarUi();
       isSeekSessionActive = false;
       accumulatedSeekOffset = 0;
       pendingSeekTimeout = null;
@@ -919,6 +925,7 @@ function VideoJsPlayer(poster = "") {
     // Apply resume time after metadata is loaded
     if (pendingResumeTime > 0) {
       player.on("loadedmetadata", () => {
+        syncSeekBarUi();
         if (useWebOSNativePlayer) {
           if (!applyResumeTimeToPlayback()) {
             scheduleResumeSeekRetry();
@@ -929,6 +936,11 @@ function VideoJsPlayer(poster = "") {
         }
       });
     }
+
+    player.on("loadedmetadata", () => {
+      updateLastKnownPlaybackProgress();
+      syncSeekBarUi();
+    });
 
     const seekBar = document.getElementById("customSeek");
     const liveBadge = document.querySelector(".video-live-badge");
@@ -1040,44 +1052,8 @@ function VideoJsPlayer(poster = "") {
     player.on("timeupdate", () => {
       if (errorActive) return;
       updateLastKnownPlaybackProgress();
-
-      if (!seekBar.getAttribute("max")) {
-        seekBar.setAttribute("max", player.duration() || 0);
-        }
-
-        // Only update seek bar value if user is not actively dragging it
-        if (!isSeekBarDragging) {
-          seekBar.value = player.currentTime();
-        }
-
-        // Update current time display
-        if (currentTimeEl) {
-          currentTimeEl.textContent = formatTime(player.currentTime());
-        }
-
-        // Update duration display (only once when available)
-        if (
-          durationEl &&
-          player.duration() &&
-          durationEl.textContent === "0:00"
-        ) {
-          durationEl.textContent = formatTime(player.duration());
-        }
-
-        const percent = (player.currentTime() / player.duration()) * 100;
-        let bufferedPercent = 0;
-        if (player.buffered().length > 0) {
-          bufferedPercent =
-            (player.buffered().end(player.buffered().length - 1) /
-              player.duration()) *
-            100;
-        }
-
-        seekBar.style.background = `linear-gradient(to right,
-          var(--gold) 0%, var(--gold) ${percent}%,
-          rgba(255, 255, 255, 0.4) ${percent}%, rgba(255, 255, 255, 0.4) ${bufferedPercent}%,
-          rgba(255, 255, 255, 0.15) ${bufferedPercent}%, rgba(255, 255, 255, 0.15) 100%)`;
-      });
+      syncSeekBarUi();
+    });
     }
 
     player.on("waiting", () => {
@@ -1101,6 +1077,7 @@ function VideoJsPlayer(poster = "") {
       if (!errorActive) {
         const loadingEl = document.querySelector(".video-buffer-loader");
         if (loadingEl) loadingEl.classList.add("hidden");
+        syncSeekBarUi();
         if (useWebOSNativePlayer && pendingResumeTime > 0 && !resumeTimeApplied) {
           if (!applyResumeTimeToPlayback()) {
             scheduleResumeSeekRetry();
@@ -1121,6 +1098,7 @@ function VideoJsPlayer(poster = "") {
       if (!errorActive) {
         const loadingEl = document.querySelector(".video-buffer-loader");
         if (loadingEl) loadingEl.classList.add("hidden");
+        syncSeekBarUi();
         if (useWebOSNativePlayer && pendingResumeTime > 0 && !resumeTimeApplied) {
           if (!applyResumeTimeToPlayback()) {
             scheduleResumeSeekRetry();
@@ -1137,6 +1115,7 @@ function VideoJsPlayer(poster = "") {
       if (!errorActive) {
         const loadingEl = document.querySelector(".video-buffer-loader");
         if (loadingEl) loadingEl.classList.add("hidden");
+        syncSeekBarUi();
         if (useWebOSNativePlayer && pendingResumeTime > 0 && !resumeTimeApplied) {
           if (!applyResumeTimeToPlayback()) {
             scheduleResumeSeekRetry();
@@ -1160,15 +1139,8 @@ function VideoJsPlayer(poster = "") {
     });
 
     player.on("durationchange", () => {
-      if (
-        !errorActive &&
-        durationEl &&
-        player.duration() &&
-        durationEl.textContent === "0:00"
-      ) {
-        durationEl.textContent = formatTime(player.duration());
-      }
       updateLastKnownPlaybackProgress();
+      syncSeekBarUi();
     });
 
     player.on("loadstart", () => {
@@ -1213,8 +1185,7 @@ function VideoJsPlayer(poster = "") {
 
         // ONLY unfocus if controls are hidden or NO element is currently focused
         // This keeps the red/gold border visible even while the video is playing/seeking
-        const isAnythingFocused =
-          isSeekBarFocused || isAspectRatioFocused || isPlayPauseFocused;
+        const isAnythingFocused = isSeekBarFocused || isPlayPauseFocused;
         if (!isAnythingFocused || controlsBar.classList.contains("hidden")) {
           unfocusAll();
         }
@@ -1238,7 +1209,7 @@ function VideoJsPlayer(poster = "") {
         showOverlay("pause");
 
         // ONLY pull focus to play/pause if NOTHING else is focused
-        if (!isSeekBarFocused && !isAspectRatioFocused) {
+        if (!isSeekBarFocused) {
           setTimeout(() => focusPlayPause(), 100);
         }
 
@@ -1678,14 +1649,6 @@ function VideoJsPlayer(poster = "") {
       }
     }
 
-    function cycleAspectRatio() {
-      const videoEl = getPlaybackVideoElement();
-      if (videoEl && window.VideoAspectRatio) {
-        const newLabel = window.VideoAspectRatio.cycle(videoEl);
-        window.VideoAspectRatio.showOverlay(newLabel);
-      }
-    }
-
     function videojsPlayerdownHandler(e) {
       if (localStorage.getItem("currentPage") !== "videoJsPlayer") return;
 
@@ -1795,34 +1758,6 @@ function VideoJsPlayer(poster = "") {
         return;
       }
 
-      // 🔴 UPDATED: Aspect ratio button navigation logic
-      if (isAspectRatioFocused) {
-        const aspectRatioButton = document.getElementById("aspectRatioButton");
-        if (aspectRatioButton) {
-          switch (e.key) {
-            case "ArrowUp":
-              // Move focus to seek bar
-              focusSeekBar();
-              e.preventDefault();
-              break;
-
-            case "Enter":
-              // Apply aspect ratio change using utility
-              cycleAspectRatio();
-              e.preventDefault();
-              break;
-
-            default:
-              if (isBackKey(e)) {
-                goBack();
-                e.preventDefault();
-              }
-              break;
-          }
-        }
-        return; // Don't process other keys when aspect ratio button is focused
-      }
-
       // 🔴 UPDATED: Seek bar navigation logic
       if (isSeekBarFocused) {
         const seekBar = document.getElementById("customSeek");
@@ -1859,14 +1794,7 @@ function VideoJsPlayer(poster = "") {
               break;
 
             case "ArrowDown":
-              // Move focus to aspect ratio button if it exists, otherwise stay or move elsewhere
-              const arBtn = document.getElementById("aspectRatioButton");
-              if (arBtn) {
-                focusAspectRatio();
-              } else {
-                // For YouTube or no AR button, maybe just preventDefault
-                e.preventDefault();
-              }
+              focusPlayPause();
               e.preventDefault();
               break;
 
@@ -2017,13 +1945,6 @@ function VideoJsPlayer(poster = "") {
         return;
       }
 
-      if (target.closest("#aspectRatioButton")) {
-        showControls();
-        focusAspectRatio();
-        cycleAspectRatio();
-        return;
-      }
-
       if (target.closest("#customSeek")) {
         showControls();
         focusSeekBar();
@@ -2068,7 +1989,6 @@ function VideoJsPlayer(poster = "") {
       wasPlayingBeforeSeek = false;
       isSeekBarFocused = false;
       isPlayPauseFocused = true;
-      isAspectRatioFocused = false;
       userManuallyPaused = false;
       accumulatedSeekOffset = 0;
       lastSeekTime = 0;
@@ -2101,13 +2021,6 @@ function VideoJsPlayer(poster = "") {
   }
 
   setTimeout(() => initPlayer(), 0);
-
-  setTimeout(() => {
-    const videoHtmlElement = getPlaybackVideoElement();
-    if (videoHtmlElement && window.VideoAspectRatio) {
-      window.VideoAspectRatio.initialize(videoHtmlElement);
-    }
-  }, 0);
 
   return `
   <div class="video-js-player-container">
@@ -2155,16 +2068,6 @@ function VideoJsPlayer(poster = "") {
         <input id="customSeek" type="range" value="0" min="0" step="0.1" />
         <span id="duration" class="time-display">0:00</span>
       </div>
-      ${
-        isYouTube
-          ? ""
-          : `<div class="aspect-ratio-container">
-        <button class="aspect-ratio-button" id="aspectRatioButton"><i class="fa-solid fa-compress" style="color: ${
-          isAspectRatioFocused ? "var(--app-text-color)" : "white"
-        }"></i>Aspect Ratio</button>
-      </div>`
-      }
-
     </div>
  
     <div id="aspectRatioOverlay" class="aspect-ratio-overlay hidden"></div>

@@ -7,7 +7,6 @@ function LiveVideoJsComponent(
 ) {
   const id = "live-videojs-player";
   let epgData = [];
-  let aspectRatioChangeHandler = null;
   let fullscreenChangeHandler = null;
   let playPauseClickHandler = null;
   let fullscreenClickHandler = null;
@@ -15,7 +14,6 @@ function LiveVideoJsComponent(
   let playerContainerClickHandler = null;
   let nativeVideoEventCleanup = [];
   let playbackErrorActive = false;
-  // Removed internal aspect ratio logic in favor of window.VideoAspectRatio utility
 
   function getVideoElement() {
     return document.getElementById(id);
@@ -23,21 +21,6 @@ function LiveVideoJsComponent(
 
   function getLivePlayerContainer() {
     return document.querySelector(".live-video-player-div");
-  }
-
-  function cycleManualAspectRatio() {
-    const videoEl = getVideoElement();
-    if (videoEl && window.VideoAspectRatio) {
-      return window.VideoAspectRatio.cycle(videoEl);
-    }
-    return null;
-  }
-
-  function resetManualAspectRatio() {
-    const videoEl = getVideoElement();
-    if (videoEl && window.VideoAspectRatio) {
-      window.VideoAspectRatio.initialize(videoEl);
-    }
   }
 
   function syncPlayerLayout(isFullscreen) {
@@ -121,7 +104,6 @@ function LiveVideoJsComponent(
     if (loading || error) {
       setFullscreenControlsVisible(false);
     }
-    updateAspectRatioButtonVisibility();
   }
 
   function syncLoaderFromMedia(videoEl) {
@@ -166,6 +148,48 @@ function LiveVideoJsComponent(
       loading: false,
       error: true,
     });
+  }
+
+  function createNativeLivePlayer(videoEl) {
+    return {
+      play() {
+        const playPromise = videoEl.play();
+        if (playPromise && typeof playPromise.catch === "function") {
+          playPromise.catch((err) => {
+            console.warn("Native live play failed:", err);
+            syncLoaderFromMedia(videoEl);
+          });
+        }
+        return playPromise;
+      },
+      pause() {
+        return videoEl.pause();
+      },
+      togglePlayPause,
+      paused() {
+        return videoEl.paused;
+      },
+      dispose() {
+        try {
+          videoEl.pause();
+          videoEl.removeAttribute("src");
+          videoEl.load();
+        } catch (err) {
+          console.warn("Native live player dispose failed:", err);
+        }
+      },
+      refreshControlsVisibility() {
+        syncLoaderFromMedia(videoEl);
+        syncPlayPauseIconFromMedia(videoEl);
+      },
+      showControls() {
+        wakeClickControls();
+      },
+      fullscreen() {
+        return isFullscreenActive();
+      },
+      element: videoEl,
+    };
   }
 
   // Store reference to previous cleanup to avoid race conditions
@@ -337,7 +361,13 @@ function LiveVideoJsComponent(
     try {
       // Native HTML5 video
       if (videoEl.paused) {
-        videoEl.play();
+        const playPromise = videoEl.play();
+        if (playPromise && typeof playPromise.catch === "function") {
+          playPromise.catch((err) => {
+            console.warn("Play/Pause toggle play failed:", err);
+            syncLoaderFromMedia(videoEl);
+          });
+        }
         updatePlayPauseIcon(true);
       } else {
         videoEl.pause();
@@ -374,21 +404,6 @@ function LiveVideoJsComponent(
     updatePlayPauseIcon(isPlaying);
   }
 
-  // Function to update aspect ratio button visibility
-  function updateAspectRatioButtonVisibility() {
-    const aspectRatioBtn = document.querySelector(".videojs-aspect-ratio-div");
-    const loadingEl = document.querySelector(".live-video-loader");
-    const errorEl = document.querySelector(".live-video-error");
-
-    if (aspectRatioBtn) {
-      // Hide aspect ratio button when loader is visible or error is visible
-      const shouldHide =
-        (loadingEl && !loadingEl.classList.contains("hidden")) ||
-        (errorEl && !errorEl.classList.contains("hidden"));
-      aspectRatioBtn.style.display = shouldHide ? "none" : "block";
-    }
-  }
-
   function isFullscreenActive() {
     return !!(
       document.fullscreenElement ||
@@ -398,34 +413,30 @@ function LiveVideoJsComponent(
     );
   }
 
+  function hideAspectRatioControls() {
+    document
+      .querySelectorAll(
+        ".videojs-aspect-ratio-div, #videojs-aspect-ratio, .flow-aspect-ratio-div, #flow-aspect-ratio",
+      )
+      .forEach((el) => {
+        el.style.display = "none";
+      });
+  }
+
   function setFullscreenControlsVisible(visible) {
     const playPauseIcon = document.querySelector(".play-pause-icon");
-    const aspectRatioWrap = document.querySelector(".videojs-aspect-ratio-div");
-    const aspectRatioBtn = document.getElementById("videojs-aspect-ratio");
     const fullscreenBtn = document.getElementById("lp-fullscreen-btn");
     const shouldShow = visible && !isPlayerOverlayBlockingControls();
     const isFs = isFullscreenActive();
+
+    hideAspectRatioControls();
 
     if (playPauseIcon) {
       playPauseIcon.style.display = shouldShow ? "flex" : "none";
     }
 
-    if (aspectRatioWrap) {
-      // Aspect ratio should be visible only in fullscreen mode.
-      aspectRatioWrap.style.display = shouldShow && isFs ? "block" : "none";
-    }
-
-    if (aspectRatioBtn) {
-      aspectRatioBtn.style.display =
-        shouldShow && isFs ? "inline-flex" : "none";
-    }
-
     if (fullscreenBtn) {
       fullscreenBtn.style.display = shouldShow && !isFs ? "flex" : "none";
-    }
-
-    if (shouldShow) {
-      updateAspectRatioButtonVisibility();
     }
   }
 
@@ -502,10 +513,14 @@ function LiveVideoJsComponent(
     if (loadingEl) loadingEl.classList.add("hidden");
     if (errorEl) errorEl.classList.add("hidden");
     playbackErrorActive = false;
-    updateAspectRatioButtonVisibility();
 
     const videoEl = document.getElementById(id);
     if (!videoEl) return;
+
+    setOverlayState({
+      loading: true,
+      error: false,
+    });
 
     videoEl.src = srcUrl;
     videoEl.autoplay = true;
@@ -518,9 +533,7 @@ function LiveVideoJsComponent(
     videoEl.style.objectFit = "contain";
     videoEl.load();
 
-    window.livePlayer = videoEl;
-    window.livePlayer.togglePlayPause = togglePlayPause;
-    resetManualAspectRatio();
+    window.livePlayer = createNativeLivePlayer(videoEl);
     scheduleLayoutSync();
 
     const startPlayback = () => {
@@ -538,14 +551,6 @@ function LiveVideoJsComponent(
       scheduleLayoutSync();
       syncLoaderFromMedia(videoEl);
       syncPlayPauseIconFromMedia(videoEl);
-
-      setTimeout(() => {
-        const topOverlays = document.querySelector(".live-top-overlays");
-        if (topOverlays) {
-          topOverlays.style.opacity = "0";
-          topOverlays.style.transition = "opacity 0.5s ease";
-        }
-      }, 5000);
     };
 
     const handleNativePause = () => {
@@ -726,11 +731,8 @@ function LiveVideoJsComponent(
     }
 
     const handleFullscreenChange = () => {
-      const channelNameEl = document.querySelector(".live-channel-name");
-      const liveBadgeEl = document.querySelector(".live-badge");
       const isFs = isFullscreenActive();
-      if (channelNameEl) channelNameEl.style.display = isFs ? "none" : "flex";
-      if (liveBadgeEl) liveBadgeEl.style.display = "flex";
+      hideAspectRatioControls();
 
       if (isFs) {
         syncPlayerLayout(true);
@@ -752,6 +754,7 @@ function LiveVideoJsComponent(
     document.addEventListener("mozfullscreenchange", fullscreenChangeHandler);
     document.addEventListener("MSFullscreenChange", fullscreenChangeHandler);
     handleFullscreenChange();
+    hideAspectRatioControls();
 
     const backKeyExitFullscreen = (e) => {
       let isBack = false;
@@ -791,9 +794,15 @@ function LiveVideoJsComponent(
     };
 
     videoEl.addEventListener("keydown", backKeyExitFullscreen);
+    nativeVideoEventCleanup.push(() => {
+      videoEl.removeEventListener("keydown", backKeyExitFullscreen);
+    });
     const playerDiv = document.querySelector(".live-video-player-div");
     if (playerDiv) {
       playerDiv.addEventListener("keydown", backKeyExitFullscreen);
+      nativeVideoEventCleanup.push(() => {
+        playerDiv.removeEventListener("keydown", backKeyExitFullscreen);
+      });
     }
 
     const prevBtn = document.getElementById("live-prev-btn");
@@ -863,7 +872,7 @@ function LiveVideoJsComponent(
 
         const clickedPlayPause = event.target.closest(".play-pause-icon");
         const clickedControl = event.target.closest(
-          ".play-pause-icon, #lp-fullscreen-btn, #videojs-aspect-ratio, .retry-btn",
+          ".play-pause-icon, #lp-fullscreen-btn, .retry-btn",
         );
         if (
           clickedPlayPause ||
@@ -885,27 +894,6 @@ function LiveVideoJsComponent(
       playPauseIcon.addEventListener("click", playPauseClickHandler);
     }
 
-    const handleAspectRatioChange = () => {
-      const newLabel = cycleManualAspectRatio();
-      if (
-        newLabel &&
-        window.VideoAspectRatio &&
-        window.VideoAspectRatio.showOverlay
-      ) {
-        window.VideoAspectRatio.showOverlay(newLabel);
-      } else {
-        console.warn(
-          "Aspect ratio handler: No video element or VideoAspectRatio module found",
-        );
-      }
-    };
-
-    const aspectRatioButton = document.getElementById("videojs-aspect-ratio");
-    if (aspectRatioButton) {
-      aspectRatioChangeHandler = handleAspectRatioChange;
-      aspectRatioButton.addEventListener("click", aspectRatioChangeHandler);
-      console.log("Aspect ratio button event listener attached");
-    }
     // Watchdog timer to ensure player is disposed when not on LivePage
     if (window._livePlayerWatchdog) clearInterval(window._livePlayerWatchdog);
     window._livePlayerWatchdog = setInterval(() => {
@@ -939,10 +927,6 @@ function LiveVideoJsComponent(
     if (window._liveTvVolumeHandler) {
       document.removeEventListener("keydown", window._liveTvVolumeHandler);
       window._liveTvVolumeHandler = null;
-    }
-    const aspectRatioButton = document.getElementById("videojs-aspect-ratio");
-    if (aspectRatioButton && aspectRatioChangeHandler) {
-      aspectRatioButton.removeEventListener("click", aspectRatioChangeHandler);
     }
 
     nativeVideoEventCleanup.forEach((cleanupFn) => {
@@ -1021,22 +1005,15 @@ function LiveVideoJsComponent(
   return `
   <div class="livetvPlayer-main-container">
     <div class="live-video-player live-video-player-div" style="width:100% !important; height:100% !important; min-height:100% !important; overflow: hidden; position: relative;">
-      <div class="videojs-aspect-ratio-div">
-        <button id="videojs-aspect-ratio" style="display:none;" class="videojs-aspect-ratio-btn"><i class="fa-solid fa-compress" style="color:white"></i>Aspect Ratio </button>
-      </div>
       <div class="play-pause-icon" >
         <i class="fa-solid fa-play"></i>
 
-      </div>
-      <div class="live-top-overlays">
-        <div class="live-channel-name">${channelName || ""}</div>
-        <div class="live-badge">LIVE</div>
       </div>
       <div class="live-video-loader hidden"><div class="live-spinner"></div></div>
       <div class="live-video-error hidden">
         <div class="error-icon">⚠️</div>
         <p>Failed to load video</p>
-        <!-- <button class="retry-btn">Retry</button> -->
+        <button class="retry-btn">Retry</button>
       </div>
       <div class="live-video-controls">
         <div id="lp-fullscreen-btn" class="lp-fullscreen-btn" style="display:none;">
@@ -1052,8 +1029,6 @@ function LiveVideoJsComponent(
         src="${srcUrl}"
         style="display:block !important; height:100% !important; min-height:100% !important; width:100% !important; background:black; object-fit:contain;"
       ></video>
-
-          <div id="aspectRatioOverlay" class="aspect-ratio-overlay "></div>
 
     </div>
           <div class="livetv-player-epg" style="display: none;">
