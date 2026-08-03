@@ -806,7 +806,9 @@ function VideoJsPlayer(poster = "") {
       autoplay: true,
       controls: false,
       preload: "auto",
-      fluid: true,
+      fluid: false,
+      fill: true,
+      responsive: false,
       poster:
         isYouTube &&
         (fromValue === "trailer_movie" || fromValue === "trailer_series")
@@ -863,6 +865,9 @@ function VideoJsPlayer(poster = "") {
       videoElement.playsInline = true;
       videoElement.setAttribute("playsinline", "playsinline");
       videoElement.setAttribute("webkit-playsinline", "webkit-playsinline");
+      videoElement.style.setProperty("width", "100%", "important");
+      videoElement.style.setProperty("height", "100%", "important");
+      videoElement.style.setProperty("object-fit", "fill", "important");
 
       if (options.poster) {
         videoElement.poster = options.poster;
@@ -881,6 +886,9 @@ function VideoJsPlayer(poster = "") {
     } else {
       playbackVideoElement = videoElement;
       player = videojs(videoElement, options);
+      if (typeof player.fill === "function") {
+        player.fill(true);
+      }
     }
 
     pendingResumeTime = resumeTime > 0 ? resumeTime : 0;

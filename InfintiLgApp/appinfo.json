@@ -1,5 +1,5 @@
 {
-  "id": "com.infinti.app",
+  "id": "com.infinti-app.app",
   "version": "1.0.0",
   "vendor": "My Company",
   "type": "web",
@@ -8,6 +8,6 @@
   "icon": "app-icon.png",
   "largeIcon": "app-icon.png",
       "disableBackHistoryAPI" : true,
-          "splashBackground": "splash-screen.jpg",
+          "splashBackground": "splash-screen.png",
    "resolution": "1920x1080"
 }
