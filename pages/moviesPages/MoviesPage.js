@@ -2132,6 +2132,15 @@ function MoviesPage() {
       const isRight = e.key === "ArrowRight" || e.keyCode === 39;
       const isEnter = e.key === "Enter" || e.keyCode === 13;
 
+      if (
+        (isLeft || isRight) &&
+        document.activeElement &&
+        document.activeElement.tagName === "INPUT"
+      ) {
+        // Input has real focus (after Enter) - let the browser move the text caret
+        return;
+      }
+
       const toggleBtn = qs(".movies-cat-toggle-btn");
       const catSearchContainer = qs(".movies-cat-search-container");
       const catSearchInput = qs("#movies-cat-search-input");

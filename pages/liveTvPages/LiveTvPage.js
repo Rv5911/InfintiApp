@@ -2345,6 +2345,15 @@ function LiveTvPage() {
       const isRight = e.key === "ArrowRight" || e.keyCode === 39;
       const isEnter = e.key === "Enter" || e.keyCode === 13;
 
+      if (
+        (isLeft || isRight) &&
+        document.activeElement &&
+        document.activeElement.tagName === "INPUT"
+      ) {
+        // Input has real focus (after Enter) - let the browser move the text caret
+        return;
+      }
+
       if (isUp) {
         const focusedFav = qs(".channel-fav-btn-focused");
         const focusedRemove = qs(".channel-remove-btn-focused");
