@@ -136,7 +136,7 @@ function ExitModal() {
       </div>
 
       <div class="clear-wrap">
-        <div class="clear-panel" role="dialog" aria-labelledby="dialogTitle">
+        <div class="clear-panel">
           <h1 class="clear-title" id="dialogTitle">Do you want to Exit the App?</h1>
           <div class="clear-actions">
             <button class="btn save" id="saveBtnExit">Yes</button>

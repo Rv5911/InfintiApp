@@ -116,7 +116,7 @@ function NoCacheModal() {
       </div>
 
       <div class="clear-wrap">
-        <div class="clear-panel" role="dialog" aria-labelledby="dialogTitle">
+        <div class="clear-panel">
           <h1 class="clear-title" id="dialogTitle">Do you want to clear App Cache and Data?</h1>
           <div class="clear-actions">
             <button class="btn save" id="saveBtnCache">Yes</button>

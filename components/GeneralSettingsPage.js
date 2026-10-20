@@ -340,7 +340,7 @@ function GeneralSettingsPage() {
         ${DateTimeComponent()}
       </div>
       <div class="gs-content-wrap">
-        <div class="gs-panel" role="dialog" aria-labelledby="gsDialogTitle">
+        <div class="gs-panel">
           <h1 class="gs-title" id="gsDialogTitle">General Settings</h1>
           <div class="gs-options-list" id="gsOptionsList">
             <!--
