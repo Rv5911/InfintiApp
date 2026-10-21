@@ -1,5 +1,5 @@
 function DateTimeComponent() {
-    const selectedPlaylist = JSON.parse(localStorage.getItem("selectedPlaylist"));
+    const selectedPlaylist = JSON.parse(localStorage.getItem("selectedPlaylist")) || {};
 
     return `
      <div class="datetime">

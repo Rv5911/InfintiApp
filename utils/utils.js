@@ -618,6 +618,36 @@ function isBackKey(e) {
   return BACK_KEYS.codes.includes(keyCode) || BACK_KEYS.names.includes(keyName);
 }
 
+// Deletes the character at the input's current caret/selection instead of
+// always chopping the last character off the end.
+function deleteCharAtCaret(inputEl) {
+  if (!inputEl || inputEl.value.length === 0) return false;
+
+  const value = inputEl.value;
+  const selectionStart =
+    typeof inputEl.selectionStart === "number"
+      ? inputEl.selectionStart
+      : value.length;
+  const selectionEnd =
+    typeof inputEl.selectionEnd === "number"
+      ? inputEl.selectionEnd
+      : selectionStart;
+
+  if (selectionStart !== selectionEnd) {
+    inputEl.value = value.slice(0, selectionStart) + value.slice(selectionEnd);
+    inputEl.setSelectionRange(selectionStart, selectionStart);
+  } else if (selectionStart > 0) {
+    inputEl.value =
+      value.slice(0, selectionStart - 1) + value.slice(selectionStart);
+    inputEl.setSelectionRange(selectionStart - 1, selectionStart - 1);
+  } else {
+    return false;
+  }
+
+  inputEl.dispatchEvent(new Event("input"));
+  return true;
+}
+
 // blocking keys when loading is shown
 let loginCancelled = false;
 let keyBlockHandler = null;

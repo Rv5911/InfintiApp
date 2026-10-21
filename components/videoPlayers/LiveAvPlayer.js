@@ -13,6 +13,7 @@ function LiveAvPlayer(
     var avplay = null;
     var isLoading = true;
     var errorActive = false;
+    var isLiveNetworkDisconnect = false; // True while the current error is a network drop
     var controlsHideTimeout = null;
     var areControlsVisible = false;
 
@@ -614,7 +615,15 @@ function LiveAvPlayer(
                 },
                 onerror: function(err) {
                     console.error("[LiveAvPlayer] AVPlay Error:", err);
-                    showError("Playback Error: " + err);
+                    var errType = err;
+                    if (typeof err === "object" && err !== null) {
+                        errType = err.message || err.name || String(err);
+                    }
+                    var isNetwork = errType === "PLAYER_ERROR_CONNECTION_FAILED";
+                    showError(
+                        isNetwork ? "Network Connection Failed" : "Playback Error: " + err,
+                        isNetwork,
+                    );
                 },
                 onsubtitlechange: function(duration, text) {
                     var sd = document.getElementById("av-live-sub-display");
@@ -665,6 +674,7 @@ function LiveAvPlayer(
 
     function retryPlayback() {
         errorActive = false;
+        isLiveNetworkDisconnect = false;
         isLoading = true;
 
         var errPnl = document.querySelector(".av-live-error-pnl");
@@ -686,8 +696,9 @@ function LiveAvPlayer(
         initPlayer();
     }
 
-    function showError(m) {
+    function showError(m, isNetworkError) {
         errorActive = true;
+        isLiveNetworkDisconnect = !!isNetworkError;
 
         var topInfo = document.querySelector(".av-live-top-info-row");
         if (topInfo) topInfo.classList.add("hidden");
@@ -706,10 +717,29 @@ function LiveAvPlayer(
             pnl.innerHTML =
                 '<div class="av-live-error-content">' +
                 '<i class="fa-solid fa-triangle-exclamation"></i>' +
-                "<p>Something went wrong, try again</p>" +
+                "<p>" +
+                (isNetworkError
+                    ? "Network Error — Please check your internet connection"
+                    : "Something went wrong, try again") +
+                "</p>" +
                 '<div id="av-live-retry-btn">Retry</div>' +
                 "</div>";
         }
+    }
+
+    function handleLiveNetworkOffline() {
+        if (errorActive || !avplay) return;
+        try {
+            avplay.pause();
+        } catch (e) {}
+        showError("Network Connection Failed", true);
+    }
+
+    function handleLiveNetworkOnline() {
+        // errorActive flips false as soon as retryPlayback() runs, so this
+        // also guards against duplicate resume attempts from repeated "online" events.
+        if (!errorActive || !isLiveNetworkDisconnect) return;
+        retryPlayback();
     }
 
     function updateSeekProgress(ms) {
@@ -1316,6 +1346,8 @@ function LiveAvPlayer(
 
     document.addEventListener("lp-avplay-fullscreen-toggle", syncFullscreenUI);
     document.addEventListener("keydown", handleKey);
+    window.addEventListener("offline", handleLiveNetworkOffline);
+    window.addEventListener("online", handleLiveNetworkOnline);
 
     window.livePlayer = {
         dispose: function() {
@@ -1324,6 +1356,8 @@ function LiveAvPlayer(
                 "lp-avplay-fullscreen-toggle",
                 syncFullscreenUI,
             );
+            window.removeEventListener("offline", handleLiveNetworkOffline);
+            window.removeEventListener("online", handleLiveNetworkOnline);
             if (avplay) {
                 try {
                     avplay.stop();

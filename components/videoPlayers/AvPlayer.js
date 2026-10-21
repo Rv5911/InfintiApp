@@ -161,6 +161,7 @@ function AvPlayer() {
     var isErrorRetryFocused = false;
     var sidebarOpenTimeout = null;
     var isDestroyed = false; // Guard flag to prevent ghost toasts after cleanup
+    var isNetworkDisconnect = false; // True while the current fatal error is a network drop
 
     // Track info
     var audioTracks = [];
@@ -374,7 +375,73 @@ function AvPlayer() {
         };
     }
 
-    function showFatalError(message) {
+    function saveResumeTimeOnError() {
+        try {
+            var playbackProgress = getPlaybackProgress();
+            var resumeTime = Math.floor(playbackProgress.currentTime / 1000);
+            var duration = Math.floor(playbackProgress.duration / 1000);
+
+            if (!isYouTube && !isLive && resumeTime > 5 && duration > 0) {
+                var isNearCompletion = Math.abs(resumeTime - duration) < 5;
+                var continueWatchingItem = {
+                    itemId: playingItemData.season
+                        ? localStorage.getItem("selectedSeriesId")
+                        : localStorage.getItem("selectedMovieId"),
+                    episodeId: playingItemData.season
+                        ? localStorage.getItem("selectedEpisodeId")
+                        : null,
+                    resumeTime: resumeTime,
+                    duration: duration,
+                    type: playingItemData.season ? "series" : "movie",
+                };
+
+                let playlists =
+                    JSON.parse(localStorage.getItem("playlistsData")) || [];
+
+                playlists = playlists.map((pl) => {
+                    if (pl.playlistName !== currentPlaylistName) return pl;
+
+                    if (continueWatchingItem.type === "series") {
+                        let updatedSeries = (pl.continueWatchingSeries || []).filter(
+                            (item) =>
+                                !(
+                                    item.itemId === continueWatchingItem.itemId &&
+                                    item.episodeId === continueWatchingItem.episodeId
+                                ),
+                        );
+                        pl = {
+                            ...pl,
+                            continueWatchingSeries: updatedSeries,
+                        };
+                    } else {
+                        let updatedMovies = (pl.continueWatchingMovies || []).filter(
+                            (item) => item.itemId !== continueWatchingItem.itemId,
+                        );
+                        pl = {
+                            ...pl,
+                            continueWatchingMovies: updatedMovies,
+                        };
+                    }
+
+                    return pl;
+                });
+
+                localStorage.setItem("playlistsData", JSON.stringify(playlists));
+
+                if (!isNearCompletion) {
+                    if (continueWatchingItem.type === "series") {
+                        addItemToHistory(continueWatchingItem, "continueWatchingSeries");
+                    } else {
+                        addItemToHistory(continueWatchingItem, "continueWatchingMovies");
+                    }
+                }
+            }
+        } catch (saveErr) {
+            console.warn("Failed to save resume time on error:", saveErr);
+        }
+    }
+
+    function showFatalError(message, isNetworkError) {
         // Hide all player UI
         var controls = document.getElementById("av-controls-bar");
         var titleBar = document.getElementById("av-title-bar");
@@ -399,7 +466,9 @@ function AvPlayer() {
                 '<div class="av-error-icon">\u26a0\ufe0f</div>' +
                 "<h3></h3>" +
                 "<p>" +
-                ( "Something went wrong. Please try again") +
+                (isNetworkError
+                    ? "Network Error \u2014 Please check your internet connection"
+                    : "Something went wrong. Please try again") +
                 "</p>" +
                 '<div id="av-retry-btn" class="av-retry-btn focused">RETRY</div>' +
                 '<p style="font-size: 16px; margin-top: 14px; opacity: 0.65;">Press \u2190 BACK to exit</p>' +
@@ -411,6 +480,7 @@ function AvPlayer() {
         // console.log("RETRYING PLAYBACK...");
         errorActive = false;
         isErrorRetryFocused = false;
+        isNetworkDisconnect = false;
         isLoading = true;
 
         // Reset resume time state
@@ -436,6 +506,30 @@ function AvPlayer() {
         } catch (e) {}
 
         initPlayer();
+    }
+
+    function handleNetworkOffline() {
+        if (errorActive || !avplay) return;
+
+        try {
+            avplay.pause();
+        } catch (e) {}
+
+        saveResumeTimeOnError();
+
+        errorActive = true;
+        isNetworkDisconnect = true;
+        clearResumeSeekRetry();
+        pendingResumeTimeMs = 0;
+        resumeTimeApplied = false;
+        showFatalError("Network Connection Failed", true);
+    }
+
+    function handleNetworkOnline() {
+        // errorActive flips false as soon as retryPlayback() runs, so this
+        // also guards against duplicate resume attempts from repeated "online" events.
+        if (!errorActive || !isNetworkDisconnect) return;
+        retryPlayback();
     }
 
     function showControls() {
@@ -1405,9 +1499,11 @@ function AvPlayer() {
                 avplay.play();
                 showOverlay("play");
                 hideControlsWithDelay(3000);
-            } else if (action === "pause" || action === "stop") {
+            } else if (action === "pause") {
                 avplay.pause();
                 showOverlay("pause");
+            } else if (action === "stop") {
+                goBack();
             }
         } catch (e) {
             console.warn("[AvPlayer] Remote playback action failed:", action, e);
@@ -2125,69 +2221,7 @@ function AvPlayer() {
                     }
 
                     // Save resume time to continue watching before showing error
-                    try {
-                        var playbackProgress = getPlaybackProgress();
-                        var resumeTime = Math.floor(playbackProgress.currentTime / 1000);
-                        var duration = Math.floor(playbackProgress.duration / 1000);
-
-                        if (!isYouTube && !isLive && resumeTime > 5 && duration > 0) {
-                            var isNearCompletion = Math.abs(resumeTime - duration) < 5;
-                            var continueWatchingItem = {
-                                itemId: playingItemData.season
-                                    ? localStorage.getItem("selectedSeriesId")
-                                    : localStorage.getItem("selectedMovieId"),
-                                episodeId: playingItemData.season
-                                    ? localStorage.getItem("selectedEpisodeId")
-                                    : null,
-                                resumeTime: resumeTime,
-                                duration: duration,
-                                type: playingItemData.season ? "series" : "movie",
-                            };
-
-                            let playlists =
-                                JSON.parse(localStorage.getItem("playlistsData")) || [];
-
-                            playlists = playlists.map((pl) => {
-                                if (pl.playlistName !== currentPlaylistName) return pl;
-
-                                if (continueWatchingItem.type === "series") {
-                                    let updatedSeries = (pl.continueWatchingSeries || []).filter(
-                                        (item) =>
-                                            !(
-                                                item.itemId === continueWatchingItem.itemId &&
-                                                item.episodeId === continueWatchingItem.episodeId
-                                            ),
-                                    );
-                                    pl = {
-                                        ...pl,
-                                        continueWatchingSeries: updatedSeries,
-                                    };
-                                } else {
-                                    let updatedMovies = (pl.continueWatchingMovies || []).filter(
-                                        (item) => item.itemId !== continueWatchingItem.itemId,
-                                    );
-                                    pl = {
-                                        ...pl,
-                                        continueWatchingMovies: updatedMovies,
-                                    };
-                                }
-
-                                return pl;
-                            });
-
-                            localStorage.setItem("playlistsData", JSON.stringify(playlists));
-
-                            if (!isNearCompletion) {
-                                if (continueWatchingItem.type === "series") {
-                                    addItemToHistory(continueWatchingItem, "continueWatchingSeries");
-                                } else {
-                                    addItemToHistory(continueWatchingItem, "continueWatchingMovies");
-                                }
-                            }
-                        }
-                    } catch (saveErr) {
-                        console.warn("Failed to save resume time on error:", saveErr);
-                    }
+                    saveResumeTimeOnError();
 
                     // UNKNOWN_ERROR_EVENT_FROM_PLAYER is a transient Tizen 5.5 event.
                     // It does NOT always mean fatal failure — attempt recovery first.
@@ -2203,6 +2237,7 @@ function AvPlayer() {
                                 } else if (state === "IDLE" || state === "NONE") {
                                     // Fatal after all — show error
                                     errorActive = true;
+                                    isNetworkDisconnect = false;
                                     showFatalError(
                                         "Stream interrupted. Please go back and retry.",
                                     );
@@ -2211,6 +2246,7 @@ function AvPlayer() {
                             } catch (re) {
                                 console.error("Recovery failed:", re);
                                 errorActive = true;
+                                isNetworkDisconnect = false;
                                 showFatalError("Stream interrupted. Please go back and retry.");
                             }
                         }, 1500);
@@ -2222,6 +2258,7 @@ function AvPlayer() {
                     clearResumeSeekRetry();
                     pendingResumeTimeMs = 0;
                     resumeTimeApplied = false;
+                    isNetworkDisconnect = errorType === "PLAYER_ERROR_CONNECTION_FAILED";
                     var readableError = String(errorType);
                     if (errorType === "PLAYER_ERROR_NOT_SUPPORTED_FORMAT")
                         readableError = "Format Not Supported by this TV";
@@ -2231,7 +2268,7 @@ function AvPlayer() {
                         readableError = "Stream URL Not Found (404)";
                     else if (errorType === "PLAYER_ERROR_INVALID_STATE")
                         readableError = "Player entered invalid state";
-                    showFatalError(readableError);
+                    showFatalError(readableError, isNetworkDisconnect);
                 },
                 oncurrentplaytime: function(ms) {
                     if (!avplay || pendingSeekTimeout || errorActive) return;
@@ -2460,6 +2497,7 @@ function AvPlayer() {
                     retryPlayback();
                 } else if (isBackNavigationKey(e)) {
                     e.preventDefault();
+                    e.stopImmediatePropagation();
                     goBack();
                 }
                 return;
@@ -2550,6 +2588,7 @@ function AvPlayer() {
                 default:
                     if (isBackNavigationKey(e)) {
                         e.preventDefault();
+                        e.stopImmediatePropagation();
                         goBack();
                     }
                     break;
@@ -2577,10 +2616,14 @@ function AvPlayer() {
         };
 
         window.addEventListener("keydown", avKeyHandler, true);
+        window.addEventListener("offline", handleNetworkOffline);
+        window.addEventListener("online", handleNetworkOnline);
 
         AvPlayer.cleanup = function() {
             isDestroyed = true; // Prevent any pending timeout callbacks from firing toasts
             window.removeEventListener("keydown", avKeyHandler, true);
+            window.removeEventListener("offline", handleNetworkOffline);
+            window.removeEventListener("online", handleNetworkOnline);
             if (pendingSeekTimeout) clearTimeout(pendingSeekTimeout);
             if (controlsHideTimeout) clearTimeout(controlsHideTimeout);
             if (inactivityTimeout) clearTimeout(inactivityTimeout);
@@ -2606,6 +2649,7 @@ function AvPlayer() {
             isSelectionPending = false;
             isLoading = true;
             errorActive = false;
+            isNetworkDisconnect = false;
             hasStartedPlayingOnce = false;
             accumulatedSeekOffset = 0;
             

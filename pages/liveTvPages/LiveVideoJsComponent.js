@@ -15,6 +15,7 @@ function LiveVideoJsComponent(
   let playerContainerClickHandler = null;
   let nativeVideoEventCleanup = [];
   let playbackErrorActive = false;
+  let isLiveVjsNetworkDisconnect = false; // True while the current error is a network drop
   // Removed internal aspect ratio logic in favor of window.VideoAspectRatio utility
 
   function getVideoElement() {
@@ -124,6 +125,8 @@ function LiveVideoJsComponent(
     updateAspectRatioButtonVisibility();
   }
 
+  let loaderShowTimeout = null;
+
   function syncLoaderFromMedia(videoEl) {
     if (!videoEl) return;
 
@@ -139,16 +142,25 @@ function LiveVideoJsComponent(
       !isPaused && (videoEl.seeking || videoEl.readyState < haveCurrentData);
 
     if (isError) {
+      clearTimeout(loaderShowTimeout);
+      loaderShowTimeout = null;
       setOverlayState({
         loading: false,
         error: true,
       });
     } else if (isBuffering) {
-      setOverlayState({
-        loading: true,
-        error: false,
-      });
+      // Debounce showing the loader - fires this often (e.g. every
+      // "timeupdate"), and most readiness blips clear within a few hundred ms;
+      // only show it once buffering is actually sustained, to stop it flashing.
+      if (!loaderShowTimeout) {
+        loaderShowTimeout = setTimeout(() => {
+          loaderShowTimeout = null;
+          setOverlayState({ loading: true, error: false });
+        }, 300);
+      }
     } else {
+      clearTimeout(loaderShowTimeout);
+      loaderShowTimeout = null;
       setOverlayState({
         loading: false,
         error: false,
@@ -158,14 +170,56 @@ function LiveVideoJsComponent(
 
   function clearPlaybackError() {
     playbackErrorActive = false;
+    isLiveVjsNetworkDisconnect = false;
   }
 
-  function showPlaybackError() {
+  function showPlaybackError(isNetworkError) {
     playbackErrorActive = true;
+    isLiveVjsNetworkDisconnect = !!isNetworkError;
+    const textEl = document.getElementById("live-videojs-error-text");
+    if (textEl) {
+      textEl.textContent = isNetworkError
+        ? "Network Error — Please check your internet connection"
+        : "Failed to load video";
+    }
     setOverlayState({
       loading: false,
       error: true,
     });
+  }
+
+  function retryLiveVjsPlayback() {
+    clearPlaybackError();
+    setOverlayState({
+      loading: true,
+      error: false,
+    });
+    const videoEl = getVideoElement();
+    if (!videoEl) return;
+    videoEl.src = srcUrl;
+    videoEl.load();
+    videoEl.play().catch((err) => {
+      console.warn("Retry play() failed:", err);
+      syncLoaderFromMedia(videoEl);
+    });
+  }
+
+  function handleLiveVjsNetworkOffline() {
+    if (playbackErrorActive) return;
+    const videoEl = getVideoElement();
+    if (videoEl) {
+      try {
+        videoEl.pause();
+      } catch (e) {}
+    }
+    showPlaybackError(true);
+  }
+
+  function handleLiveVjsNetworkOnline() {
+    // playbackErrorActive flips false as soon as retry runs, so this also
+    // guards against duplicate resume attempts from repeated "online" events.
+    if (!playbackErrorActive || !isLiveVjsNetworkDisconnect) return;
+    retryLiveVjsPlayback();
   }
 
   // Store reference to previous cleanup to avoid race conditions
@@ -390,11 +444,23 @@ function LiveVideoJsComponent(
   }
 
   function isFullscreenActive() {
-    return !!(
+    if (
       document.fullscreenElement ||
       document.webkitFullscreenElement ||
       document.mozFullScreenElement ||
       document.msFullscreenElement
+    ) {
+      return true;
+    }
+    // LivePage.js's own fullscreen toggle (remote Enter on the fullscreen
+    // button) never calls the native Fullscreen API - it's a CSS-class/dataset
+    // based "simulated" fullscreen on #lp-player-container. Match its check
+    // (checkIsFullscreen() in LivePage.js) so this component's layout/control
+    // logic actually reacts to the fullscreen state the remote control drives.
+    const lpPlayerContainer = document.getElementById("lp-player-container");
+    return !!(
+      lpPlayerContainer &&
+      lpPlayerContainer.dataset.livepageFullscreen === "true"
     );
   }
 
@@ -429,33 +495,16 @@ function LiveVideoJsComponent(
     }
   }
 
-  function wakeFullscreenControls() {
-    if (!isFullscreenActive()) return;
-
+  // Shows the play-pause/fullscreen controls, then auto-hides them after a
+  // few seconds of inactivity - in both fullscreen and non-fullscreen, since
+  // "not currently using the player" applies to either mode.
+  function wakeClickControls() {
     setFullscreenControlsVisible(true);
 
     clearTimeout(window._liveFullscreenControlsTimer);
     window._liveFullscreenControlsTimer = setTimeout(() => {
-      if (isFullscreenActive()) {
-        setFullscreenControlsVisible(false);
-      }
+      setFullscreenControlsVisible(false);
     }, 5000);
-  }
-
-  function wakeClickControls() {
-    const inFullscreen = isFullscreenActive();
-    setFullscreenControlsVisible(true);
-
-    clearTimeout(window._liveFullscreenControlsTimer);
-    window._liveFullscreenControlsTimer = null;
-
-    if (inFullscreen) {
-      window._liveFullscreenControlsTimer = setTimeout(() => {
-        if (isFullscreenActive()) {
-          setFullscreenControlsVisible(false);
-        }
-      }, 5000);
-    }
   }
 
   // If no URL is provided
@@ -563,7 +612,9 @@ function LiveVideoJsComponent(
     };
 
     const handleNativeError = () => {
-      showPlaybackError();
+      var MEDIA_ERR_NETWORK = 2;
+      var isNetwork = !!(videoEl.error && videoEl.error.code === MEDIA_ERR_NETWORK);
+      showPlaybackError(isNetwork);
     };
 
     const nativeMediaEventHandlers = [
@@ -667,24 +718,17 @@ function LiveVideoJsComponent(
       });
     });
 
-    syncLoaderFromMedia(videoEl);
+    // Not syncLoaderFromMedia() here: videoEl.paused is still true until
+    // startPlayback() below calls .play(), which would read as "not buffering"
+    // and hide the loader before playback has even started.
+    setOverlayState({ loading: true, error: false });
     startPlayback();
     syncPlayPauseIconFromMedia(videoEl);
 
     const retryBtn = document.querySelector(".retry-btn");
     if (retryBtn) {
       retryClickHandler = () => {
-        clearPlaybackError();
-        setOverlayState({
-          loading: true,
-          error: false,
-        });
-        videoEl.src = srcUrl;
-        videoEl.load();
-        videoEl.play().catch((err) => {
-          console.warn("Retry play() failed:", err);
-          syncLoaderFromMedia(videoEl);
-        });
+        retryLiveVjsPlayback();
       };
       retryBtn.addEventListener("click", retryClickHandler);
     }
@@ -734,13 +778,12 @@ function LiveVideoJsComponent(
 
       if (isFs) {
         syncPlayerLayout(true);
-        wakeFullscreenControls();
       } else {
-        clearTimeout(window._liveFullscreenControlsTimer);
-        window._liveFullscreenControlsTimer = null;
         scheduleLayoutSync();
-        setFullscreenControlsVisible(true);
       }
+      // Control visibility (fullscreen btn, play-pause, aspect-ratio) is owned
+      // by LivePage.js's own D-pad-aware resetControlsTimer()/updateFocus() -
+      // not touched here, so the two don't fight over the same elements.
     };
 
     fullscreenChangeHandler = handleFullscreenChange;
@@ -751,6 +794,13 @@ function LiveVideoJsComponent(
     );
     document.addEventListener("mozfullscreenchange", fullscreenChangeHandler);
     document.addEventListener("MSFullscreenChange", fullscreenChangeHandler);
+    // LivePage.js's toggleFullscreen() (the actual remote-triggered path) is a
+    // CSS-class/dataset "simulated" fullscreen, not the native Fullscreen API -
+    // it dispatches this custom event instead of a native fullscreenchange.
+    document.addEventListener(
+      "lp-avplay-fullscreen-toggle",
+      fullscreenChangeHandler,
+    );
     handleFullscreenChange();
 
     const backKeyExitFullscreen = (e) => {
@@ -828,9 +878,9 @@ function LiveVideoJsComponent(
     window._liveTvVolumeHandler = (e) => {
       if (localStorage.getItem("currentPage") !== "liveTvPage") return;
 
-      if (isFullscreenActive()) {
-        wakeFullscreenControls();
-      }
+      // Not wakeClickControls() here: this fires on every key including
+      // D-pad arrows, which would fight LivePage.js's own
+      // resetControlsTimer()/updateFocus() over the same controls' visibility.
 
       switch (e.keyCode) {
         case 447:
@@ -906,6 +956,9 @@ function LiveVideoJsComponent(
       aspectRatioButton.addEventListener("click", aspectRatioChangeHandler);
       console.log("Aspect ratio button event listener attached");
     }
+    window.addEventListener("offline", handleLiveVjsNetworkOffline);
+    window.addEventListener("online", handleLiveVjsNetworkOnline);
+
     // Watchdog timer to ensure player is disposed when not on LivePage
     if (window._livePlayerWatchdog) clearInterval(window._livePlayerWatchdog);
     window._livePlayerWatchdog = setInterval(() => {
@@ -929,6 +982,9 @@ function LiveVideoJsComponent(
 
   // Add cleanup function to dispose player when component is not open
   LiveVideoJsComponent.cleanup = function () {
+    window.removeEventListener("offline", handleLiveVjsNetworkOffline);
+    window.removeEventListener("online", handleLiveVjsNetworkOnline);
+
     // Clear watchdog timer
     if (window._livePlayerWatchdog) {
       clearInterval(window._livePlayerWatchdog);
@@ -987,6 +1043,10 @@ function LiveVideoJsComponent(
           "MSFullscreenChange",
           fullscreenChangeHandler,
         );
+        document.removeEventListener(
+          "lp-avplay-fullscreen-toggle",
+          fullscreenChangeHandler,
+        );
       }
 
       const playPauseIcon = document.querySelector(".play-pause-icon");
@@ -1016,6 +1076,8 @@ function LiveVideoJsComponent(
     window._liveTvVolumeHandlerAttached = false;
     clearTimeout(window._liveFullscreenControlsTimer);
     window._liveFullscreenControlsTimer = null;
+    clearTimeout(loaderShowTimeout);
+    loaderShowTimeout = null;
   };
 
   return `
@@ -1035,7 +1097,7 @@ function LiveVideoJsComponent(
       <div class="live-video-loader hidden"><div class="live-spinner"></div></div>
       <div class="live-video-error hidden">
         <div class="error-icon">⚠️</div>
-        <p>Failed to load video</p>
+        <p id="live-videojs-error-text">Failed to load video</p>
         <!-- <button class="retry-btn">Retry</button> -->
       </div>
       <div class="live-video-controls">

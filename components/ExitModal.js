@@ -55,6 +55,11 @@ function ExitModal() {
       localStorage.removeItem("exitFrom");
 
       Router.showPage("playlistPage");
+    } else if (localStorage.getItem("exitFrom") == "loginPage") {
+      localStorage.setItem("currentPage", "login");
+      localStorage.removeItem("exitFrom");
+
+      Router.showPage("login");
     } else {
       localStorage.setItem("currentPage", "dashboard");
       localStorage.removeItem("exitFrom");

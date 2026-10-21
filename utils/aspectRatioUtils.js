@@ -9,17 +9,17 @@ window.VideoAspectRatio = (function () {
   // Aspect ratio configurations
   const ASPECT_RATIOS = [
     {
-      label: "16:9",
-      value: "16:9",
+      label: "Fit",
+      value: "fit",
       style: {
         width: "100%",
-        height: "100vh",
+        height: "100%",
         top: "0",
         bottom: "0",
         left: "0",
         right: "0",
         position: "absolute",
-        objectFit: "fill",
+        objectFit: "contain",
         transform: "none",
         clipPath: "none",
         overflow: "hidden",
@@ -28,17 +28,17 @@ window.VideoAspectRatio = (function () {
       },
     },
     {
-      label: "4:3",
-      value: "4:3",
+      label: "Zoom",
+      value: "zoom",
       style: {
-        width: "75%",
-        height: "100vh",
+        width: "100%",
+        height: "100%",
         top: "0",
         bottom: "0",
-        left: "12.5%",
-        right: "12.5%",
+        left: "0",
+        right: "0",
         position: "absolute",
-        objectFit: "fill",
+        objectFit: "cover",
         transform: "none",
         clipPath: "none",
         overflow: "hidden",
@@ -46,7 +46,6 @@ window.VideoAspectRatio = (function () {
         margin: "0",
       },
     },
-  
   ];
 
   let currentIndex = 0;

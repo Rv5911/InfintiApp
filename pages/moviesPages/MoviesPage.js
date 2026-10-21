@@ -37,6 +37,8 @@ function MoviesPage() {
   let isSidebarVisible = false; // Default hidden
   let searchCategoryQuery = "";
   let searchQuery = "";
+  let searchCaretPos = 0;
+  let catSearchCaretPos = 0;
   const categoryFocusMap = new Map();
   const unlockedMovieAdultCatIds = new Set();
   let isLongPressExecuted = false;
@@ -2067,6 +2069,9 @@ function MoviesPage() {
             focusToggleBtn();
           }
         });
+        searchInput.addEventListener("blur", () => {
+          searchCaretPos = searchInput.selectionStart || 0;
+        });
         searchInput.dataset.keyfix = "true";
       }
 
@@ -2074,12 +2079,11 @@ function MoviesPage() {
       if (typeof isBackKey === "function" && isBackKey(e)) {
         const activeEl = document.activeElement;
         if (activeEl && activeEl.tagName === "INPUT") {
-          if (activeEl.value.length > 0) {
-            activeEl.value = activeEl.value.slice(0, -1);
-            activeEl.dispatchEvent(new Event("input"));
+          if (typeof deleteCharAtCaret === "function" && deleteCharAtCaret(activeEl)) {
             e.preventDefault();
             return;
-          } else {
+          }
+          if (activeEl.value.length === 0) {
             activeEl.blur();
             if (activeEl.id === "movies-header-search") {
               activeEl.classList.remove("movies-header-search-input-focused");
@@ -2094,6 +2098,9 @@ function MoviesPage() {
             e.preventDefault();
             return;
           }
+          // Caret at start with nothing before it to delete - stay put
+          e.preventDefault();
+          return;
         }
 
         if (
@@ -2196,6 +2203,11 @@ function MoviesPage() {
             if (toggleBtn) toggleBtn.blur();
             if (catSearchInput) {
               catSearchInput.focus();
+              const restorePos = Math.min(
+                catSearchCaretPos,
+                catSearchInput.value.length,
+              );
+              catSearchInput.setSelectionRange(restorePos, restorePos);
               // Add one-time listener to return focus to container
               if (!catSearchInput.dataset.focusFix) {
                 catSearchInput.addEventListener("keydown", (ev) => {
@@ -2217,9 +2229,16 @@ function MoviesPage() {
                       "XF86Back",
                     ].includes(ev.key);
                   if (ev.key === "ArrowDown" || ev.keyCode === 40 || isBack) {
+                    if (
+                      isBack &&
+                      typeof deleteCharAtCaret === "function" &&
+                      deleteCharAtCaret(catSearchInput)
+                    ) {
+                      ev.preventDefault();
+                      return;
+                    }
                     if (isBack && catSearchInput.value.length > 0) {
-                      catSearchInput.value = catSearchInput.value.slice(0, -1);
-                      catSearchInput.dispatchEvent(new Event("input"));
+                      // Caret at start with nothing before it to delete
                       ev.preventDefault();
                       return;
                     }
@@ -2228,6 +2247,9 @@ function MoviesPage() {
                     catSearchContainer.classList.add("focused");
                     isCatSearchFocused = true;
                   }
+                });
+                catSearchInput.addEventListener("blur", () => {
+                  catSearchCaretPos = catSearchInput.selectionStart || 0;
                 });
                 catSearchInput.dataset.focusFix = "true";
               }
@@ -2682,7 +2704,14 @@ function MoviesPage() {
         const focusedCard = cards[focusedCardIndex];
 
         if (inSearch) {
-          searchInput && searchInput.focus();
+          if (searchInput) {
+            searchInput.focus();
+            const restorePos = Math.min(
+              searchCaretPos,
+              searchInput.value.length,
+            );
+            searchInput.setSelectionRange(restorePos, restorePos);
+          }
           e.preventDefault();
           return;
         }

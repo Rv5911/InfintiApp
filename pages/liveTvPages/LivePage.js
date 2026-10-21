@@ -34,6 +34,7 @@ function LivePage() {
   // Search State
   let categorySearchQuery = "";
   let channelSearchQuery = "";
+  let headerSearchCaretPos = 0;
   let currentSortOption = "default";
 
   // Chunking State
@@ -313,14 +314,10 @@ function LivePage() {
     const liveVideoUrl = getLiveVideoUrl(stream);
     if (!liveVideoUrl) return false;
 
-    const canUseAvplay =
-      desiredPlayerType === "avplay" &&
-      isTizenDevice() &&
-      typeof LiveAvPlayer === "function";
-    const canUseFlowPlayer =
-      !canUseAvplay &&
-      getSelectedLiveStreamFormat() === "ts" &&
-      typeof FlowLivePlayerComponent === "function";
+    // Tizen Live TV always uses LiveVideoJsComponent now - LiveAvPlayer (and the
+    // flow-player fallback) are intentionally disabled, not just untried.
+    const canUseAvplay = false;
+    const canUseFlowPlayer = false;
     const playerType = canUseAvplay
       ? "avplay"
       : canUseFlowPlayer
@@ -1836,6 +1833,15 @@ function LivePage() {
         fullscreenBtn.style.display = showInlineControls ? "flex" : "none";
       }
       if (aspectRatioBtn) aspectRatioBtn.style.display = "none";
+
+      if (showInlineControls) {
+        // Idle-hide after 5s of no remote input, same as the fullscreen case
+        // below - previously only fullscreen had any auto-hide at all here.
+        window._controlsTimer = setTimeout(() => {
+          if (playPauseIcon) playPauseIcon.style.display = "none";
+          if (fullscreenBtn) fullscreenBtn.style.display = "none";
+        }, 5000);
+      }
       return;
     }
 
@@ -2106,11 +2112,28 @@ function LivePage() {
       ) {
         window.livePlayer.play();
       } else if (
-        (remotePlaybackAction === "pause" || remotePlaybackAction === "stop") &&
+        remotePlaybackAction === "pause" &&
         window.livePlayer &&
         typeof window.livePlayer.pause === "function"
       ) {
         window.livePlayer.pause();
+      } else if (remotePlaybackAction === "stop") {
+        if (window.livePlayer && typeof window.livePlayer.pause === "function") {
+          window.livePlayer.pause();
+        }
+
+        if (checkIsFullscreen()) {
+          toggleFullscreen();
+        }
+
+        if (currentPlayingStream) {
+          const playingIndex = filteredStreams.findIndex(
+            (s) => String(s.stream_id) === String(currentPlayingStream.stream_id),
+          );
+          if (playingIndex !== -1) channelIndex = playingIndex;
+        }
+        focusedSection = "channels";
+        updateFocus();
       }
 
       resetControlsTimer();
@@ -2124,12 +2147,11 @@ function LivePage() {
     if (typeof isBackKey === "function" && isBackKey(e)) {
       const activeEl = document.activeElement;
       if (activeEl && activeEl.tagName === "INPUT") {
-        if (activeEl.value.length > 0) {
-          activeEl.value = activeEl.value.slice(0, -1);
-          activeEl.dispatchEvent(new Event("input"));
+        if (typeof deleteCharAtCaret === "function" && deleteCharAtCaret(activeEl)) {
           e.preventDefault();
           return;
-        } else {
+        }
+        if (activeEl.value.length === 0) {
           activeEl.blur();
           // Update visual state if needed
           if (activeEl.id === "live-header-search") {
@@ -2145,6 +2167,9 @@ function LivePage() {
           e.preventDefault();
           return;
         }
+        // Caret at start with nothing before it to delete - stay put
+        e.preventDefault();
+        return;
       }
 
       if (isFullscreen) {
@@ -2246,6 +2271,15 @@ function LivePage() {
         e.preventDefault();
         return;
       }
+    }
+
+    if (
+      (e.key === "ArrowLeft" || e.key === "ArrowRight") &&
+      document.activeElement &&
+      document.activeElement.tagName === "INPUT"
+    ) {
+      // Input has real focus (after Enter) - let the browser move the text caret
+      return;
     }
 
     // Prevent default for navigation keys
@@ -2796,8 +2830,8 @@ function LivePage() {
             document.querySelector(".play-pause-icon") ||
             document.getElementById("live-play-pause-btn");
           if (btn) btn.click();
-        } else if (playerSubFocus === 2) {
-          // Aspect Ratio focused - Click it
+        } else if (playerSubFocus === 2 && checkIsFullscreen()) {
+          // Aspect Ratio focused - Click it (fullscreen-only feature)
           const btn = getAspectRatioButton();
           if (btn) btn.click();
         }
@@ -2845,6 +2879,11 @@ function LivePage() {
           searchInput.focus({
             preventScroll: true,
           });
+          const restorePos = Math.min(
+            headerSearchCaretPos,
+            searchInput.value.length,
+          );
+          searchInput.setSelectionRange(restorePos, restorePos);
         }
       } else if (headerSubFocus === 1) {
         // Menu - Open Sidebar
@@ -2998,6 +3037,9 @@ function LivePage() {
         focusedSection = "header";
         headerSubFocus = 0;
         updateFocus();
+      });
+      headerSearchInput.addEventListener("blur", () => {
+        headerSearchCaretPos = headerSearchInput.selectionStart || 0;
       });
     }
   };
