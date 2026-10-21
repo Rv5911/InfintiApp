@@ -86,6 +86,13 @@ function LiveVideoJsComponent(
       videoEl.style.setProperty("min-height", "100%", "important");
       videoEl.style.setProperty("object-fit", "contain", "important");
       videoEl.style.setProperty("background", "black", "important");
+
+      // Force a reflow/repaint after the style writes above. This function
+      // runs last in the fullscreen-exit restore cascade (after LivePage.js's
+      // own layout restore), and without a nudge here the embedded WebKit
+      // compositor can get stuck on a stale/black frame until something else
+      // (e.g. an arrow-key press) incidentally forces a layout flush.
+      void videoEl.offsetHeight;
     }
   }
 

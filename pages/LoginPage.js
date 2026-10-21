@@ -65,6 +65,10 @@ function LoginPage() {
     const mainToggleIcon = toggleIcons.length > 0 ? toggleIcons[0] : null;
     let backPressedOnce = false;
     let backPressTimer = null;
+    // Independent of document.activeElement - some Tizen remotes/WebKit builds
+    // shift real DOM focus onto inputs via native spatial navigation alone, so
+    // activeElement can't be trusted to mean "the user pressed Enter to edit."
+    let isEditingLoginInput = false;
 
     function resetBackPressState() {
       backPressedOnce = false;
@@ -75,23 +79,15 @@ function LoginPage() {
     }
 
     function deleteCharacterFromFocusedLoginInput() {
-      const activeInput = loginInputs.includes(document.activeElement)
+      // Only act while the app itself put us into edit mode (via Enter) -
+      // document.activeElement alone isn't trustworthy, see isEditingLoginInput.
+      if (!isEditingLoginInput) return false;
+
+      const focusedInput = loginInputs.includes(document.activeElement)
         ? document.activeElement
         : null;
-      const focusedItem = focusableItems[focusIndex];
-      const focusedInput =
-        activeInput ||
-        (focusedItem && focusedItem.isInput ? focusedItem.element : null);
 
       if (!focusedInput || focusedInput.value.length === 0) return false;
-
-      if (document.activeElement !== focusedInput) {
-        focusedInput.focus();
-        focusedInput.setSelectionRange(
-          focusedInput.value.length,
-          focusedInput.value.length,
-        );
-      }
 
       const value = focusedInput.value;
       const selectionStart =
@@ -300,6 +296,17 @@ function LoginPage() {
           return;
         }
 
+        // App-tracked edit mode only (post-Enter) - activeElement alone can't
+        // be trusted, see isEditingLoginInput declaration.
+        if (!isEditingLoginInput) {
+          resetBackPressState();
+          localStorage.setItem("currentPage", "exitPage");
+          localStorage.setItem("exitFrom", "loginPage");
+          LoginPage.cleanup();
+          Router.showPage("exitModal");
+          return;
+        }
+
         if (backPressedOnce) {
           resetBackPressState();
           exitApp();
@@ -314,6 +321,15 @@ function LoginPage() {
 
       const currentItem = focusableItems[focusIndex];
       const len = focusableItems.length;
+
+      if (
+        e.key === "ArrowUp" ||
+        e.key === "ArrowDown" ||
+        e.key === "ArrowLeft" ||
+        e.key === "ArrowRight"
+      ) {
+        isEditingLoginInput = false;
+      }
 
       // OPTIMIZATIONS:
       // 1. Using pre-calculated 'currentItem' properties
@@ -383,6 +399,7 @@ function LoginPage() {
             currentItem.element.value.length,
             currentItem.element.value.length,
           );
+          isEditingLoginInput = true;
         } else if (currentItem.isButton) {
           currentItem.element.click();
         } else if (currentItem.isToggle) {
@@ -447,16 +464,16 @@ function LoginPage() {
     <p class="login-form-title">Login Details</p>
       <div class="login-page-form-container">
         <div class="login-input-container">
-          <input type="text" id="login-playlist-name" class="login-page-input" placeholder="Anyname" autocomplete="new-password" />
+          <input type="text" id="login-playlist-name"  class="login-page-input" placeholder="Anyname" autocomplete="new-password" />
           <img src="./assets/playlist-name-icon.png" style="opacity: 0.8;" alt="Logo" class="logo" />
         </div>
         <div class="login-input-container">
-          <input type="text" id="login-username" class="login-page-input" placeholder="User Name" autocomplete="new-password" />
+          <input type="text" id="login-username"  class="login-page-input" placeholder="User Name" autocomplete="new-password" />
           <img src="./assets/playlist-username-icon.png" style="opacity: 0.8;" alt="Logo" class="logo" />
         </div>
         <div class="password-wrapper">
           <div class="login-input-container password-container">
-            <input type="password"  id="login-password"  class="login-page-input" placeholder="Password" autocomplete="new-password" />
+            <input type="password"   id="login-password"  class="login-page-input" placeholder="Password" autocomplete="new-password" />
             <img src="./assets/playlist-password-icon.png" style="opacity: 0.8;" alt="Logo" class="logo" />
           </div>
           <div class="toggle-password-container">
